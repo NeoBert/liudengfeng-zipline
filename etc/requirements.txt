@@ -1,6 +1,6 @@
-# 使用conda安装scipy
+# conda install scipy
 # https://www.lfd.uci.edu/~gohlke/pythonlibs/
-# 下载并安装`bottleneck` `tables`
+# install `bottleneck` `tables`
 # pip install -r etc\requirements.txt
 
 # Incompatible with earlier PIP versions
