@@ -8,7 +8,7 @@ from sqlalchemy import func
 import pandas as pd
 import numpy as np
 from cnswd.sql.base import session_scope
-from cnswd.sql.cn import StockDaily, CJMX
+from cnswd.sql.szsh import StockDaily, CJMX
 from cnswd.sql.szx import StockInfo, Dividend
 
 
@@ -35,8 +35,24 @@ def get_exchange(code):
 
 
 def _stock_basic_info():
-    """股票上市基础信息"""
-    col_names = ['symbol', 'start_date', 'end_date', 'status', 'stock_type']
+    """股票基础信息
+    
+    Returns:
+        DataFrame -- 六列数据框
+
+    Examples
+    --------
+    >>> df = _stock_basic_info()
+    >>> df.head()
+        symbol start_date end_date status stock_type exchange
+    0     002301 2009-10-21     None   正常上市         A股   深交所中小板
+    1     002055 2006-07-25     None   正常上市         A股   深交所中小板
+    2     600000 1999-11-10     None   正常上市         A股      上交所
+    3     601966 2016-07-06     None   正常上市         A股      上交所
+    4     603556 2016-11-10     None   正常上市         A股      上交所    
+    """
+    col_names = ['symbol', 'start_date', 'end_date',
+                 'status', 'stock_type', 'exchange']
     with session_scope('szx') as sess:
         query = sess.query(
             StockInfo.股票代码,
@@ -44,6 +60,7 @@ def _stock_basic_info():
             StockInfo.摘牌日期,
             StockInfo.上市状态,
             StockInfo.股票类别,
+            StockInfo.上市地点,
         )
         df = pd.DataFrame.from_records(query.all())
         df.columns = col_names
@@ -66,7 +83,7 @@ def get_latest_short_name():
     4     000005    世纪星源     
     """
     col_names = ['symbol', 'last_date', 'asset_name']
-    with session_scope('cn') as sess:
+    with session_scope('szsh') as sess:
         query = sess.query(
             StockDaily.股票代码,
             func.max(StockDaily.日期),
@@ -80,9 +97,22 @@ def get_latest_short_name():
 
 
 def _stock_first_and_last():
-    """自股票日线交易数据查询开始交易及结束交易日期"""
+    """
+    自股票日线交易数据查询开始交易及结束交易日期
+
+    Examples
+    --------
+    >>> df = _stock_first_and_last()
+    >>> df.head()
+        symbol first_traded last_traded
+    0     000001   1991-04-03  2018-12-21
+    1     000002   1991-01-29  2018-12-21
+    2     000003   1991-01-02  2002-04-26
+    3     000004   1991-01-02  2018-12-21
+    4     000005   1991-01-02  2018-12-21   
+    """
     col_names = ['symbol', 'first_traded', 'last_traded']
-    with session_scope('cn') as sess:
+    with session_scope('szsh') as sess:
         query = sess.query(
             StockDaily.股票代码,
             func.min(StockDaily.日期),
@@ -110,12 +140,12 @@ def gen_asset_metadata(only_in=True, only_A=True):
     --------
     >>> df = gen_asset_metadata()
     >>> df.head()
-    symbol start_date   end_date       ...       last_traded exchange auto_close_date
-    0  000001 1991-04-03 2018-10-09       ...        2018-10-09     XSHE      2018-10-10
-    1  000002 1991-01-29 2018-10-09       ...        2018-10-09     XSHE      2018-10-10
-    2  000004 1991-01-14 2018-10-09       ...        2018-10-09     XSHE      2018-10-10
-    3  000005 1990-12-10 2018-10-09       ...        2018-10-09     XSHE      2018-10-10
-    4  000006 1992-04-27 2018-10-09       ...        2018-10-09     XSHE      2018-10-10
+        symbol start_date   end_date exchange asset_name first_traded last_traded auto_close_date
+    0     000001 1991-04-03 2018-12-21    深交所主板       平安银行   1991-04-03  2018-12-21      2018-12-22
+    1     000002 1991-01-29 2018-12-21    深交所主板       万 科Ａ   1991-01-29  2018-12-21      2018-12-22
+    2     000004 1991-01-14 2018-12-21    深交所主板       国农科技   1991-01-02  2018-12-21      2018-12-22
+    3     000005 1990-12-10 2018-12-21    深交所主板       世纪星源   1991-01-02  2018-12-21      2018-12-22
+    4     000006 1992-04-27 2018-12-21    深交所主板       深振业Ａ   1992-04-27  2018-12-21      2018-12-22
     """
     f_and_l = _stock_first_and_last()
     latest_name = get_latest_short_name()
@@ -138,7 +168,7 @@ def gen_asset_metadata(only_in=True, only_A=True):
                                                     'last_traded']
     df.sort_values('symbol', inplace=True)
     df.reset_index(inplace=True, drop=True)
-    df['exchange'] = df['symbol'].map(get_exchange)
+    # df['exchange'] = df['symbol'].map(get_exchange)
     df['auto_close_date'] = df['last_traded'].map(
         lambda x: x + pd.Timedelta(days=1))
     return df
@@ -200,7 +230,7 @@ def fetch_single_equity(stock_code, start, end):
     """
     start = pd.Timestamp(start).date()
     end = pd.Timestamp(end).date()
-    with session_scope('cn') as sess:
+    with session_scope('szsh') as sess:
         query = sess.query(
             StockDaily.股票代码,
             StockDaily.日期,
@@ -310,7 +340,7 @@ def fetch_single_minutely_equity(stock_code, start, end, exclude_lunch=True):
     col_names = ['symbol', 'datetime', 'price', 'volume']
     start = pd.Timestamp(start).date()
     end = pd.Timestamp(end).date()
-    with session_scope('cn') as sess:
+    with session_scope('szsh') as sess:
         query = sess.query(
             CJMX.股票代码,
             CJMX.成交时间,
@@ -346,16 +376,15 @@ def fetch_single_quity_adjustments(stock_code, start, end):
 
     Examples
     --------
-    >>> fetch_single_quity_adjustments('600000', '2010-4-1', '2018-4-16')
-        symbol        date  amount  ratio record_date    pay_date listing_date
-    0  600000  2010-06-10   0.150    0.3  2010-06-09  2010-06-11   2010-06-10
-    1  600000  2011-06-03   0.160    0.3  2011-06-02  2011-06-07   2011-06-03
-    2  600000  2012-06-26   0.300    0.0  2012-06-25  2012-06-26   2012-06-26
-    3  600000  2013-06-03   0.550    0.0  2013-05-31  2013-06-03   2013-06-03
-    4  600000  2014-06-24   0.660    0.0  2014-06-23  2014-06-24   2014-06-24
-    5  600000  2015-06-23   0.757    0.0  2015-06-19  2015-06-23   2015-06-23
-    6  600000  2016-06-23   0.515    0.1  2016-06-22  2016-06-24   2016-06-23
-    7  600000  2017-05-25   0.200    0.3  2017-05-24  2017-05-26   2017-05-25
+    >>> # 需要除去数值都为0的无效行
+    >>> fetch_single_quity_adjustments('000333', '2010-4-1', '2018-4-16')
+    symbol       date  s_ratio  z_ratio  amount declared_date record_date    ex_date   pay_date
+    0  000333 2015-06-30      0.0      0.0     0.0           NaT         NaT        NaT        NaT
+    1  000333 2015-12-31      0.0      0.5     1.2    2016-04-27  2016-05-05 2016-05-06 2016-05-06
+    2  000333 2016-06-30      0.0      0.0     0.0           NaT         NaT        NaT        NaT
+    3  000333 2016-12-31      0.0      0.0     1.0    2017-04-22  2017-05-09 2017-05-10 2017-05-10
+    4  000333 2017-06-30      0.0      0.0     0.0           NaT         NaT        NaT        NaT
+    5  000333 2017-12-31      0.0      0.0     1.2    2018-04-24  2018-05-03 2018-05-04 2018-05-04
     """
     start = pd.Timestamp(start).date()
     end = pd.Timestamp(end).date()
