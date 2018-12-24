@@ -187,7 +187,7 @@ def _fill_zero(df):
         df[col] = ohlc[col]
     return df
 
-
+# szx数据行情自2000年开始
 def fetch_single_equity(stock_code, start, end):
     """
     从本地数据库读取股票期间日线交易数据

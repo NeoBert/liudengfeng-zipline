@@ -5,6 +5,8 @@
     1. 如使用用int(stock_code)代表sid，必须在写入资产元数据时，提供sid列
     2. 默认只写入A股，且在市股票数据
     3. 保持一致性，只需要OHKCV列，附加列另行处理
+    4. 由于数据期间不一致，如601607分红派息自2000年开始，而日线数据自2010年开始，导致无法计算调整系数，
+       属正常。
 """
 
 import pandas as pd
@@ -105,7 +107,7 @@ def gen_symbol_data(symbol_map,
 
             # 只需要ohlcv列
             raw_data = raw_data[OHLCV_COLS]
-            
+
             # 时区调整，以0.0填充na
             # 转换为以日期为索引的表(与sessions保持一致)
             asset_data = raw_data.xs(
