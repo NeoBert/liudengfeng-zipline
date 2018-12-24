@@ -78,3 +78,8 @@ TAGS
 .gdb_history
 
 *.dSYM/
+
+# VS
+.vscode/
+zipline.egg-info/
+*.pyd
