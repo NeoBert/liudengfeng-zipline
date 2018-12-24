@@ -96,13 +96,16 @@ def gen_symbol_data(symbol_map,
             # raw_data.drop('change_pct', axis=1, inplace=True)
             # # 百分比调整为小数
             # raw_data['turnover'] = raw_data.turnover / 100.
-            # TODO:暂时不调整精度，观察后再确定成交量的调整
+
             # 调整数据精度
-            # raw_data = _adjusted_raw_data(raw_data)
+            raw_data['volume'] = raw_data['volume'] / 10000.0
+
             # 以日期、符号为索引
             raw_data.set_index(['date', 'symbol'], inplace=True)
+
             # 只需要ohlcv列
             raw_data = raw_data[OHLCV_COLS]
+            
             # 时区调整，以0.0填充na
             # 转换为以日期为索引的表(与sessions保持一致)
             asset_data = raw_data.xs(

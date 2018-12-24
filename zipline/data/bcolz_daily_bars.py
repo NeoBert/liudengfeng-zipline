@@ -165,7 +165,9 @@ class BcolzDailyBarWriter(object):
         return "Merging daily equity files:"
 
     def progress_bar_item_show_func(self, value):
-        return value if value is None else str(value[0])
+        # return value if value is None else str(value[0])
+        # # 提示股票代码
+        return value if value is None else str(value[0]).zfill(6)
 
     def write(self,
               data,
@@ -703,4 +705,5 @@ class BcolzDailyBarReader(SessionBarReader):
             else:
                 return price * 0.001
         else:
-            return price
+            # # 成交量恢复(损失精度)
+            return price * 10000
