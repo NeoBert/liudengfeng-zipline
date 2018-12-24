@@ -4,10 +4,7 @@
 备注：
     1. 如使用用int(stock_code)代表sid，必须在写入资产元数据时，提供sid列
     2. 默认只写入A股，且在市股票数据
-
-TODO:
-    1. 在`cnswd`包完成退市及B股数据日线数据下载功能
-    2. 上述二部分需要`selenium`才能在网易网完成下载
+    3. 保持一致性，只需要OHKCV列，附加列另行处理
 """
 
 import pandas as pd
@@ -15,20 +12,20 @@ from logbook import Logger
 
 from . import core as bundles
 # from ..constants import ADJUST_FACTOR, TEST_SYMBOLS, OHLC
-# from ..sqldata import (fetch_single_equity, fetch_single_quity_adjustments,
-#                        gen_asset_metadata, fetch_single_minutely_equity)
+from ..sqldata import (fetch_single_equity, fetch_single_quity_adjustments,
+                       gen_asset_metadata, fetch_single_minutely_equity, OHLCV_COLS)
 
 TODAY = pd.Timestamp('today').normalize()
-log = Logger('cnquandl')
+log = Logger('数据集')
 
 
 def _exchanges():
     # 通过 `股票.exchange = exchanges.exchange`来关联
     return pd.DataFrame(
         {
-            'exchange': ['深圳证券交易所', '上海证券交易所'],
-            'canonical_name': ['XSHE', 'XSHG'],
-            'country_code': ['CN', 'CN']
+            'exchange': ['深交所主板', '上交所', '深交所中小板', '深交所创业板'],
+            'canonical_name': ['XSHG', 'XSHG', 'XSHG', 'XSHG'],
+            'country_code': ['CN'] * 4
         }
     )
 
@@ -95,14 +92,17 @@ def gen_symbol_data(symbol_map,
                 start=sessions[0],
                 end=sessions[-1],
             )
-            # 不得包含涨跌幅列，含有正负号
-            raw_data.drop('change_pct', axis=1, inplace=True)
-            # 百分比调整为小数
-            raw_data['turnover'] = raw_data.turnover / 100.
+            # # 不得包含涨跌幅列，含有正负号
+            # raw_data.drop('change_pct', axis=1, inplace=True)
+            # # 百分比调整为小数
+            # raw_data['turnover'] = raw_data.turnover / 100.
+            # TODO:暂时不调整精度，观察后再确定成交量的调整
             # 调整数据精度
-            raw_data = _adjusted_raw_data(raw_data)
+            # raw_data = _adjusted_raw_data(raw_data)
             # 以日期、符号为索引
             raw_data.set_index(['date', 'symbol'], inplace=True)
+            # 只需要ohlcv列
+            raw_data = raw_data[OHLCV_COLS]
             # 时区调整，以0.0填充na
             # 转换为以日期为索引的表(与sessions保持一致)
             asset_data = raw_data.xs(
@@ -142,7 +142,7 @@ def gen_symbol_data(symbol_map,
 
 
 @bundles.register('cndaily',
-                  calendar_name='XSHE',
+                  calendar_name='XSHG',
                   #   end_session=pd.Timestamp('now', tz='Asia/Shanghai'),
                   minutes_per_day=241)
 def cndaily_bundle(environ,
@@ -197,7 +197,7 @@ def cndaily_bundle(environ,
 
 
 @bundles.register('cnminutely',
-                  calendar_name='XSHE',
+                  calendar_name='XSHG',
                   start_session=pd.Timestamp(
                       'now', tz='Asia/Shanghai') - pd.Timedelta(days=30),
                   #   end_session=pd.Timestamp('now', tz='Asia/Shanghai'),
@@ -254,7 +254,7 @@ def cnminutely_bundle(environ,
 # 不可包含退市或者暂停上市的股票代码
 
 @bundles.register('cdtest',
-                  calendar_name='XSHE',
+                  calendar_name='XSHG',
                   #   end_session=pd.Timestamp('now', tz='Asia/Shanghai'),
                   minutes_per_day=241)
 def cntdaily_bundle(environ,
@@ -303,7 +303,7 @@ def cntdaily_bundle(environ,
 
 
 @bundles.register('cmtest',
-                  calendar_name='XSHE',
+                  calendar_name='XSHG',
                   start_session=pd.Timestamp(
                       'now', tz='Asia/Shanghai') - pd.Timedelta(days=30),
                   #   end_session=pd.Timestamp('now', tz='Asia/Shanghai'),
