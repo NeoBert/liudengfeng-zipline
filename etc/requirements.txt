@@ -101,3 +101,6 @@ python-interface>=1.5.1
 
 # Country Codes
 iso3166>=0.9
+
+# chinese stock data
+cnswd>=2.0.0
