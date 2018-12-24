@@ -4,100 +4,100 @@
 # pip install -r etc\requirements.txt
 
 # Incompatible with earlier PIP versions
-pip==18.1
+pip>=18.1
 # bcolz fails to install if this is not in the build_requires.
-setuptools==40.6.2
+setuptools>=40.6.2
 
 # Logging
-Logbook==1.4.1
+Logbook>=1.4.1
 
 # Scientific Libraries
 
-pytz==2018.7
-numpy==1.15.4
+pytz>=2018.7
+numpy>=1.15.4
 
 # for pandas-datareader
-requests-file==1.4.3
+requests-file>=1.4.3
 
 # for requests
-certifi==2018.11.29
-chardet==3.0.4
-idna==2.8
-urllib3==1.24.1
+certifi>=2018.11.29
+chardet>=3.0.4
+idna>=2.8
+urllib3>=1.24.1
 
 # scipy and pandas are required for statsmodels,
 # statsmodels in turn is required for some pandas packages
-scipy==1.2.0rc2
-pandas==0.23.4
-pandas-datareader==0.7.0
+scipy>=1.2.0rc2
+pandas>=0.23.4
+pandas-datareader>=0.7.0
 # Needed for parts of pandas.stats
-patsy==0.5.1
-statsmodels==0.9.0
+patsy>=0.5.1
+statsmodels>=0.9.0
 
-python-dateutil==2.7.5
-six==1.12.0
+python-dateutil>=2.7.5
+six>=1.12.0
 
 # For fetching remote data
-requests==2.21.0
+requests>=2.21.0
 
-Cython==0.29.2
+Cython>=0.29.2
 
 # faster OrderedDict
-cyordereddict==1.0.0
+cyordereddict>=1.0.0
 
 # faster array ops.
-bottleneck==1.2.1
+bottleneck>=1.2.1
 
-contextlib2==0.5.5
+contextlib2>=0.5.5
 
 # networkx requires decorator
-decorator==4.3.0
+decorator>=4.3.0
 
 # Graph algorithms used by zipline.pipeline
-networkx==2.2
+networkx>=2.2
 
 # NumericalExpression pipeline terms.
-# # numexpr==2.6.1
-numexpr==2.6.8
+# # numexpr>=2.6.1
+numexpr>=2.6.8
 
 # On disk storage format for pipeline data.
-bcolz==1.2.1
+bcolz>=1.2.1
 
 # On disk storage format for pricing data.
-h5py==2.8.0
+h5py>=2.8.0
 
 # Command line interface helper
-click==7.0
+click>=7.0
 
 # FUNctional programming utilities
-toolz==0.9.0
-multipledispatch==0.6.0
+toolz>=0.9.0
+multipledispatch>=0.6.0
 
 # for alembic
-MarkupSafe==1.1.0
-Mako==1.0.7
+MarkupSafe>=1.1.0
+Mako>=1.0.7
 # Asset writer and finder
-sqlalchemy==1.2.15
+sqlalchemy>=1.2.15
 # For asset db management
-alembic==1.0.5
+alembic>=1.0.5
 
-sortedcontainers==2.1.0
+sortedcontainers>=2.1.0
 # for intervaltree
-intervaltree==3.0.0
+intervaltree>=3.0.0
 
 # for caching
-lru-dict==1.1.6
+lru-dict>=1.1.6
 
 # For financial risk calculations
-empyrical==0.5.0
+empyrical>=0.5.0
 
-tables==3.4.4
+tables>=3.4.4
 
 # For trading calendars
-trading-calendars==1.6.1
+trading-calendars>=1.6.1
 
 # Interface definitions.
-python-interface==1.5.1
+python-interface>=1.5.1
 
 # Country Codes
-iso3166==0.9
+iso3166>=0.9
