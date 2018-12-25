@@ -934,7 +934,7 @@ class TradingAlgorithm(object):
         if calendar is None:
             cal = self.trading_calendar
         elif calendar is calendars.US_EQUITIES:
-            cal = get_calendar('XNYS')
+            cal = get_calendar('XSHG')
         elif calendar is calendars.US_FUTURES:
             cal = get_calendar('us_futures')
         else:

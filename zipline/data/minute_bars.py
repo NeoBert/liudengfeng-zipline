@@ -233,7 +233,7 @@ class BcolzMinuteBarMetadata(object):
             else:
                 # No calendar info included in older versions, so
                 # default to NYSE.
-                calendar = get_calendar('XNYS')
+                calendar = get_calendar('XSHG')
 
                 start_session = pd.Timestamp(
                     raw_data['first_trading_day'], tz='UTC')

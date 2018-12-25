@@ -148,7 +148,7 @@ def ipython_only(option):
 @click.option(
     '-b',
     '--bundle',
-    default='quandl',
+    default='cndaily',
     metavar='BUNDLE-NAME',
     show_default=True,
     help='The data bundle to use for the simulation.',
@@ -185,8 +185,8 @@ def ipython_only(option):
 @click.option(
     '--trading-calendar',
     metavar='TRADING-CALENDAR',
-    default='XNYS',
-    help="The calendar you want to use e.g. XLON. XNYS is the default."
+    default='XSHG',  # # 默认交易日历
+    help="The calendar you want to use e.g. XLON. XSHG is the default."
 )
 @click.option(
     '--print-algo/--no-print-algo',
@@ -353,7 +353,7 @@ def ingest(bundle, assets_version, show_progress):
 @click.option(
     '-b',
     '--bundle',
-    default='quandl',
+    default='cndaily',
     metavar='BUNDLE-NAME',
     show_default=True,
     help='The data bundle to clean.',

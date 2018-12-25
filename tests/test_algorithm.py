@@ -479,7 +479,7 @@ def log_nyse_close(context, data):
             from trading_calendars import get_calendar
 
             def initialize(context):
-                schedule_function(func=my_func, calendar=get_calendar('XNYS'))
+                schedule_function(func=my_func, calendar=get_calendar('XSHG'))
 
             def my_func(context, data):
                 pass
