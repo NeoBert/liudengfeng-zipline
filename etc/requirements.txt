@@ -104,3 +104,6 @@ iso3166>=0.9
 
 # chinese stock data
 cnswd>=2.0.0
+
+# analysis algorithm performance
+pyfolio>=0.9.0

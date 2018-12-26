@@ -109,7 +109,7 @@ def generate_minute_test_data(first_day,
         first_day, last_day)
     minutes_count = len(full_minutes)
 
-    cal = get_calendar\('XSHG'\)
+    cal = get_calendar('XSHG')
     minutes = cal.minutes_for_sessions_in_range(
         first_day, last_day
     )

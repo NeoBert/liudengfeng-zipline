@@ -1,0 +1,23 @@
+import os
+from shutil import rmtree
+from logbook import Logger
+from odo import odo
+import bcolz
+
+from .base import bcolz_table_path
+
+
+def write_dataframe(df, table_name, attr_dict=None):
+    """以bcolz格式写入数据框"""
+    log = Logger(table_name)
+    # 转换为bcolz格式并存储
+    rootdir = bcolz_table_path(table_name)
+    if os.path.exists(rootdir):
+        rmtree(rootdir)
+    odo(df, rootdir)
+    log.info('写入数据至：{}'.format(rootdir))
+    if attr_dict:
+        # 设置属性
+        ct = bcolz.open(rootdir)
+        for k, v in attr_dict.items():
+            ct.attrs[k] = v

@@ -20,7 +20,8 @@ from six.moves.urllib_error import HTTPError
 from trading_calendars import get_calendar
 
 from .benchmarks import get_benchmark_returns
-from . import treasuries, treasuries_can
+from .benchmarks_cn import get_cn_benchmark_returns
+from . import treasuries, treasuries_can, treasuries_cn
 from ..utils.paths import (
     cache_root,
     data_root,
@@ -31,6 +32,8 @@ logger = logbook.Logger('Loader')
 
 # Mapping from index symbol to appropriate bond data
 INDEX_MAPPING = {
+    '000001':
+    (treasuries_cn, 'treasury_cn.csv', ''),
     'SPY':
     (treasuries, 'treasury_curves.csv', 'www.federalreserve.gov'),
     '^GSPTSE':
@@ -87,7 +90,7 @@ def has_data_for_dates(series_or_df, first_date, last_date):
     return (first <= first_date) and (last >= last_date)
 
 
-def load_market_data(trading_day=None, trading_days=None, bm_symbol='SPY',
+def load_market_data(trading_day=None, trading_days=None, bm_symbol='000001',
                      environ=None):
     """
     Load benchmark returns and treasury yield curves for the given calendar and
