@@ -7,9 +7,9 @@ import os
 import warnings
 
 import pandas as pd
+
 from cnswd.utils import data_root, ensure_list, sanitize_dates
 from trading_calendars import get_calendar
-
 from zipline.assets import Asset, Equity
 from zipline.data.bundles.core import load
 from zipline.data.data_portal import DataPortal
@@ -17,9 +17,9 @@ from zipline.pipeline import Pipeline
 from zipline.pipeline.data import EquityPricing
 from zipline.pipeline.domain import CN_EQUITIES
 from zipline.pipeline.engine import SimplePipelineEngine
-from zipline.pipeline.fundamentals.reader import Fundamentals
-from zipline.pipeline.loaders import CNEquityPricingLoader
-from zipline.pipeline.loaders.blaze import global_loader, BlazeLoader
+# from zipline.pipeline.fundamentals.reader import Fundamentals
+# from zipline.pipeline.loaders import EquityPricingLoader
+# from zipline.pipeline.loaders.blaze import BlazeLoader, global_loader
 
 with warnings.catch_warnings():
     warnings.filterwarnings(
@@ -40,13 +40,12 @@ def get_asset_finder(bundle='cndaily'):
 
 def gen_pipeline_loader(bundle='cndaily'):
     bundle_data = load(bundle)
-    return CNEquityPricingLoader(bundle_data.equity_daily_bar_reader,
-                                 bundle_data.adjustment_reader)
+    return EquityPricingLoader(bundle_data.equity_daily_bar_reader, bundle_data.adjustment_reader)
 
 
 def gen_data_portal(bundle='cndaily'):
     bundle_data = get_bundle_data(bundle)
-    trading_calendar = get_calendar('SZSH')
+    trading_calendar = get_calendar('XSHG')
     return DataPortal(
         bundle_data.asset_finder,
         trading_calendar,
@@ -78,7 +77,7 @@ def get_loader(column):
 
 def to_tdates(start, end):
     """修正交易日期"""
-    calendar = get_calendar('SZSH')
+    calendar = get_calendar('XSHG')
     dates = calendar.all_sessions
     # 修正日期
     start, end = sanitize_dates(start, end)
@@ -118,7 +117,7 @@ def symbols(symbols_, symbol_reference_date=None, handle_missing='log'):
             pos = allowed_dtype.index(type(s))
             res[pos].append(s)
         except ValueError:
-            raise Exception(
+            raise TypeError(
                 '{} is not str、int or zipline.assets.Asset'.format(s))
 
     if symbol_reference_date is not None:

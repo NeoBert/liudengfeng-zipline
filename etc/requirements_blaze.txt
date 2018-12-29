@@ -1,7 +1,10 @@
+# git clone datashape odo blaze
+# pip install -e .
+# pip install -r etc\requirements_blaze.txt
 # -e git://github.com/quantopian/datashape.git@bf06a41dc0908baf7c324aeacadba8820468ee78#egg=datashape-dev
 # -e git://github.com/quantopian/odo.git@da7f26d87702f5d293763e8ed54c7e25fd3af38#egg=odo-dev
-datashape>=0.5.4
-odo>=0.5.0
+# datashape>=0.5.4
+# odo>=0.5.0
 # Keep cytoolz version in sync with toolz version in requirements.txt
 cytoolz>=0.8.2
 
@@ -19,4 +22,4 @@ Werkzeug>=0.12.2
 psutil>=4.3.0
 
 # -e git://github.com/quantopian/blaze.git@310605323449e375e81a0cf04011c507cd126ef6#egg=blaze-dev
-blaze>=0.11.0
+# blaze>=0.11.0

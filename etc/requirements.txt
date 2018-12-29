@@ -1,6 +1,6 @@
 # conda install scipy
 # https://www.lfd.uci.edu/~gohlke/pythonlibs/
-# install `bottleneck` `tables`
+# download and install `cyordereddict` `bottleneck` `tables`
 # pip install -r etc\requirements.txt
 
 # Incompatible with earlier PIP versions
