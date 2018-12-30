@@ -153,7 +153,9 @@ class TermGraph(object):
         nodes get one extra reference to ensure that they're still in the graph
         at the end of execution.
         """
-        refcounts = self.graph.out_degree()
+        # # networkx升级后签名变化
+        # refcounts = self.graph.out_degree()
+        refcounts = dict(self.graph.out_degree)
         for t in self.outputs.values():
             refcounts[t] += 1
 

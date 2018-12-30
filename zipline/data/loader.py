@@ -216,7 +216,8 @@ def ensure_benchmark_data(symbol, first_date, last_date, now, trading_day,
     )
 
     try:
-        data = get_benchmark_returns(symbol)
+        # data = get_benchmark_returns(symbol) # # 更改为A股指数
+        data = get_cn_benchmark_returns(symbol)
         data.to_csv(get_data_filepath(filename, environ))
     except (OSError, IOError, HTTPError):
         logger.exception('Failed to cache the new benchmark returns')
@@ -259,8 +260,8 @@ def ensure_treasury_data(symbol, first_date, last_date, now, environ=None):
     comparing the current time to the result of os.path.getmtime on the cache
     path.
     """
-    loader_module, filename, source = INDEX_MAPPING.get(
-        symbol, INDEX_MAPPING['SPY'],
+    loader_module, filename, _ = INDEX_MAPPING.get(
+        symbol, INDEX_MAPPING['000001'],
     )
     first_date = max(first_date, loader_module.earliest_possible_date())
 

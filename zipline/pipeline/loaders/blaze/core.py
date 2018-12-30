@@ -377,7 +377,12 @@ def _check_datetime_field(name, measure):
     TypeError
         If the field is not a datetime inside ``measure``.
     """
-    if not isinstance(measure[name], (Date, DateTime)):
+    # TODO:接受OPtion?
+    to_check = measure[name]
+    if isinstance(to_check, Option):
+        to_check = to_check.ty
+    # if not isinstance(measure[name], (Date, DateTime)):
+    if not isinstance(to_check, (Date, DateTime)):
         raise TypeError(
             "'{name}' field must be a '{dt}', not: '{dshape}'".format(
                 name=name,

@@ -17,12 +17,7 @@ from zipline.utils.numpy_utils import (_FILLVALUE_DEFAULTS, categorical_dtype,
 
 from ..common import AD_FIELD_NAME, TS_FIELD_NAME
 
-# 临时测试
-def _relabel(expr):
-    return expr.relabel(
-        股票代码='sid',
-        上市日期='asof_date',
-    )    
+  
 
 
 def fillvalue_for_expr(expr):

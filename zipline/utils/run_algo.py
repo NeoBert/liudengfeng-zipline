@@ -27,6 +27,9 @@ from zipline.extensions import load
 from zipline.algorithm import TradingAlgorithm
 from zipline.finance.blotter import Blotter
 
+# # 加载Fundamentals所包含的数据集各列
+from zipline.pipeline.loaders.blaze import global_loader
+from zipline.pipeline.data import BoundColumn
 
 class _RunAlgoError(click.ClickException, ValueError):
     """Signal an error that should have a different message if invoked from
@@ -163,6 +166,10 @@ def _run(handle_data,
     def choose_loader(column):
         if column in USEquityPricing.columns:
             return pipeline_loader
+        # # 简单处理
+        elif type(column) == BoundColumn:
+            # # 使用实例才能避免KeyError
+            return global_loader
         raise ValueError(
             "No PipelineLoader registered for column %s." % column
         )

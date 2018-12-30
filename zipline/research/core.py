@@ -17,9 +17,9 @@ from zipline.pipeline import Pipeline
 from zipline.pipeline.data import EquityPricing
 from zipline.pipeline.domain import CN_EQUITIES
 from zipline.pipeline.engine import SimplePipelineEngine
-# from zipline.pipeline.fundamentals.reader import Fundamentals
-# from zipline.pipeline.loaders import EquityPricingLoader
-# from zipline.pipeline.loaders.blaze import BlazeLoader, global_loader
+from zipline.pipeline.fundamentals.reader import Fundamentals
+from zipline.pipeline.loaders import EquityPricingLoader
+from zipline.pipeline.loaders.blaze import BlazeLoader, global_loader
 
 with warnings.catch_warnings():
     warnings.filterwarnings(
