@@ -239,11 +239,6 @@ class Fundamentals(object):
         return gen_data_set(table_name='infoes')
 
     @classlazyval
-    def equity(self):
-        """股份数据集"""
-        return gen_data_set(table_name='equity')
-
-    @classlazyval
     def balance_sheet(self):
         """资产负债数据集"""
         return gen_data_set(table_name='balance_sheets')

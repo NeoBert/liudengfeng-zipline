@@ -28,7 +28,7 @@ def _normalize_ad_ts_sid(df, ndays=0, nhours=8, target_tz='utc'):
     股票代码 -> sid(int64)
     date(date) -> asof_date(timestamp)
     date(date) + ndays -> timestamp(timestamp)
-    确保asof_date <= timestamp
+    确保timestamp >= asof_date
     """
     if AD_FIELD_NAME in df.columns:
         # 如果asof_date存在，则只需要转换数据类型及目标时区
@@ -45,7 +45,7 @@ def _normalize_ad_ts_sid(df, ndays=0, nhours=8, target_tz='utc'):
         if ndays != 0:
             df[TS_FIELD_NAME] = df[AD_FIELD_NAME] + pd.Timedelta(days=ndays)
         else:
-            # 确保 df[AD_FIELD_NAME] <= df[TS_FIELD_NAME]
+            # 确保 df[TS_FIELD_NAME] >= df[AD_FIELD_NAME]
             df[TS_FIELD_NAME] = df[AD_FIELD_NAME] + \
                 pd.Timedelta(hours=nhours+1)
 

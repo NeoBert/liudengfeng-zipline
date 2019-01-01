@@ -308,7 +308,7 @@ Pipeline Engine
 Data Loaders
 ````````````
 
-.. autoclass:: zipline.pipeline.loaders.equity_pricing_loader.USEquityPricingLoader
+.. autoclass:: zipline.pipeline.loaders.equity_pricing_loader.CNEquityPricingLoader
    :members: __init__, from_files, load_adjusted_array
    :member-order: bysource
 

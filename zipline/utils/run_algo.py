@@ -19,8 +19,8 @@ from zipline.data.loader import load_market_data
 from zipline.data.data_portal import DataPortal
 from zipline.finance import metrics
 from zipline.finance.trading import SimulationParameters
-from zipline.pipeline.data import USEquityPricing
-from zipline.pipeline.loaders import USEquityPricingLoader
+from zipline.pipeline.data import CNEquityPricing
+from zipline.pipeline.loaders import CNEquityPricingLoader
 
 import zipline.utils.paths as pth
 from zipline.extensions import load
@@ -158,13 +158,13 @@ def _run(handle_data,
         adjustment_reader=bundle_data.adjustment_reader,
     )
 
-    pipeline_loader = USEquityPricingLoader(
+    pipeline_loader = CNEquityPricingLoader(
         bundle_data.equity_daily_bar_reader,
         bundle_data.adjustment_reader,
     )
 
     def choose_loader(column):
-        if column in USEquityPricing.columns:
+        if column in CNEquityPricing.columns:
             return pipeline_loader
         # # 简单处理
         elif type(column) == BoundColumn:

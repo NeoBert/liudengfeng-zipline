@@ -24,7 +24,7 @@ from zipline.utils.memoize import classlazyval
 from zipline.pipeline import SimplePipelineEngine
 from zipline.pipeline.data import USEquityPricing
 from zipline.pipeline.domain import GENERIC, US_EQUITIES
-from zipline.pipeline.loaders import USEquityPricingLoader
+from zipline.pipeline.loaders import CNEquityPricingLoader
 from zipline.pipeline.loaders.testing import make_seeded_random_loader
 from zipline.protocol import BarData
 from zipline.utils.paths import ensure_directory, ensure_directory_containing
@@ -1689,7 +1689,7 @@ class WithUSEquityPricingPipelineEngine(WithAdjustmentReader,
         cls.findata_dir = cls.data_root_dir.makedir('findata')
         super(WithUSEquityPricingPipelineEngine, cls).init_class_fixtures()
 
-        loader = USEquityPricingLoader(
+        loader = CNEquityPricingLoader(
             cls.bcolz_equity_daily_bar_reader,
             SQLiteAdjustmentReader(cls.adjustments_db_path),
         )

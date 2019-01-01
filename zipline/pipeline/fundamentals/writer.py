@@ -16,6 +16,7 @@ import bcolz
 import logbook
 from logbook import Logger
 
+from ..common import AD_FIELD_NAME, TS_FIELD_NAME
 from .base import bcolz_table_path
 from .preprocess import _normalize_ad_ts_sid, get_static_info_table
 from .sql import get_dividend_data, get_short_name_changes,get_equity_data,get_margin_data
@@ -33,6 +34,8 @@ def write_dataframe(df, table_name, attr_dict=None):
     if os.path.exists(rootdir):
         rmtree(rootdir)
     df = _normalize_ad_ts_sid(df)
+    # df[AD_FIELD_NAME] = df[AD_FIELD_NAME].astype('int64')
+    # df[TS_FIELD_NAME] = df[TS_FIELD_NAME].astype('int64')
     # odo(df, rootdir)
     ct = bcolz.ctable.fromdataframe(df, rootdir=rootdir)
     log.info('写入数据至：{}'.format(rootdir))
@@ -73,6 +76,6 @@ def write_dynamic_data_to_bcolz():
 
 def write_sql_data_to_bcolz():
     """写入Fundamentals数据"""
-    # write_static_info_to_bcolz()
+    write_static_info_to_bcolz()
     write_dynamic_data_to_bcolz()
     # write_financial_data_to_bcolz()

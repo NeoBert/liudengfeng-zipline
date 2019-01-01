@@ -924,7 +924,7 @@ class BlazeLoader(object):
         )
         requested_columns = set(map(getname, columns))
         colnames = sorted(added_query_fields | requested_columns)
-
+        # # 时区:utc
         lower_dt, upper_dt = data_query_cutoff_times[[0, -1]]
 
         def collect_expr(e, lower):
@@ -947,9 +947,12 @@ class BlazeLoader(object):
             This can return more data than needed. The in memory reindex will
             handle this.
             """
-            predicate = e[TS_FIELD_NAME] < upper_dt
+            # # 转换为本地时区 
+            # # upper_dt -> upper_dt.tz_localize(None)
+            # # lower -> lower.tz_localize(None)
+            predicate = e[TS_FIELD_NAME] < upper_dt.tz_localize(None)
             if lower is not None:
-                predicate &= e[TS_FIELD_NAME] >= lower
+                predicate &= e[TS_FIELD_NAME] >= lower.tz_localize(None)
 
             return odo(e[predicate][colnames], pd.DataFrame, **odo_kwargs)
 
@@ -969,7 +972,10 @@ class BlazeLoader(object):
 
         all_rows = pd.concat(
             filter(
-                lambda df: df is not None, (
+                # # 可能为空
+                # # 排除非空数据，确保AD_FIELD_NAME数据类型为M
+                # lambda df: df is not None, (
+                lambda df: (df is not None) and (not df.empty), (
                     materialized_checkpoints,
                     materialized_expr_deferred.get(),
                     materialized_deltas,

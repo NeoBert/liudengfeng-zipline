@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """
-Tests for USEquityPricingLoader and related classes.
+Tests for CNEquityPricingLoader and related classes.
 """
 from nose_parameterized import parameterized
 from numpy import (
@@ -44,7 +44,7 @@ from zipline.pipeline.loaders.synthetic import (
     expected_bar_values_2d,
 )
 from zipline.pipeline.loaders.equity_pricing_loader import (
-    USEquityPricingLoader,
+    CNEquityPricingLoader,
 )
 
 from zipline.errors import WindowLengthTooLong
@@ -475,7 +475,7 @@ class USEquityPricingLoaderTestCase(WithAdjustmentReader,
         )
         self.assertEqual(adjustments, [{}, {}])
 
-        pricing_loader = USEquityPricingLoader(
+        pricing_loader = CNEquityPricingLoader(
             self.bcolz_equity_daily_bar_reader,
             adjustment_reader,
         )
@@ -555,7 +555,7 @@ class USEquityPricingLoaderTestCase(WithAdjustmentReader,
             shift=-1,
         )
 
-        pricing_loader = USEquityPricingLoader(
+        pricing_loader = CNEquityPricingLoader(
             self.bcolz_equity_daily_bar_reader,
             self.adjustment_reader,
         )

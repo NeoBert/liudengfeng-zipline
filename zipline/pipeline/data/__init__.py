@@ -1,4 +1,4 @@
-from .equity_pricing import EquityPricing, USEquityPricing, CNEquityPricing
+from .equity_pricing import EquityPricing, CNEquityPricing
 from .dataset import DataSet, Column, BoundColumn
 
 __all__ = [
@@ -6,6 +6,5 @@ __all__ = [
     'Column',
     'DataSet',
     'EquityPricing',
-    'USEquityPricing',
     'CNEquityPricing',
 ]

@@ -15,12 +15,12 @@ from ..assets import Asset, Equity
 from ..data.bundles.core import load
 from ..data.data_portal import DataPortal
 from ..pipeline import Pipeline
-from ..pipeline.data import EquityPricing
+from ..pipeline.data import CNEquityPricing
 from ..pipeline.domain import CN_EQUITIES
+from ..pipeline.loaders.blaze import BlazeLoader
 from ..pipeline.engine import SimplePipelineEngine
 from ..pipeline.fundamentals.reader import Fundamentals
-from ..pipeline.loaders import EquityPricingLoader
-from ..pipeline.loaders.blaze import BlazeLoader, global_loader
+from ..pipeline.loaders import CNEquityPricingLoader
 
 with warnings.catch_warnings():
     warnings.filterwarnings(
@@ -41,7 +41,7 @@ def get_asset_finder(bundle='cndaily'):
 
 def gen_pipeline_loader(bundle='cndaily'):
     bundle_data = load(bundle)
-    return EquityPricingLoader(bundle_data.equity_daily_bar_reader, bundle_data.adjustment_reader)
+    return CNEquityPricingLoader(bundle_data.equity_daily_bar_reader, bundle_data.adjustment_reader)
 
 
 def gen_data_portal(bundle='cndaily'):
@@ -67,13 +67,24 @@ def init_engine(get_loader, asset_finder):
     return engine
 
 
-def get_loader(column):
-    if column in EquityPricing.columns:
+def choose_loader(column):
+    if column in CNEquityPricing.columns:
         return gen_pipeline_loader()
     # # 简单处理
     elif Fundamentals.has_column(column):
         return BlazeLoader()
-    raise ValueError("`PipelineLoader`没有注册列 %s." % column)
+    raise ValueError(
+        "No PipelineLoader registered for column %s." % column
+    )
+
+
+# def get_loader(column):
+#     if column in CNEquityPricing.columns:
+#         return gen_pipeline_loader()
+#     # # 简单处理
+#     elif Fundamentals.has_column(column):
+#         return global_loader
+#     raise ValueError("`PipelineLoader`没有注册列 %s." % column)
 
 
 def to_tdates(start, end):
@@ -136,9 +147,19 @@ def symbols(symbols_, symbol_reference_date=None, handle_missing='log'):
 
 
 def run_pipeline(pipe, start, end):
+    """研究环境下运行期间pipeline
+
+    Arguments:
+        pipe {Pileline} -- 要运行的pipeline
+        start {datetime-like} -- 开始时间
+        end {datetime-like} -- 结束时间
+
+    Returns:	
+        pd.DataFrame
+    """
     _, start_date, end_date = to_tdates(start, end)
     asset_finder = get_asset_finder()
-    engine = init_engine(get_loader, asset_finder)
+    engine = init_engine(choose_loader, asset_finder)
     df = engine.run_pipeline(pipe, start_date, end_date)
     return df
 
