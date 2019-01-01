@@ -17,8 +17,6 @@ from zipline.utils.numpy_utils import (_FILLVALUE_DEFAULTS, categorical_dtype,
 
 from ..common import AD_FIELD_NAME, TS_FIELD_NAME
 
-  
-
 
 def fillvalue_for_expr(expr):
     """为表达式填充空白值

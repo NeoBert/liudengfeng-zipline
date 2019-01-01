@@ -15,6 +15,8 @@ The only required column in your table is ``asof_date`` where this column
 represents the date this data is referencing. For example, one might have a CSV
 like:
 
+``asof_date`` 数据引用日期。
+
 asof_date,value
 2014-01-06,0
 2014-01-07,1
@@ -27,6 +29,8 @@ point in time data. This column tells us when the data was known, or became
 available to for use. Using our same CSV, we could write this with a timestamp
 like:
 
+``timestamp`` 数据已知可供使用。
+
 asof_date,timestamp,value
 2014-01-06,2014-01-07,0
 2014-01-07,2014-01-08,1
@@ -36,6 +40,8 @@ This says that the value was 0 on 2014-01-01; however, we did not learn this
 until 2014-01-02. This is useful for avoiding look-ahead bias in your
 pipelines. If this column does not exist, the ``asof_date`` column will be used
 instead.
+
+``asof_date`` 发生时间；``timestamp``代表知悉时间或者公布时间；
 
 If your data references a particular asset, you can add a ``sid`` column to
 your dataset to represent this. For example:
@@ -377,7 +383,7 @@ def _check_datetime_field(name, measure):
     TypeError
         If the field is not a datetime inside ``measure``.
     """
-    # TODO:接受OPtion?
+    # TODO:接受OPtion? 初步可行，还需要检验存在空白列的情形！
     to_check = measure[name]
     if isinstance(to_check, Option):
         to_check = to_check.ty

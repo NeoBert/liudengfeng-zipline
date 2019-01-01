@@ -12,10 +12,13 @@ asof_date    timestamp    sid      地域  证监会行业    同花顺行业  �
 
 注意：
     将文字转换为类别，将映射保存为属性，提高读写速度。
+
+TODO:废弃
 """
 from logbook import Logger
+
+from .preprocess import get_static_info_table
 from .writer import write_dataframe
-from . preprocess import get_static_info_table
 
 
 def write_static_info_to_bcolz():

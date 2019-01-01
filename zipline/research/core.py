@@ -7,19 +7,20 @@ import os
 import warnings
 
 import pandas as pd
+from trading_calendars import get_calendar
 
 from cnswd.utils import data_root, ensure_list, sanitize_dates
-from trading_calendars import get_calendar
-from zipline.assets import Asset, Equity
-from zipline.data.bundles.core import load
-from zipline.data.data_portal import DataPortal
-from zipline.pipeline import Pipeline
-from zipline.pipeline.data import EquityPricing
-from zipline.pipeline.domain import CN_EQUITIES
-from zipline.pipeline.engine import SimplePipelineEngine
-from zipline.pipeline.fundamentals.reader import Fundamentals
-from zipline.pipeline.loaders import EquityPricingLoader
-from zipline.pipeline.loaders.blaze import BlazeLoader, global_loader
+
+from ..assets import Asset, Equity
+from ..data.bundles.core import load
+from ..data.data_portal import DataPortal
+from ..pipeline import Pipeline
+from ..pipeline.data import EquityPricing
+from ..pipeline.domain import CN_EQUITIES
+from ..pipeline.engine import SimplePipelineEngine
+from ..pipeline.fundamentals.reader import Fundamentals
+from ..pipeline.loaders import EquityPricingLoader
+from ..pipeline.loaders.blaze import BlazeLoader, global_loader
 
 with warnings.catch_warnings():
     warnings.filterwarnings(

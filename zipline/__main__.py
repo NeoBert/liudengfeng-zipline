@@ -13,6 +13,7 @@ from zipline.utils.compat import wraps
 from zipline.utils.cli import Date, Timestamp
 from zipline.utils.run_algo import _run, load_extensions
 from zipline.extensions import create_args
+from zipline.pipeline.fundamentals.writer import write_sql_data_to_bcolz  # 新增
 
 try:
     __IPYTHON__
@@ -413,6 +414,13 @@ def bundles():
         # no ingestions have yet been made.
         for timestamp in ingestions or ["<no ingestions>"]:
             click.echo("%s %s" % (bundle, timestamp))
+
+
+@main.command()
+def sql_to_bcolz():
+    """生成基础数据(Fundamental)
+    """
+    write_sql_data_to_bcolz()
 
 
 if __name__ == '__main__':
