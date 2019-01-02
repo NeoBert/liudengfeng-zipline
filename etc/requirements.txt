@@ -1,6 +1,5 @@
-# conda install scipy
-# or
 # https://www.lfd.uci.edu/~gohlke/pythonlibs/
+# numpy mkl scipy
 # download and install `cyordereddict` `bottleneck` `tables` `lru_dict` `bcolz`
 # pip install -r etc\requirements.txt
 
@@ -28,7 +27,7 @@ urllib3>=1.24.1
 
 # scipy and pandas are required for statsmodels,
 # statsmodels in turn is required for some pandas packages
-scipy>=1.1.0
+scipy>=1.2.0
 pandas>=0.23.4
 pandas-datareader>=0.7.0
 # Needed for parts of pandas.stats

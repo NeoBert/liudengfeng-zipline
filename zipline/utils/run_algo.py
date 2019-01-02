@@ -31,6 +31,7 @@ from zipline.finance.blotter import Blotter
 from zipline.pipeline.loaders.blaze import global_loader
 from zipline.pipeline.data import BoundColumn
 
+
 class _RunAlgoError(click.ClickException, ValueError):
     """Signal an error that should have a different message if invoked from
     the cli.

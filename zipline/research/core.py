@@ -17,16 +17,10 @@ from ..data.data_portal import DataPortal
 from ..pipeline import Pipeline
 from ..pipeline.data import CNEquityPricing
 from ..pipeline.domain import CN_EQUITIES
-from ..pipeline.loaders.blaze import BlazeLoader
+from ..pipeline.loaders.blaze import global_loader
 from ..pipeline.engine import SimplePipelineEngine
 from ..pipeline.fundamentals.reader import Fundamentals
 from ..pipeline.loaders import CNEquityPricingLoader
-
-with warnings.catch_warnings():
-    warnings.filterwarnings(
-        'ignore',
-    )
-    from collections import Iterable
 
 
 def get_bundle_data(bundle='cndaily'):
@@ -72,19 +66,10 @@ def choose_loader(column):
         return gen_pipeline_loader()
     # # 简单处理
     elif Fundamentals.has_column(column):
-        return BlazeLoader()
+        return global_loader
     raise ValueError(
         "No PipelineLoader registered for column %s." % column
     )
-
-
-# def get_loader(column):
-#     if column in CNEquityPricing.columns:
-#         return gen_pipeline_loader()
-#     # # 简单处理
-#     elif Fundamentals.has_column(column):
-#         return global_loader
-#     raise ValueError("`PipelineLoader`没有注册列 %s." % column)
 
 
 def to_tdates(start, end):
@@ -146,19 +131,19 @@ def symbols(symbols_, symbol_reference_date=None, handle_missing='log'):
     return ret
 
 
-def run_pipeline(pipe, start, end):
+def run_pipeline(pipe, start_date, end_date, bundle='cndaily'):
     """研究环境下运行期间pipeline
 
     Arguments:
         pipe {Pileline} -- 要运行的pipeline
-        start {datetime-like} -- 开始时间
-        end {datetime-like} -- 结束时间
+        start_date {datetime-like} -- 开始时间
+        end_date {datetime-like} -- 结束时间
 
     Returns:	
         pd.DataFrame
     """
-    _, start_date, end_date = to_tdates(start, end)
-    asset_finder = get_asset_finder()
+    _, start_date, end_date = to_tdates(start_date, end_date)
+    asset_finder = get_asset_finder(bundle)
     engine = init_engine(choose_loader, asset_finder)
     df = engine.run_pipeline(pipe, start_date, end_date)
     return df

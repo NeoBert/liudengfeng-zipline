@@ -78,7 +78,7 @@ from .term import AssetExists, InputDates, LoadableTerm
 from zipline.utils.date_utils import compute_date_range_chunks
 from zipline.utils.pandas_utils import categorical_df_concat
 from zipline.utils.sharedoc import copydoc
-
+from functools import lru_cache # # 确保返回对象一致??
 
 class PipelineEngine(with_metaclass(ABCMeta)):
 
@@ -533,7 +533,9 @@ class SimplePipelineEngine(PipelineEngine):
         # going to produce data for the same set of dates. That may change in
         # the future if we find a loader that can still benefit significantly
         # from batching unequal-length requests.
+        @lru_cache(None)
         def loader_group_key(term):
+            # # 实例loader每次返回新的对象，使用lru_cache保持一致
             loader = get_loader(term)
             extra_rows = graph.extra_rows[term]
             return loader, extra_rows

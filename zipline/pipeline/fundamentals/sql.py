@@ -248,7 +248,7 @@ def get_quote_data(only_A=True):
 
 # TODO:考虑增加其他综合计算指标，如PEG
 
-
+# TODO:只需写入有变动的记录，使用公司股本变动表
 def get_equity_data(only_A=True):
     """公司股本数据"""
     with session_scope('szx') as sess:
