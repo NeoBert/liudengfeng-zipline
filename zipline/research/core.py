@@ -131,6 +131,11 @@ def symbols(symbols_, symbol_reference_date=None, handle_missing='log'):
     return ret
 
 
+def symbol(symbol_, symbol_reference_date=None, handle_missing='log'):
+    """单只股票"""
+    return symbols(symbol_, symbol_reference_date, handle_missing)[0]
+
+
 def run_pipeline(pipe, start_date, end_date, bundle='cndaily'):
     """研究环境下运行期间pipeline
 

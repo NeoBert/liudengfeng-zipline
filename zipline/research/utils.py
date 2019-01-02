@@ -37,25 +37,25 @@ def select_output_by(output, start=None, end=None, assets=None, reduce_format=Tr
     nlevels = output.index.nlevels
     if nlevels != 2:
         raise ValueError('输入数据框只能是run_pipeline输出结果，MultiIndex DataFrame')
-    
+
     _, start, end = to_tdates(start, end)
-    
+
     if assets is not None:
         assets = symbols(assets)
     else:
         assets = []
-    
+
     ret = _select_output_by(output, start, end, assets)
-    
+
     if reduce_format:
         cond1 = start == end
         cond2 = len(assets) == 1
         if cond1 & cond2:
             ret = ret.xs((start, assets[0]))
         elif cond1:
-                ret = ret.xs(start, level=0)
+            ret = ret.xs(start, level=0)
         elif cond2:
-                ret = ret.xs(assets[0], level=1)
+            ret = ret.xs(assets[0], level=1)
 
     return ret
 

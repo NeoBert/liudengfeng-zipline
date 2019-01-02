@@ -30,7 +30,7 @@ from ..data.dataset import BoundColumn
 from .base import bcolz_table_path
 from .constants import (MARKET_MAPS, QUARTERLY_TABLES, SECTOR_NAMES,
                         SUPER_SECTOR_NAMES)
-from .utils import _normalized_dshape, fillvalue_for_expr,gen_odo_kwargs
+from .utils import _normalized_dshape, fillvalue_for_expr, gen_odo_kwargs
 
 ITEM_CODE_PATTERN = re.compile(r'A\d{3}')
 warnings.filterwarnings("ignore")
@@ -46,7 +46,7 @@ def _gen_expr(table_name):
     rootdir = bcolz_table_path(table_name)
     # # 此时读取的datetime丢失了时区信息
     ctable = bcolz.ctable(rootdir=rootdir, mode='r')
-    df = ctable.todataframe() # 转换为DataFrame对象
+    df = ctable.todataframe()  # 转换为DataFrame对象
     raw_dshape = discover(ctable)
     dshape = _normalized_dshape(raw_dshape, True)
     expr = blaze.data(df, name=table_name, dshape=dshape)
@@ -78,6 +78,18 @@ def query_maps(table_name, attr_name, key_to_int=False):
         return d
 
 
+def _code(key, table_name, attr_name):
+    maps = query_maps(table_name, attr_name)
+    out = {k: v for k, v in maps.items() if key in v}
+    return out
+
+
+def _cname(code, table_name, attr_name):
+    code = int(code)
+    maps = query_maps(table_name, attr_name, True)
+    return maps[code]
+
+
 class Fundamentals(object):
     """股票基础数据集容器类"""
 
@@ -93,13 +105,13 @@ class Fundamentals(object):
 
     @classlazyval
     def concept_maps(self):
-        return query_maps('infoes', 'concept')
+        return query_maps('infoes', '概念')
 
     @staticmethod
     def concept_col_name(code):
         """股票概念中文名称（输入编码）"""
         table_name = 'infoes'
-        attr_name = 'concept'
+        attr_name = '概念'
         maps = query_maps(table_name, attr_name)
         return maps[code]
 
@@ -111,125 +123,136 @@ class Fundamentals(object):
     def concept_col_code(key):
         """模糊查询概念编码（输入概念关键词）"""
         table_name = 'infoes'
-        attr_name = 'concept'
+        attr_name = '概念'
         maps = query_maps(table_name, attr_name)
         out = {k: v for k, v in maps.items() if key in v}
         return out
+
+    @staticmethod
+    def ir_iarc_code(key):
+        """模糊查询研究机构编码（输入研究机构关键词）"""
+        table_name = 'investment_rating'
+        attr_name = '研究机构简称'
+        return _code(key, table_name, attr_name)
+
+    @staticmethod
+    def ir_researcher_code(key):
+        """模糊查询研究员编码（输入研究员关键词）"""
+        table_name = 'investment_rating'
+        attr_name = '研究员名称'
+        return _code(key, table_name, attr_name)
 
     #========================编码中文含义========================#
     # 为提高读写速度，文本及类别更改为整数编码，查找整数所代表的含义，使用
     # 下列方法。数字自0开始，长度为len(类别)
     # 输入数字（如触发Keyerror，请减少数值再次尝试
 
-    @classlazyval
-    def supper_sector_maps(self):
-        return query_maps('infoes', 'super_sector_code', True)
+    @staticmethod
+    def ir_iarc_cname(code):
+        """研究机构编码对应名称"""
+        table_name = 'investment_rating'
+        attr_name = '研究机构简称'
+        return _cname(code, table_name, attr_name)
 
     @staticmethod
-    def supper_sector_cname(code):
-        """超级部门编码含义"""
-        code = int(code)
-        table_name = 'infoes'
-        attr_name = 'super_sector_code'
-        maps = query_maps(table_name, attr_name, True)
-        return maps[code]
+    def ir_researcher_cname(code):
+        """研究员编码对应名称"""
+        table_name = 'investment_rating'
+        attr_name = '研究员名称'
+        return _cname(code, table_name, attr_name)
 
-    @classlazyval
-    def sector_maps(self):
-        return query_maps('infoes', 'sector_code', True)
+    # @staticmethod
+    # def sector_cname(code):
+    #     """部门编码含义"""
+    #     code = int(code)
+    #     table_name = 'infoes'
+    #     attr_name = 'sector_code'
+    #     maps = query_maps(table_name, attr_name, True)
+    #     return maps[code]
 
-    @staticmethod
-    def sector_cname(code):
-        """部门编码含义"""
-        code = int(code)
-        table_name = 'infoes'
-        attr_name = 'sector_code'
-        maps = query_maps(table_name, attr_name, True)
-        return maps[code]
+    # @staticmethod
+    # def sector_code(key):
+    #     """关键词查询部门编码"""
+    #     table_name = 'infoes'
+    #     attr_name = 'sector_code'
+    #     maps = query_maps(table_name, attr_name)
+    #     out = {k: v for k, v in maps.items() if key in v}
+    #     return out
 
-    @staticmethod
-    def sector_code(key):
-        """关键词查询部门编码"""
-        table_name = 'infoes'
-        attr_name = 'sector_code'
-        maps = query_maps(table_name, attr_name)
-        out = {k: v for k, v in maps.items() if key in v}
-        return out
+    # @staticmethod
+    # def market_cname(code):
+    #     """市场版块编码含义"""
+    #     code = str(code)
+    #     table_name = 'infoes'
+    #     attr_name = 'market'
+    #     maps = query_maps(table_name, attr_name)
+    #     return maps[code]
 
-    @staticmethod
-    def market_cname(code):
-        """市场版块编码含义"""
-        code = str(code)
-        table_name = 'infoes'
-        attr_name = 'market'
-        maps = query_maps(table_name, attr_name)
-        return maps[code]
+    # @classlazyval
+    # def region_maps(self):
+    #     return query_maps('infoes', 'region')
 
-    @classlazyval
-    def region_maps(self):
-        return query_maps('infoes', 'region')
+    # @staticmethod
+    # def region_cname(code):
+    #     """地域版块编码含义"""
+    #     code = str(code)
+    #     table_name = 'infoes'
+    #     attr_name = 'region'
+    #     maps = query_maps(table_name, attr_name)
+    #     return maps[code]
 
-    @staticmethod
-    def region_cname(code):
-        """地域版块编码含义"""
-        code = str(code)
-        table_name = 'infoes'
-        attr_name = 'region'
-        maps = query_maps(table_name, attr_name)
-        return maps[code]
+    # @staticmethod
+    # def region_code(key):
+    #     """关键词查询地域编码"""
+    #     table_name = 'infoes'
+    #     attr_name = 'region'
+    #     maps = query_maps(table_name, attr_name)
+    #     out = {k: v for k, v in maps.items() if key in v}
+    #     return out
 
-    @staticmethod
-    def region_code(key):
-        """关键词查询地域编码"""
-        table_name = 'infoes'
-        attr_name = 'region'
-        maps = query_maps(table_name, attr_name)
-        out = {k: v for k, v in maps.items() if key in v}
-        return out
+    # @classlazyval
+    # def csrc_industry_maps(self):
+    #     return query_maps('infoes', 'csrc_industry')
 
-    @classlazyval
-    def csrc_industry_maps(self):
-        return query_maps('infoes', 'csrc_industry')
+    # @staticmethod
+    # def csrc_industry_cname(code):
+    #     """证监会行业编码含义"""
+    #     code = str(code)
+    #     table_name = 'infoes'
+    #     attr_name = 'csrc_industry'
+    #     maps = query_maps(table_name, attr_name)
+    #     return maps[code]
 
-    @staticmethod
-    def csrc_industry_cname(code):
-        """证监会行业编码含义"""
-        code = str(code)
-        table_name = 'infoes'
-        attr_name = 'csrc_industry'
-        maps = query_maps(table_name, attr_name)
-        return maps[code]
+    # @staticmethod
+    # def csrc_industry_code(key):
+    #     """关键词模糊查询证监会行业编码"""
+    #     table_name = 'infoes'
+    #     attr_name = 'csrc_industry'
+    #     maps = query_maps(table_name, attr_name)
+    #     out = {k: v for k, v in maps.items() if key in v}
+    #     return out
 
-    @staticmethod
-    def csrc_industry_code(key):
-        """关键词模糊查询证监会行业编码"""
-        table_name = 'infoes'
-        attr_name = 'csrc_industry'
-        maps = query_maps(table_name, attr_name)
-        out = {k: v for k, v in maps.items() if key in v}
-        return out
+    # @classlazyval
+    # def cn_industry_maps(self):
+    #     return query_maps('infoes', 'cn_industry')
 
-    @classlazyval
-    def cn_industry_maps(self):
-        return query_maps('infoes', 'cn_industry')
+    # @staticmethod
+    # def cn_industry_cname(code):
+    #     """国证行业编码含义"""
+    #     code = str(code)
+    #     table_name = 'infoes'
+    #     attr_name = 'cn_industry'
+    #     maps = query_maps(table_name, attr_name)
+    #     return maps[code]
 
-    @staticmethod
-    def cn_industry_cname(code):
-        """国证行业编码含义"""
-        code = str(code)
-        table_name = 'infoes'
-        attr_name = 'cn_industry'
-        maps = query_maps(table_name, attr_name)
-        return maps[code]
-
-    @staticmethod
-    def cn_industry_code(key):
-        """关键词模糊查询国证行业编码"""
-        table_name = 'infoes'
-        attr_name = 'cn_industry'
-        maps = query_maps(table_name, attr_name)
-        out = {k: v for k, v in maps.items() if key in v}
-        return out
+    # @staticmethod
+    # def cn_industry_code(key):
+    #     """关键词模糊查询国证行业编码"""
+    #     table_name = 'infoes'
+    #     attr_name = 'cn_industry'
+    #     maps = query_maps(table_name, attr_name)
+    #     out = {k: v for k, v in maps.items() if key in v}
+    #     return out
 
     #========================数据集========================#
 
@@ -240,48 +263,8 @@ class Fundamentals(object):
 
     @classlazyval
     def equity(self):
-        """股份数据集"""
+        """股份数据集，总股本、流通股本变动信息"""
         return gen_data_set(table_name='equity')
-
-    @classlazyval
-    def balance_sheet(self):
-        """资产负债数据集"""
-        return gen_data_set(table_name='balance_sheets')
-
-    @classlazyval
-    def balance_sheet_yearly(self):
-        """资产负债数据集(仅包含年度报告)"""
-        return gen_data_set('balance_sheets', True)
-
-    @classlazyval
-    def profit_statement(self):
-        """利润表数据集"""
-        return gen_data_set(table_name='profit_statements')
-
-    @classlazyval
-    def profit_statement_yearly(self):
-        """年度利润表数据集(仅包含年度报告)"""
-        return gen_data_set('profit_statements', True)
-
-    @classlazyval
-    def cash_flow(self):
-        """现金流量表数据集"""
-        return gen_data_set(table_name='cashflow_statements')
-
-    @classlazyval
-    def cash_flow_yearly(self):
-        """现金流量表数据集(仅包含年度报告)"""
-        return gen_data_set('cashflow_statements', True)
-
-    @classlazyval
-    def key_financial_indicator(self):
-        """主要财务指标数据集"""
-        return gen_data_set(table_name='zyzbs')
-
-    @classlazyval
-    def key_financial_indicator_yearly(self):
-        """主要财务指标数据集(仅包含年度报告)"""
-        return gen_data_set('zyzbs', True)
 
     @classlazyval
     def margin(self):
@@ -293,18 +276,67 @@ class Fundamentals(object):
         """每股股利数据集"""
         return gen_data_set(table_name='dividend')
 
-    #========================单列========================#
     @classlazyval
     def rating(self):
-        """股票评级（单列）"""
-        return gen_data_set(table_name='rating').rating
+        """股票评级"""
+        return gen_data_set(table_name='investment_rating')
 
     @classlazyval
-    def short_name(self):
-        """股票简称（单列）"""
-        return gen_data_set(table_name='short_names').short_name
+    def balance_sheet(self):
+        """资产负债数据集"""
+        return gen_data_set(table_name='periodly_balance_sheets')
+
+    # @classlazyval
+    # def balance_sheet_yearly(self):
+    #     """资产负债数据集(仅包含年度报告)"""
+    #     return gen_data_set('balance_sheets')
 
     @classlazyval
-    def treatment(self):
-        """股票特别处理（单列）"""
-        return gen_data_set(table_name='special_treatments').treatment
+    def profit_statement(self):
+        """利润表数据集"""
+        return gen_data_set(table_name='periodly_income_statements')
+
+    # @classlazyval
+    # def profit_statement_yearly(self):
+    #     """年度利润表数据集(仅包含年度报告)"""
+    #     return gen_data_set('profit_statements', True)
+
+    @classlazyval
+    def cash_flow(self):
+        """现金流量表数据集"""
+        return gen_data_set(table_name='periodly_cash_flow_statements')
+
+    # @classlazyval
+    # def cash_flow_yearly(self):
+    #     """现金流量表数据集(仅包含年度报告)"""
+    #     return gen_data_set('cashflow_statements')
+
+    @classlazyval
+    def ttm_profit_statement(self):
+        """TTM利润表数据集"""
+        return gen_data_set(table_name='ttm_income_statements')
+
+    @classlazyval
+    def ttm_cash_flow(self):
+        """TTM现金流量表数据集"""
+        return gen_data_set(table_name='ttm_cash_flow_statements')
+
+    @classlazyval
+    def financial_indicators(self):
+        """定期财务指标数据集"""
+        return gen_data_set(table_name='periodly_financial_indicators')
+
+    @classlazyval
+    def q_financial_indicators(self):
+        """季度财务指标数据集"""
+        return gen_data_set(table_name='quarterly_financial_indicators')
+
+    @classlazyval
+    def financial_indicator_rankings(self):
+        """财务指标排名数据集"""
+        return gen_data_set(table_name='financial_indicator_rankings')
+
+    @classlazyval
+    def performance_forecastes(self):
+        """业绩预告数据集"""
+        return gen_data_set(table_name='performance_forecastes')

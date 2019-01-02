@@ -4,12 +4,14 @@
 
 """
 import warnings
+
 import numpy as np
 import pandas as pd
 
-from .constants import SECTOR_NAMES, SUPER_SECTOR_NAMES
 from ..common import AD_FIELD_NAME, SID_FIELD_NAME, TS_FIELD_NAME
-from .sql import get_stock_info, get_cn_industry, get_concept_info, field_code_concept_maps
+from .constants import SECTOR_NAMES, SUPER_SECTOR_NAMES
+from .sql import (field_code_concept_maps, get_cn_industry, get_concept_info,
+                  get_investment_rating_data, get_stock_info)
 
 # ========================辅助函数========================= #
 
@@ -122,13 +124,50 @@ def supper_sector_code_map(sector_code):
     return int(str(sector_code)[0])
 
 
+# def get_static_info_table():
+#     """股票静态信息合并表"""
+#     stocks = get_stock_info()
+#     cn_industry = get_cn_industry()
+#     cn_industry['sector_code'] = cn_industry['国证四级行业编码'].map(sector_code_map)
+#     cn_industry['super_sector_code'] = cn_industry['sector_code'].map(
+#         supper_sector_code_map)
+#     concept = get_concept_info()
+#     df = stocks.join(
+#         cn_industry.set_index('sid'), on='sid'
+#     ).join(
+#         concept.set_index('sid'), on='sid'
+#     )
+#     maps = {}
+#     _, name_maps = field_code_concept_maps()
+#     cate_cols_pat = ['市场', '省份', '城市', '证监会', '国证', '申万']
+#     for col_pat in cate_cols_pat:
+#         df, maps = _handle_cate(df, col_pat, maps)
+#     maps['概念'] = name_maps
+#     maps['部门'] = SECTOR_NAMES
+#     maps['超级部门'] = SUPER_SECTOR_NAMES
+#     # 填充无效值
+#     bool_cols = df.columns[df.columns.str.match(r'A\d{3}')]
+#     _fillna(df, bool_cols, False)
+#     _fillna(df, cate_cols_pat, -1)
+#     return df, maps
+
+
 def get_static_info_table():
-    """股票静态信息合并表"""
+    """
+    股票静态信息合并表
+
+    注：总行数约4000行，无需将str转换为类别。
+    """
     stocks = get_stock_info()
     cn_industry = get_cn_industry()
     cn_industry['sector_code'] = cn_industry['国证四级行业编码'].map(sector_code_map)
     cn_industry['super_sector_code'] = cn_industry['sector_code'].map(
         supper_sector_code_map)
+    cn_industry['部门'] = cn_industry['sector_code'].map(SECTOR_NAMES)
+    cn_industry['超级部门'] = cn_industry['super_sector_code'].map(
+        SUPER_SECTOR_NAMES)
+    del cn_industry['sector_code']
+    del cn_industry['super_sector_code']
     concept = get_concept_info()
     df = stocks.join(
         cn_industry.set_index('sid'), on='sid'
@@ -137,14 +176,25 @@ def get_static_info_table():
     )
     maps = {}
     _, name_maps = field_code_concept_maps()
-    cate_cols_pat = ['市场', '省份', '城市', '证监会', '国证', '申万']
-    for col_pat in cate_cols_pat:
-        df, maps = _handle_cate(df, col_pat, maps)
     maps['概念'] = name_maps
-    maps['部门'] = SECTOR_NAMES
-    maps['超级部门'] = SUPER_SECTOR_NAMES
     # 填充无效值
     bool_cols = df.columns[df.columns.str.match(r'A\d{3}')]
     _fillna(df, bool_cols, False)
+    # _fillna(df, cate_cols_pat, -1)
+    return df, maps
+
+
+def get_investment_rating():
+    """
+    投资评级数据
+
+    注：行数超过50万行，需要将研究机构、研究员转换为类别。
+    """
+    maps = {}
+    df = get_investment_rating_data()
+    cate_cols_pat = ['研究机构简称', '研究员名称', '是否首次评级', '评价变化',  '前一次投资评级']
+    for col_pat in cate_cols_pat:
+        df, maps = _handle_cate(df, col_pat, maps)
+    # 填充无效值
     _fillna(df, cate_cols_pat, -1)
     return df, maps

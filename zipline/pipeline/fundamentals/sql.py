@@ -9,18 +9,17 @@ import numpy as np
 import pandas as pd
 from sqlalchemy import func
 
-
 from cnswd.sql.base import get_engine, session_scope
 from cnswd.sql.szsh import TCTGN, StockDaily, TradingCalendar
 from cnswd.sql.szx import (Classification, ClassificationBom,
-                           Dividend, FinancialIndicatorRanking,
+                           CompanyShareChange, Dividend,
+                           FinancialIndicatorRanking, InvestmentRating,
                            PerformanceForecaste, PeriodlyBalanceSheet,
                            PeriodlyCashFlowStatement,
                            PeriodlyFinancialIndicator, PeriodlyIncomeStatement,
                            QuarterlyFinancialIndicator, Quote,
                            ShareholdingConcentration, StockInfo,
                            TtmCashFlowStatement, TtmIncomeStatement)
-
 
 NUM_MAPS = {
     1: '一级',
@@ -226,41 +225,19 @@ def get_short_name_changes():
         df.columns = ['sid', 'asof_date', '股票简称']
         return df
 
-# TODO:废弃
 
-
-def get_quote_data(only_A=True):
-    """股票交易数据"""
-    engine = get_engine('szx')
-    table = Quote.__tablename__
-    df = pd.read_sql_table(table, engine)
-    if only_A:
-        df = df[~df.股票代码.str.startswith('2')]
-        df = df[~df.股票代码.str.startswith('9')]
-    to_drop = ['股票简称', '交易所', '今日开盘价', '最高成交价', '涨跌', '涨跌幅',
-               '最低成交价', '收盘价', '成交数量', '成交金额', '昨收盘价', '总笔数']
-    df.drop(to_drop, axis=1, inplace=True, errors='ignore')
-    df.rename(columns={"股票代码": "sid",
-                       "交易日期": "asof_date"},
-              inplace=True)
-    return df
-
-
-# TODO:考虑增加其他综合计算指标，如PEG
-
-# TODO:只需写入有变动的记录，使用公司股本变动表
 def get_equity_data(only_A=True):
     """公司股本数据"""
     with session_scope('szx') as sess:
         query = sess.query(
-            Quote.股票代码,
-            Quote.交易日期,
-            Quote.发行总股本,
-            Quote.流通股本,
+            CompanyShareChange.股票代码,
+            CompanyShareChange.变动日期,
+            CompanyShareChange.总股本,
+            CompanyShareChange.已流通股份,
         ).filter(
-            Quote.流通股本 > 0
+            CompanyShareChange.已流通股份 > 0
         )
-    columns = ['sid', 'asof_date', '发行总股本', '流通股本']
+    columns = ['sid', 'asof_date', '总股本', '流通股本']
     df = pd.DataFrame.from_records(query.all(), columns=columns)
     if only_A:
         df = df[~df.sid.str.startswith('2')]
@@ -538,3 +515,26 @@ def get_shareholding_concentration_data(only_A=True):
         df['前十大股东'] = df['前十大股东'] == '前十大股东'
         df.sort_values(['sid', 'asof_date'], inplace=True)
         return df
+
+
+# ==========================投资评级=========================== #
+
+
+def get_investment_rating_data(only_A=True):
+    """投资评级"""
+    to_drop = ['股票简称']
+    columns = []
+    for c in InvestmentRating.__table__.columns:
+        if c.name not in to_drop:
+            columns.append(c.name)
+    table = InvestmentRating.__tablename__
+    engine = get_engine('szx')
+    df = pd.read_sql_table(table, engine, columns=columns)
+    if only_A:
+        df = df[~df.股票代码.str.startswith('2')]
+        df = df[~df.股票代码.str.startswith('9')]
+    df.rename(columns={"股票代码": "sid",
+                       "发布日期": "asof_date"},
+              inplace=True)
+    df.sort_values(['sid', 'asof_date'], inplace=True)
+    return df
