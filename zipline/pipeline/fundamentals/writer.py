@@ -94,12 +94,12 @@ def write_dynamic_data_to_bcolz():
     """
     df_e = get_equity_data()
     write_dataframe(df_e, 'equity')
-    # df_m = get_margin_data()
-    # write_dataframe(df_m, 'margin')
-    # df_dd = get_dividend_data()
-    # write_dataframe(df_dd, 'dividend')
-    # df_sn = get_short_name_changes()
-    # write_dataframe(df_sn, 'shortname')
+    df_m = get_margin_data()
+    write_dataframe(df_m, 'margin')
+    df_dd = get_dividend_data()
+    write_dataframe(df_dd, 'dividend')
+    df_sn = get_short_name_changes()
+    write_dataframe(df_sn, 'shortname')
     df_ir, attr_dic = get_investment_rating()
     write_dataframe(df_ir, 'investment_rating', attr_dic)
 
@@ -124,6 +124,6 @@ def write_financial_data_to_bcolz():
 
 def write_sql_data_to_bcolz():
     """写入Fundamentals数据"""
-    # write_static_info_to_bcolz()
-    # write_dynamic_data_to_bcolz()
+    write_static_info_to_bcolz()
+    write_dynamic_data_to_bcolz()
     write_financial_data_to_bcolz()
