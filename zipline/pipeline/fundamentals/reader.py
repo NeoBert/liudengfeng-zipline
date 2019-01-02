@@ -253,6 +253,11 @@ class Fundamentals(object):
     #     maps = query_maps(table_name, attr_name)
     #     out = {k: v for k, v in maps.items() if key in v}
     #     return out
+    #=========================单列=========================#
+    @classlazyval
+    def short_name(self):
+        """股票简称（单列）"""
+        return gen_data_set(table_name='shortname').股票简称
 
     #========================数据集========================#
 
