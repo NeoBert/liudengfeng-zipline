@@ -1,11 +1,5 @@
 """
-基于基础数据的内置过滤器、分类器
-
-*ST---公司经营连续三年亏损，退市预警。
-ST----公司经营连续二年亏损，特别处理。
-S*ST--公司经营连续三年亏损，退市预警+还没有完成股改。
-SST---公司经营连续二年亏损，特别处理+还没有完成股改。
-S----还没有完成股改
+基于基础数据的自定义因子、过滤器、分类器
 
 改动：
     1. 直接使用ttm数据；
@@ -162,7 +156,7 @@ class NDays(CustomFactor):
         days = [(baseline - pd.Timestamp(x)).days for x in ts[0]]
         out[:] = days
 
-# ok
+
 class TradingDays(CustomFactor):
     """
     窗口期内所有有效交易天数
@@ -215,7 +209,7 @@ class SuccessiveSuspensionDays(CustomFactor):
 # 过滤器
 ##################
 
-# ok
+
 def IsST():
     """
     当前是否为ST状态
@@ -228,7 +222,7 @@ def IsST():
     short_name = Fundamentals.short_name.latest
     return short_name.has_substring('ST')
 
-# ok
+
 def QTradableStocksUS():
     """
     可交易股票(过滤器)
@@ -266,30 +260,30 @@ def IsNewShare(days=90):
     t_days = NDays()
     return t_days <= days
 
+# 待修改
+# def TopAverageAmount(N=500, window_length=21):
+#     """
+#     成交额前N位过滤
 
-def TopAverageAmount(N=500, window_length=21):
-    """
-    成交额前N位过滤
+#     参数
+#     _____
+#     N：整数
+#         取前N位。默认前500。
+#     window_length：整数
+#         窗口长度。默认21个交易日。
 
-    参数
-    _____
-    N：整数
-        取前N位。默认前500。
-    window_length：整数
-        窗口长度。默认21个交易日。
+#     returns
+#     -------
+#     zipline.pipeline.Filter
+#         成交额前N位股票过滤器
 
-    returns
-    -------
-    zipline.pipeline.Filter
-        成交额前N位股票过滤器
-
-    备注
-    ----
-        以窗口长度内平均成交额为标准        
-    """
-    high_amount = SimpleMovingAverage(
-        inputs=[CNEquityPricing.amount], window_length=window_length).top(N)
-    return high_amount
+#     备注
+#     ----
+#         以窗口长度内平均成交额为标准        
+#     """
+#     high_amount = SimpleMovingAverage(
+#         inputs=[CNEquityPricing.amount], window_length=window_length).top(N)
+#     return high_amount
 
 
 class IsYZZT(CustomFilter):
@@ -368,7 +362,7 @@ class IsYZDT(CustomFilter):
 
 class IsResumed(CustomFilter):
     """
-    当日是否为停牌后复牌的首个交易日
+    是否为停牌后复牌的首个交易日
 
     Parameters
     ----------
@@ -381,7 +375,7 @@ class IsResumed(CustomFilter):
         首日成交量为0,次日有成交
         首日市值>0，排除新股上市
     """
-    inputs = [CNEquityPricing.volume, CNEquityPricing.cmv]
+    inputs = [CNEquityPricing.volume, CNEquityPricing.close, Fundamentals.equity.流通股本]
     window_safe = True
     window_length = 2
 
@@ -390,9 +384,10 @@ class IsResumed(CustomFilter):
         if self.window_length != 2:
             raise ValueError('window_length值必须为2')
 
-    def compute(self, today, assets, out, amount, cmv):
-        is_tp = amount[0] == 0
-        is_fp = (amount[-1] - amount[0]) > 0
+    def compute(self, today, assets, out, volume, closes, shares):
+        is_tp = volume[0] == 0
+        is_fp = volume[-1] > 0
+        cmv = closes * shares
         not_new = cmv[0] > 0  # 通过流通市值排除新股上市
         out[:] = is_tp & is_fp & not_new
 
@@ -430,53 +425,80 @@ def BlackNames(stock_codes):
 # 财务相关因子
 ##################
 
+# 待修改
+# class AnnualFinancalData(CustomFactor):
+#     """
+#     选取当前时间为t,t-n年的年度科目数据
 
-class AnnualFinancalData(CustomFactor):
-    """
-    选取当前时间为t,t-n年的年度科目数据
+#     注意
+#     ----
+#         科目名称中必须含yearly，只对年报数据有效
+#     python
+#         inputs = [
+#             Fundamentals.profit_statement_yearly.A033,
+#             Fundamentals.profit_statement_yearly.report_end_date
+#         ]
+#     """
+#     window_length = 245
+#     params = {'t_n': 1}
+#     window_safe = True
 
-    注意
-    ----
-        科目名称中必须含yearly，只对年报数据有效
-    python
-        inputs = [
-            Fundamentals.profit_statement_yearly.A033,
-            Fundamentals.profit_statement_yearly.report_end_date
-        ]
-    """
-    window_length = 245
-    params = {'t_n': 1}
-    window_safe = True
+#     def _validate(self):
+#         super(AnnualFinancalData, self)._validate()
+#         # 验证输入列
+#         if len(self.inputs) != 2:
+#             raise ValueError('inputs列表长度只能为2。第一列为要查询的科目，第2列为report_end_date')
+#         last_col = self.inputs[-1]
+#         if last_col.name != 'report_end_date':
+#             raise ValueError('inputs列表最后一项必须为"report_end_date"')
+#         # 验证窗口长度与t_n匹配
+#         t_n = self.params.get('t_n')
+#         win = self.window_length
+#         at_least = t_n * 245
+#         if win < at_least:
+#             raise ValueError('window_length值至少应为t_n*245，即{}'.format(t_n * 245))
 
-    def _validate(self):
-        super(AnnualFinancalData, self)._validate()
-        # 验证输入列
-        if len(self.inputs) != 2:
-            raise ValueError('inputs列表长度只能为2。第一列为要查询的科目，第2列为report_end_date')
-        last_col = self.inputs[-1]
-        if last_col.name != 'report_end_date':
-            raise ValueError('inputs列表最后一项必须为"report_end_date"')
-        # 验证窗口长度与t_n匹配
-        t_n = self.params.get('t_n')
-        win = self.window_length
-        at_least = t_n * 245
-        if win < at_least:
-            raise ValueError('window_length值至少应为t_n*245，即{}'.format(t_n * 245))
-
-    def compute(self, today, assets, out, values, dates, t_n):
-        locs = _select_annual_indices(dates)
-        for col_loc, row_locs in enumerate(locs):
-            if len(row_locs) < t_n:
-                # 替代方案，防止中断
-                row_loc = row_locs[0]
-            else:
-                row_loc = row_locs[-t_n]
-            out[col_loc] = values[row_loc, col_loc]
+#     def compute(self, today, assets, out, values, dates, t_n):
+#         locs = _select_annual_indices(dates)
+#         for col_loc, row_locs in enumerate(locs):
+#             if len(row_locs) < t_n:
+#                 # 替代方案，防止中断
+#                 row_loc = row_locs[0]
+#             else:
+#                 row_loc = row_locs[-t_n]
+#             out[col_loc] = values[row_loc, col_loc]
 
 
 ##################
 # 估值相关因子
 ##################
+
+class TTMDividend(CustomFactor):
+    """
+    最近一年每股股利
+
+    Notes:
+    ------
+    trailing 12-month (TTM)
+    """
+    inputs = [Fundamentals.dividend.每股人民币派息, Fundamentals.dividend.asof_date]
+    # 一年的交易日不会超过260天
+    window_length = 260
+
+    def _validate(self):
+        super(TTMDividend, self)._validate()
+        if self.window_length < 260:
+            raise ValueError('window_length值必须大于或等于260,以确保获取一年的财务数据')
+
+    def compute(self, today, assets, out, ds, asof_date):
+        def func(x):
+            return x.month
+
+        mns = pd.Series(asof_date[:, 0]).map(func)
+        # mns = np.apply_along_axis(func, 0, asof_date[:,0])
+        # 选取最近12个月的日期所对应的位置
+        loc = changed_locations(mns, include_first=True)[-12:]
+        out[:] = nanmean(ds[loc], axis=0)
 
 
 # 参考网址：https://www.quantopian.com/help/fundamentals#valuation
@@ -487,22 +509,22 @@ def enterprise_value():
 
 def market_cap():
     """总市值"""
-    return CNEquityPricing.tmv.latest
+    return CNEquityPricing.close.latest * Fundamentals.equity.总股本.latest
 
 
 def market_cap_2():
     """流通市值"""
-    return CNEquityPricing.cmv.latest
+    return CNEquityPricing.close.latest * Fundamentals.equity.流通股本.latest
 
 
 def shares_outstanding():
     """总股本"""
-    return CNEquityPricing.total_share.latest
+    return Fundamentals.equity.总股本.latest
 
 
 def shares_outstanding_2():
     """流通股本"""
-    return CNEquityPricing.circulating_share.latest
+    return Fundamentals.equity.流通股本.latest
 
 
 # 以下为估值相关比率
@@ -511,7 +533,7 @@ def shares_outstanding_2():
 def book_value_per_share():
     """普通股股东权益/稀释流通股"""
     # 股东权益 / 实收资本
-    return Fundamentals.balance_sheet.A107.latest / Fundamentals.balance_sheet.A095.latest
+    return Fundamentals.balance_sheet.所有者权益或股东权益合计.latest / Fundamentals.balance_sheet.实收资本或股本.latest
 
 
 def book_value_yield():
@@ -532,7 +554,7 @@ def trailing_dividend_yield():
 
 def earning_yield():
     """稀释每股收益率(稀释每股收益/价格)"""
-    return Fundamentals.profit_statement.A045.latest / CNEquityPricing.close.latest
+    return Fundamentals.profit_statement.二稀释每股收益.latest / CNEquityPricing.close.latest
 
 
 def ev_to_ebitda():
@@ -551,4 +573,4 @@ def fcf_per_share():
 # 别名
 QTradableStocks = QTradableStocksUS
 QTradableStocksCN = QTradableStocksUS
-TAA = TopAverageAmount
+# TAA = TopAverageAmount

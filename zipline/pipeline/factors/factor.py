@@ -1412,7 +1412,7 @@ class Rank(SingleInputMixin, Factor):
         )
 
     def graph_repr(self):
-        return "Rank:\l  method: {!r}\l  mask: {}\l".format(
+        return r"Rank:\l  method: {!r}\l  mask: {}\l".format(
             self._method,
             type(self.mask).__name__,
         )
