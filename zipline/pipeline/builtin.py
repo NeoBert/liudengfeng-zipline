@@ -21,6 +21,7 @@ from .factors import CustomFactor, DailyReturns, SimpleMovingAverage
 from .filters import CustomFilter, StaticSids
 from .fundamentals.reader import Fundamentals
 
+
 ##################
 # 辅助函数
 ##################
@@ -32,20 +33,17 @@ def continuous_num(bool_values, include=False):
     assert bool_values.dtype is np.dtype('bool'), '数据类型应为bool'
 
     def get_count(x):
-        num = len(x)
         count = 0
         if not include:
-            for i in range(num - 1, 0, -1):
-                # 自尾部循环，一旦存在假，则返回
-                if x[i] == 0:
+            # 自尾部循环，一旦为假，则跳出；否则累加计数。
+            for v in reversed(x):
+                if not v:
                     break
-            count += 1
+                count += 1
         else:
             count = np.count_nonzero(x)
         return count
 
-    # 本应使用已注释代码，但出现问题。原因不明？？？
-    # return np.apply_along_axis(get_count, 0, bool_values)
     return pd.DataFrame(bool_values).apply(get_count).values
 
 
@@ -100,7 +98,7 @@ def _select_annual_indices(dates):
 
 class SuccessiveYZ(CustomFactor):
     """
-    尾部窗口一字数量
+    尾部窗口连续一字数量
 
     Parameters
     ----------
@@ -217,7 +215,7 @@ class SuccessiveSuspensionDays(CustomFactor):
 # 过滤器
 ##################
 
-
+# ok
 def IsST():
     """
     当前是否为ST状态
