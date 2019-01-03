@@ -40,7 +40,8 @@ from .technical import (
     RSI,
     TrueRange,
 )
-
+# 别名 平均成交额
+AverageAmount = AverageDollarVolume
 __all__ = [
     'AnnualizedVolatility',
     'Aroon',
@@ -74,4 +75,5 @@ __all__ = [
     'TrueRange',
     'VWAP',
     'WeightedAverageValue',
+    'AverageAmount',
 ]
