@@ -11,7 +11,7 @@ import pandas as pd
 from ..utils.math_utils import nanmean, nansum
 from ..utils.numpy_utils import changed_locations
 from .data.equity_pricing import CNEquityPricing
-from .factors import CustomFactor, DailyReturns, SimpleMovingAverage
+from .factors import CustomFactor, DailyReturns, SimpleMovingAverage, AverageDollarVolume
 from .filters import CustomFilter, StaticSids
 from .fundamentals.reader import Fundamentals
 
@@ -260,30 +260,29 @@ def IsNewShare(days=90):
     t_days = NDays()
     return t_days <= days
 
-# 待修改
-# def TopAverageAmount(N=500, window_length=21):
-#     """
-#     成交额前N位过滤
 
-#     参数
-#     _____
-#     N：整数
-#         取前N位。默认前500。
-#     window_length：整数
-#         窗口长度。默认21个交易日。
+def TopAverageAmount(N=500, window_length=21):
+    """
+    成交额前N位过滤
 
-#     returns
-#     -------
-#     zipline.pipeline.Filter
-#         成交额前N位股票过滤器
+    参数
+    _____
+    N：整数
+        取前N位。默认前500。
+    window_length：整数
+        窗口长度。默认21个交易日。
 
-#     备注
-#     ----
-#         以窗口长度内平均成交额为标准        
-#     """
-#     high_amount = SimpleMovingAverage(
-#         inputs=[CNEquityPricing.amount], window_length=window_length).top(N)
-#     return high_amount
+    returns
+    -------
+    zipline.pipeline.Filter
+        成交额前N位股票过滤器
+
+    备注
+    ----
+        以窗口长度内平均成交额为标准        
+    """
+    high_amount = AverageDollarVolume(window_length=window_length).top(N)
+    return high_amount
 
 
 class IsYZZT(CustomFilter):
@@ -472,6 +471,16 @@ def BlackNames(stock_codes):
 ##################
 # 估值相关因子
 ##################
+class TTMSale():
+    """
+    最近一年营业总收入季度平均数
+
+    Notes:
+    ------
+    trailing 12-month (TTM)
+    """
+    return Fundamentals.ttm_profit_statement.一_营业总收入.latest
+
 
 class TTMDividend(CustomFactor):
     """
