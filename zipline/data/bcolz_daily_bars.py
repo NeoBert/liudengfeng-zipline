@@ -581,7 +581,17 @@ class BcolzDailyBarReader(SessionBarReader):
             assets,
         )
         read_all = len(assets) > self._read_all_threshold
-        return _read_bcolz_data(
+        # # 需要volume -> volume * 100
+        # return _read_bcolz_data(
+        #     self._table,
+        #     (end_idx - start_idx + 1, len(assets)),
+        #     list(columns),
+        #     first_rows,
+        #     last_rows,
+        #     offsets,
+        #     read_all,
+        # )
+        raw_arrays = _read_bcolz_data(
             self._table,
             (end_idx - start_idx + 1, len(assets)),
             list(columns),
@@ -590,6 +600,13 @@ class BcolzDailyBarReader(SessionBarReader):
             offsets,
             read_all,
         )
+        for i, col in enumerate(list(columns)):
+            if col == 'volume':
+                adj = 100
+            else:
+                adj = 1
+            raw_arrays[i] = raw_arrays[i].dot(adj)
+        return raw_arrays
 
     def _load_raw_arrays_date_to_index(self, date):
         try:
@@ -706,4 +723,4 @@ class BcolzDailyBarReader(SessionBarReader):
                 return price * 0.001
         else:
             # # 成交量恢复(损失精度)
-            return price * 10000
+            return price * 100

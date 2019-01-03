@@ -3,10 +3,11 @@
 
 备注：
     1. 如使用用int(stock_code)代表sid，必须在写入资产元数据时，提供sid列
-    2. 默认只写入A股，且在市股票数据
-    3. 保持一致性，只需要OHKCV列，附加列另行处理
+    2. 默认只写入A股，且在市的股票数据
+    3. 保持一致性，只需要OHKCV列
     4. 由于数据期间不一致，如601607分红派息自2000年开始，而日线数据自2010年开始，导致无法计算调整系数，
        属正常。
+    5. 成交量数值可能超出int32，写入时除100，读取时乘以100，部分损失精度。
 """
 
 import pandas as pd
@@ -100,7 +101,7 @@ def gen_symbol_data(symbol_map,
             # raw_data['turnover'] = raw_data.turnover / 100.
 
             # 调整数据精度
-            raw_data['volume'] = raw_data['volume'] / 10000.0
+            raw_data['volume'] = raw_data['volume'] / 100.0
 
             # 以日期、符号为索引
             raw_data.set_index(['date', 'symbol'], inplace=True)
