@@ -20,3 +20,4 @@ class EquityPricing(DataSet):
 # # 更改为`CN_EQUITIES`
 # Backwards compat alias.
 CNEquityPricing = EquityPricing.specialize(CN_EQUITIES)
+USEquityPricing = CNEquityPricing
