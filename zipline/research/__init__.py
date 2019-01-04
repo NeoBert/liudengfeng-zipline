@@ -1,4 +1,5 @@
-from .core import to_tdates, symbols, symbol, prices, returns, volumes, ohlcv, run_pipeline
+from .core import symbols, symbol, prices, returns, volumes, get_pricing #, ohlcv
+from .pipebench import run_pipeline
 from .utils import select_output_by
 from ._talib import indicators
 # from ._plotly import plot_ohlcv, iplot_ohlcv, AnalysisFigure
@@ -7,14 +8,14 @@ from ._talib import indicators
 __all__ = (
     'run_pipeline',
     'select_output_by',
-    'to_tdates',
     'symbols',
     'symbol',
     'prices',
     'returns',
     'volumes',
-    'ohlcv',
+    # 'ohlcv',
     'indicators',
     # 'get_backtest',
-    # 'get_latest_backtest_info'
+    # 'get_latest_backtest_info',
+    'get_pricing',
 )

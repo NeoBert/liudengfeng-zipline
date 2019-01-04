@@ -471,14 +471,9 @@ def BlackNames(stock_codes):
 ##################
 # 估值相关因子
 ##################
-class TTMSale():
-    """
-    最近一年营业总收入季度平均数
 
-    Notes:
-    ------
-    trailing 12-month (TTM)
-    """
+def TTMSale():
+    """最近一年营业总收入季度平均数"""
     return Fundamentals.ttm_profit_statement.一_营业总收入.latest
 
 

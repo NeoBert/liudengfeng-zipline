@@ -17,6 +17,7 @@ from cnswd.sql.szx import (Classification, ClassificationBom,
                            PerformanceForecaste, PeriodlyBalanceSheet,
                            PeriodlyCashFlowStatement,
                            PeriodlyFinancialIndicator, PeriodlyIncomeStatement,
+                           QuarterlyIncomeStatement, QuarterlyCashFlowStatement,
                            QuarterlyFinancialIndicator, Quote,
                            ShareholdingConcentration, StockInfo,
                            TtmCashFlowStatement, TtmIncomeStatement)
@@ -345,6 +346,23 @@ def get_p_cash_flow_data(only_A=True):
 def get_p_income_data(only_A=True):
     """报告期利润表"""
     table = PeriodlyIncomeStatement.__tablename__
+    df = _periodly_report(only_A, table)
+    return df
+
+
+# ========================季度报告========================= #
+
+
+def get_q_income_data(only_A=True):
+    """季度利润表"""
+    table = QuarterlyIncomeStatement.__tablename__
+    df = _periodly_report(only_A, table)
+    return df
+
+
+def get_q_cash_flow_data(only_A=True):
+    """季度现金流量表"""
+    table = QuarterlyCashFlowStatement.__tablename__
     df = _periodly_report(only_A, table)
     return df
 

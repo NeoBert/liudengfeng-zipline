@@ -382,7 +382,7 @@ class PercentileFilter(SingleInputMixin, Filter):
         return (lower_bounds <= data) & (data <= upper_bounds)
 
     def graph_repr(self):
-        return "{}:\l  min: {}, max: {}\l".format(
+        return r"{}:\l  min: {}, max: {}\l".format(
             type(self).__name__,
             self._min_percentile,
             self._max_percentile,
@@ -491,7 +491,7 @@ class ArrayPredicate(SingleInputMixin, Filter):
         return params['op'](data, *params['opargs']) & mask
 
     def graph_repr(self):
-        return "{}:\l  op: {}.{}()".format(
+        return r"{}:\l  op: {}.{}()".format(
             type(self).__name__,
             self.params['op'].__module__,
             self.params['op'].__name__,
@@ -537,7 +537,7 @@ class SingleAsset(Filter):
         return out
 
     def graph_repr(self):
-        return "SingleAsset:\l  asset: {!r}\l".format(self._asset)
+        return r"SingleAsset:\l  asset: {!r}\l".format(self._asset)
 
 
 class StaticSids(Filter):
@@ -649,7 +649,7 @@ class MaximumFilter(Filter, StandardOutputs):
         )
 
     def graph_repr(self):
-        return "Maximum:\l  groupby: {}\l  mask: {}\l".format(
+        return r"Maximum:\l  groupby: {}\l  mask: {}\l".format(
             type(self.inputs[1]).__name__,
             type(self.mask).__name__,
         )

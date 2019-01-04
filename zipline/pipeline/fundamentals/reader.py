@@ -307,6 +307,11 @@ class Fundamentals(object):
     #     return gen_data_set('profit_statements', True)
 
     @classlazyval
+    def q_profit_statement(self):
+        """季度利润表数据集"""
+        return gen_data_set(table_name='quarterly_income_statements')
+
+    @classlazyval
     def cash_flow(self):
         """现金流量表数据集"""
         return gen_data_set(table_name='periodly_cash_flow_statements')
@@ -315,6 +320,11 @@ class Fundamentals(object):
     # def cash_flow_yearly(self):
     #     """现金流量表数据集(仅包含年度报告)"""
     #     return gen_data_set('cashflow_statements')
+
+    @classlazyval
+    def q_cash_flow(self):
+        """季度现金流量表数据集"""
+        return gen_data_set(table_name='quarterly_cash_flow_statements')
 
     @classlazyval
     def ttm_profit_statement(self):

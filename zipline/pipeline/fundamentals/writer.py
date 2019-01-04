@@ -17,6 +17,7 @@ import logbook
 from logbook import Logger
 
 from cnswd.sql.szx import (FinancialIndicatorRanking, PerformanceForecaste,
+                           QuarterlyIncomeStatement, QuarterlyCashFlowStatement,
                            PeriodlyBalanceSheet, PeriodlyCashFlowStatement,
                            PeriodlyFinancialIndicator, PeriodlyIncomeStatement,
                            QuarterlyFinancialIndicator, TtmCashFlowStatement,
@@ -28,6 +29,7 @@ from .preprocess import (_normalize_ad_ts_sid, get_investment_rating,
                          get_static_info_table)
 from .sql import (get_dividend_data, get_equity_data, get_margin_data,
                   get_p_balance_data, get_p_cash_flow_data, get_p_income_data,
+                  get_q_cash_flow_data, get_q_income_data,
                   get_performance_forecaste_data,
                   get_financial_indicator_ranking_data,
                   get_periodly_financial_indicator_data,
@@ -55,6 +57,10 @@ TAB_MAPS = {
     FinancialIndicatorRanking.__tablename__: get_financial_indicator_ranking_data,
     # 上市公司业绩预告
     PerformanceForecaste.__tablename__: get_performance_forecaste_data,
+    # 季度利润表
+    QuarterlyIncomeStatement.__tablename__:get_q_income_data,
+    # 季度现金流量表
+    QuarterlyCashFlowStatement.__tablename__:get_q_cash_flow_data,
 }
 
 
@@ -117,6 +123,8 @@ def write_financial_data_to_bcolz():
         7. 季度财务指标
         8. 财务指标行业排名
         9. 上市公司业绩预告
+        10. 季度利润表
+        11. 季度现金流量表
     """
     for table, func in TAB_MAPS.items():
         write_dataframe(func(), table)
