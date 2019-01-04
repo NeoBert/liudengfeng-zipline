@@ -174,12 +174,12 @@ def get_static_info_table():
     """
     stocks = get_stock_info()
     cn_industry = get_cn_industry()
-    cn_industry['sector_code'] = cn_industry['国证四级行业编码'].map(SECTOR_NAMES)
+    cn_industry['sector_code'] = cn_industry['国证四级行业编码'].map(sector_code_map)
     cn_industry['super_sector_code'] = cn_industry['sector_code'].map(
-        SUPER_SECTOR_NAMES)
-    cn_industry['部门'] = cn_industry['sector_code'].map(_sector_map)
+        supper_sector_code_map)
+    cn_industry['部门'] = cn_industry['sector_code'].map(SECTOR_NAMES)
     cn_industry['超级部门'] = cn_industry['super_sector_code'].map(
-        _super_sector_map)
+        SUPER_SECTOR_NAMES)
     del cn_industry['sector_code']
     del cn_industry['super_sector_code']
     concept = get_concept_info()
