@@ -84,8 +84,6 @@ def write_dataframe(df, table_name, attr_dict=None):
 def write_static_info_to_bcolz():
     """写入股票分类等静态数据"""
     table_name = 'infoes'
-    logger = Logger(table_name)
-    logger.info('准备数据......')
     df, attr_dict = get_static_info_table()
     write_dataframe(df, table_name, attr_dict)
 

@@ -166,6 +166,16 @@ def supper_sector_code_map(sector_code):
 #     return df, maps
 
 
+def _sector_map(x):
+    # 使用英文避免plot问题
+    return SECTOR_NAMES[x][1]
+
+
+def _super_sector_map(x):
+    # 使用英文避免plot问题
+    return SUPER_SECTOR_NAMES[x][1]
+
+
 def get_static_info_table():
     """
     股票静态信息合并表
@@ -177,9 +187,9 @@ def get_static_info_table():
     cn_industry['sector_code'] = cn_industry['国证四级行业编码'].map(sector_code_map)
     cn_industry['super_sector_code'] = cn_industry['sector_code'].map(
         supper_sector_code_map)
-    cn_industry['部门'] = cn_industry['sector_code'].map(SECTOR_NAMES)
+    cn_industry['部门'] = cn_industry['sector_code'].map(_sector_map)
     cn_industry['超级部门'] = cn_industry['super_sector_code'].map(
-        SUPER_SECTOR_NAMES)
+        _super_sector_map)
     del cn_industry['sector_code']
     del cn_industry['super_sector_code']
     concept = get_concept_info()

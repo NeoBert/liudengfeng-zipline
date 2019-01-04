@@ -224,10 +224,10 @@ def get_tdata(only_A=True):
             StockDaily.流通市值 > 0.0
         )
         df = pd.DataFrame.from_records(query.all())
+        df.columns = ['sid', 'asof_date', '成交金额', '换手率', '流通市值', '总市值']
         if only_A:
             df = df[~df.sid.str.startswith('2')]
             df = df[~df.sid.str.startswith('9')]
-        df.columns = ['sid', 'asof_date', '成交金额', '换手率', '流通市值', '总市值']
         df.sort_values(['sid', 'asof_date'], inplace=True)
         return df
 
@@ -243,10 +243,10 @@ def get_short_name_changes(only_A=True):
             StockDaily.名称
         )
         df = pd.DataFrame.from_records(query.all())
+        df.columns = ['sid', 'asof_date', '股票简称']
         if only_A:
             df = df[~df.sid.str.startswith('2')]
             df = df[~df.sid.str.startswith('9')]
-        df.columns = ['sid', 'asof_date', '股票简称']
         df.sort_values(['sid', 'asof_date'], inplace=True)
         return df.groupby('sid').apply(f).reset_index(drop=True)
 
