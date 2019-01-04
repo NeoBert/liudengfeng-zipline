@@ -374,23 +374,6 @@ def get_p_income_data(only_A=True):
     return df
 
 
-# ========================季度报告========================= #
-
-
-def get_q_income_data(only_A=True):
-    """季度利润表"""
-    table = QuarterlyIncomeStatement.__tablename__
-    df = _periodly_report(only_A, table)
-    return df
-
-
-def get_q_cash_flow_data(only_A=True):
-    """季度现金流量表"""
-    table = QuarterlyCashFlowStatement.__tablename__
-    df = _periodly_report(only_A, table)
-    return df
-
-
 def _financial_report_announcement_date():
     """财务报告公告日期"""
     col_names = ['股票代码', '公告日期', '报告年度']
@@ -431,6 +414,34 @@ def _get_report(only_A, table, columns=None, col='报告年度'):
     _fill_asof_date(df, '报告年度')
     df.sort_values(['sid', 'asof_date'], inplace=True)
     return df
+
+
+# ========================季度报告========================= #
+
+
+def get_q_income_data(only_A=True):
+    """季度利润表"""
+    table = QuarterlyIncomeStatement.__tablename__
+    to_drop = ['股票简称', '开始日期', '截止日期', '合并类型编码', '合并类型']
+    columns = []
+    for c in QuarterlyIncomeStatement.__table__.columns:
+        if c.name not in to_drop:
+            columns.append(c.name)
+    df = _get_report(only_A, table, columns)
+    return df
+
+
+def get_q_cash_flow_data(only_A=True):
+    """季度现金流量表"""
+    table = QuarterlyCashFlowStatement.__tablename__
+    to_drop = ['股票简称', '开始日期', '截止日期', '合并类型编码', '合并类型']
+    columns = []
+    for c in QuarterlyCashFlowStatement.__table__.columns:
+        if c.name not in to_drop:
+            columns.append(c.name)
+    df = _get_report(only_A, table, columns)
+    return df
+
 
 # ==========================TTM=========================== #
 
