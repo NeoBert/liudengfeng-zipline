@@ -28,6 +28,7 @@ from .base import bcolz_table_path
 from .preprocess import (_normalize_ad_ts_sid, get_investment_rating,
                          get_static_info_table)
 from .sql import (get_dividend_data, get_equity_data, get_margin_data,
+                  get_tdata,
                   get_p_balance_data, get_p_cash_flow_data, get_p_income_data,
                   get_q_cash_flow_data, get_q_income_data,
                   get_performance_forecaste_data,
@@ -58,9 +59,9 @@ TAB_MAPS = {
     # 上市公司业绩预告
     PerformanceForecaste.__tablename__: get_performance_forecaste_data,
     # 季度利润表
-    QuarterlyIncomeStatement.__tablename__:get_q_income_data,
+    QuarterlyIncomeStatement.__tablename__: get_q_income_data,
     # 季度现金流量表
-    QuarterlyCashFlowStatement.__tablename__:get_q_cash_flow_data,
+    QuarterlyCashFlowStatement.__tablename__: get_q_cash_flow_data,
 }
 
 
@@ -98,6 +99,8 @@ def write_dynamic_data_to_bcolz():
         2. 现金股利
         3. 股票简称变动历史
     """
+    df_t = get_tdata()
+    write_dataframe(df_t, 'tdata')
     df_e = get_equity_data()
     write_dataframe(df_e, 'equity')
     df_m = get_margin_data()

@@ -88,8 +88,6 @@ def _select_annual_indices(dates):
 ##################
 # 自定义因子
 ##################
-
-
 class SuccessiveYZ(CustomFactor):
     """
     尾部窗口连续一字数量

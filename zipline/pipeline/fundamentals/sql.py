@@ -210,8 +210,29 @@ def get_concept_info(only_A=True):
 
 
 # ==========================动态数据=========================== #
+def get_tdata(only_A=True):
+    """股票交易其他数据"""
+    with session_scope('szsh') as sess:
+        query = sess.query(
+            StockDaily.股票代码,
+            StockDaily.日期,
+            StockDaily.成交金额,
+            StockDaily.换手率,
+            StockDaily.流通市值,
+            StockDaily.总市值
+        ).filter(
+            StockDaily.流通市值 > 0.0
+        )
+        df = pd.DataFrame.from_records(query.all())
+        if only_A:
+            df = df[~df.sid.str.startswith('2')]
+            df = df[~df.sid.str.startswith('9')]
+        df.columns = ['sid', 'asof_date', '成交金额', '换手率', '流通市值', '总市值']
+        df.sort_values(['sid', 'asof_date'], inplace=True)
+        return df
 
-def get_short_name_changes():
+
+def get_short_name_changes(only_A=True):
     """股票简称变动历史"""
     def f(g):
         return g[g['股票简称'] != g['股票简称'].shift(1)]
@@ -222,6 +243,9 @@ def get_short_name_changes():
             StockDaily.名称
         )
         df = pd.DataFrame.from_records(query.all())
+        if only_A:
+            df = df[~df.sid.str.startswith('2')]
+            df = df[~df.sid.str.startswith('9')]
         df.columns = ['sid', 'asof_date', '股票简称']
         df.sort_values(['sid', 'asof_date'], inplace=True)
         return df.groupby('sid').apply(f).reset_index(drop=True)
