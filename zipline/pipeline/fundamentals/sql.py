@@ -443,8 +443,11 @@ def _get_report(only_A, table, columns=None, col='截止日期'):
     # df.drop(to_drop, axis=1, inplace=True, errors='ignore')
     asof_dates = _financial_report_announcement_date()
     keys = ['股票代码', '截止日期']
-    # 原始数据列名称更改为'截止日期'
-    df.rename(columns={col: '截止日期'}, inplace=True)
+    if col != '截止日期':
+        # 处理行业排名
+        df['报告年度'] = df[col]
+        # 原始数据列名称更改为'截止日期'
+        df.rename(columns={col: '截止日期'}, inplace=True)
     df = df.join(
         asof_dates.set_index(keys), on=keys
     )
