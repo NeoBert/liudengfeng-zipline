@@ -14,7 +14,7 @@ from .data.equity_pricing import CNEquityPricing
 from .factors import CustomFactor, DailyReturns, SimpleMovingAverage, AverageDollarVolume
 from .filters import CustomFilter, StaticSids
 from .fundamentals.reader import Fundamentals
-
+from .fundamentals.constants import SECTOR_NAMES as _names
 
 ##################
 # 辅助函数
@@ -88,6 +88,19 @@ def _select_annual_indices(dates):
 ##################
 # 自定义因子
 ##################
+class Sector(CustomFactor):
+    """
+    股票行业分类代码(Industry groups are consolidated into 11 sectors)
+
+    """
+    SECTOR_NAMES = _names
+    inputs = [Fundamentals.info.sector_code]
+    window_length = 1
+
+    def compute(self, today, assets, out, sc):
+        out[:] = sc[-1]
+
+        
 class SuccessiveYZ(CustomFactor):
     """
     尾部窗口连续一字数量

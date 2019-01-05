@@ -55,7 +55,7 @@ def make_default_missing_values_for_expr(expr):
             missing_values[name] = default_missing_value_for_dtype(n_type)
     return missing_values
 
-
+# # 废弃
 def make_default_missing_values_for_df(dtypes):
     """DataFrame对象各字段生成缺省默认值"""
     missing_values = {}
@@ -76,8 +76,8 @@ def fillvalue_for_expr(expr):
     """表达式默认值"""
     fillmissing = _FILLVALUE_DEFAULTS.copy()
     fillmissing.update({
-        int64_dtype: -9999,
-        categorical_dtype: 'NA',
+        int64_dtype: -1,         # # 在pipeline中
+        categorical_dtype: None, # # 类似object_dtype，默认值为None
     })
 
     ret = {}

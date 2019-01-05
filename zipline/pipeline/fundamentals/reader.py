@@ -46,10 +46,10 @@ def _gen_expr(table_name):
     rootdir = bcolz_table_path(table_name)
     # # 此时读取的datetime丢失了时区信息
     ctable = bcolz.ctable(rootdir=rootdir, mode='r')
-    df = ctable.todataframe()  # 转换为DataFrame对象
+    # df = ctable.todataframe()  # 转换为DataFrame对象
     raw_dshape = discover(ctable)
     dshape = _normalized_dshape(raw_dshape, True)
-    expr = blaze.data(df, name=table_name, dshape=dshape)
+    expr = blaze.data(ctable, name=table_name, dshape=dshape)
     return expr
 
 

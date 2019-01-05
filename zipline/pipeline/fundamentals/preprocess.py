@@ -40,16 +40,17 @@ def _to_dt(s, target_tz):
 
 
 def _normalize_ad_ts_sid(df, ndays=0, nhours=8, target_tz='utc'):
-    """通用转换
-    股票代码 -> sid(int64)
-    date(date) -> asof_date(timestamp)
-    date(date) + ndays -> timestamp(timestamp)
-    确保timestamp >= asof_date
+    """规范`asof_date`、`timestamp`、`sid`
+
+    操作：
+        股票代码 -> sid(int64)
+        date(date) -> asof_date(timestamp)
+        date(date) + ndays -> timestamp(timestamp)
+        确保timestamp >= asof_date
     """
     if AD_FIELD_NAME in df.columns:
         # 如果asof_date存在，则只需要转换数据类型及目标时区
-        df[AD_FIELD_NAME] = _to_dt(df[AD_FIELD_NAME], target_tz)
-        df[AD_FIELD_NAME] = df[AD_FIELD_NAME] + pd.Timedelta(hours=nhours)
+        df[AD_FIELD_NAME] = _to_dt(df[AD_FIELD_NAME], target_tz) + pd.Timedelta(hours=nhours)
     else:
         raise ValueError('数据必须包含"{}"列'.format(AD_FIELD_NAME))
 
@@ -138,34 +139,6 @@ def supper_sector_code_map(sector_code):
     return int(str(sector_code)[0])
 
 
-# def get_static_info_table():
-#     """股票静态信息合并表"""
-#     stocks = get_stock_info()
-#     cn_industry = get_cn_industry()
-#     cn_industry['sector_code'] = cn_industry['国证四级行业编码'].map(sector_code_map)
-#     cn_industry['super_sector_code'] = cn_industry['sector_code'].map(
-#         supper_sector_code_map)
-#     concept = get_concept_info()
-#     df = stocks.join(
-#         cn_industry.set_index('sid'), on='sid'
-#     ).join(
-#         concept.set_index('sid'), on='sid'
-#     )
-#     maps = {}
-#     _, name_maps = field_code_concept_maps()
-#     cate_cols_pat = ['市场', '省份', '城市', '证监会', '国证', '申万']
-#     for col_pat in cate_cols_pat:
-#         df, maps = _handle_cate(df, col_pat, maps)
-#     maps['概念'] = name_maps
-#     maps['部门'] = SECTOR_NAMES
-#     maps['超级部门'] = SUPER_SECTOR_NAMES
-#     # 填充无效值
-#     bool_cols = df.columns[df.columns.str.match(r'A\d{3}')]
-#     _fillna(df, bool_cols, False)
-#     _fillna(df, cate_cols_pat, -1)
-#     return df, maps
-
-
 def get_static_info_table():
     """
     股票静态信息合并表
@@ -174,14 +147,15 @@ def get_static_info_table():
     """
     stocks = get_stock_info()
     cn_industry = get_cn_industry()
-    cn_industry['sector_code'] = cn_industry['国证四级行业编码'].map(sector_code_map)
+    # 类似Sector自定义因子，代码为整数
+    cn_industry['sector_code'] = cn_industry['国证四级行业编码'].map(sector_code_map).astype('int64')
     cn_industry['super_sector_code'] = cn_industry['sector_code'].map(
-        supper_sector_code_map)
-    cn_industry['部门'] = cn_industry['sector_code'].map(SECTOR_NAMES)
-    cn_industry['超级部门'] = cn_industry['super_sector_code'].map(
-        SUPER_SECTOR_NAMES)
-    del cn_industry['sector_code']
-    del cn_industry['super_sector_code']
+        supper_sector_code_map).astype('int64')
+    # cn_industry['部门'] = cn_industry['sector_code'].map(SECTOR_NAMES)
+    # cn_industry['超级部门'] = cn_industry['super_sector_code'].map(
+    #     SUPER_SECTOR_NAMES)
+    # del cn_industry['sector_code']
+    # del cn_industry['super_sector_code']
     concept = get_concept_info()
     df = stocks.join(
         cn_industry.set_index('sid'), on='sid'

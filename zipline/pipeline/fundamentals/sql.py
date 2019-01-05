@@ -3,6 +3,7 @@
 查询本地数据
 
 """
+import re
 import warnings
 
 import numpy as np
@@ -17,8 +18,9 @@ from cnswd.sql.szx import (Classification, ClassificationBom,
                            PerformanceForecaste, PeriodlyBalanceSheet,
                            PeriodlyCashFlowStatement,
                            PeriodlyFinancialIndicator, PeriodlyIncomeStatement,
-                           QuarterlyIncomeStatement, QuarterlyCashFlowStatement,
-                           QuarterlyFinancialIndicator, Quote,
+                           QuarterlyCashFlowStatement,
+                           QuarterlyFinancialIndicator,
+                           QuarterlyIncomeStatement, Quote,
                            ShareholdingConcentration, StockInfo,
                            TtmCashFlowStatement, TtmIncomeStatement)
 
@@ -28,6 +30,27 @@ NUM_MAPS = {
     3: '三级',
     4: '四级',
 }
+
+TO_DORP_PAT = re.compile('^_|^[1-9]|^[一二三四五六七八九]')
+
+
+def _normalized_col_name(x):
+    """规范列财务报告项目在`pipeline`中的列名称
+    注：
+        去除以大写数字开头的部分
+    更改示例：
+        四2_其他原因对现金的影响      ->  其他原因对现金的影响
+        五_现金及现金等价物净增加额    ->  现金及现金等价物净增加额
+    不变示例
+        现金及现金等价物净增加额2           ->  现金及现金等价物净增加额2
+        加_公允价值变动净收益               ->  加_公允价值变动净收益
+        其中_对联营企业和合营企业的投资收益  ->  其中_对联营企业和合营企业的投资收益
+    """
+    m = re.match(TO_DORP_PAT, x)
+    if m:
+        x = re.sub(TO_DORP_PAT,'',x)
+        x = _normalized_col_name(x)
+    return x
 
 # ==========================信息=========================== #
 
@@ -325,18 +348,27 @@ def get_dividend_data(only_A=True):
 # ==========================财务报告=========================== #
 
 
-def _fill_asof_date(df, col='报告年度', ndays=45):
+def _fill_ad_and_ts(df, col='报告年度', ndays=45):
     """
-    如果截止日期为空，则在`col`的值基础上加`ndays`天
-
-    如财务报告以公告日期为截止日期，当公告日期为空时，默认报告年度后45天为公告日期。
-    """
+    修复截止日期、公告日期。
+    如果`asof_date`为空，则使用`col`的值
+        `timestamp`在`col`的值基础上加`ndays`天"""
     cond = df.asof_date.isna()
-    df.loc[cond, 'asof_date'] = df.loc[cond, col] + pd.Timedelta(days=ndays)
+    df.loc[cond, 'asof_date'] = df.loc[cond, col]
+    df.loc[cond, 'timestamp'] = df.loc[cond, col] + pd.Timedelta(days=ndays)
+    # 由于存在数据不完整的情形，当timestamp为空，在asof_date基础上加ndays
+    cond1 = df.timestamp.isna()
+    df.loc[cond1, 'timestamp'] = df.loc[cond1, 'asof_date'] + pd.Timedelta(days=ndays)
+    # 1991-12-31 时段数据需要特别修正
+    cond2 = df.timestamp.map(lambda x : x.is_quarter_end)
+    cond3 = df.asof_date == df.timestamp
+    df.loc[cond2 & cond3, 'timestamp'] = df.loc[cond2 & cond3, 'asof_date'] + pd.Timedelta(days=ndays)
 
 
 def _periodly_report(only_A, table):
-    to_drop = ['股票简称', '机构名称', '截止日期', '合并类型编码',
+    # 一般而言，定期财务报告截止日期与报告年度相同
+    # 但不排除数据更正等情形下，报告年度与截止日期不一致
+    to_drop = ['股票简称', '机构名称', '合并类型编码',
                '合并类型', '报表来源编码', '报表来源']
     engine = get_engine('szx')
     df = pd.read_sql_table(table, engine)
@@ -345,10 +377,13 @@ def _periodly_report(only_A, table):
         df = df[~df.股票代码.str.startswith('9')]
     df.drop(to_drop, axis=1, inplace=True, errors='ignore')
     df.rename(columns={"股票代码": "sid",
-                       "公告日期": "asof_date"},
+                       "截止日期": "asof_date",
+                       "公告日期": "timestamp"},
               inplace=True)
     # 修复截止日期
-    _fill_asof_date(df)
+    _fill_ad_and_ts(df)
+    # 规范列名称
+    df.columns = df.columns.map(_normalized_col_name)
     df.sort_values(['sid', 'asof_date'], inplace=True)
     return df
 
@@ -375,24 +410,30 @@ def get_p_income_data(only_A=True):
 
 
 def _financial_report_announcement_date():
-    """财务报告公告日期"""
-    col_names = ['股票代码', '公告日期', '报告年度']
+    """
+    获取财报公告日期，供其他计算类型的表使用(使用资产负债表公告日期)
+
+    注：
+        季度报告、财务指标是依据定期报告计算得来，并没有实际的公告日期。
+        以其利润表定期报告的公告日期作为`asof_date`
+    """
+    col_names = ['股票代码', '公告日期', '截止日期']
     with session_scope('szx') as sess:
         query = sess.query(
-            PeriodlyIncomeStatement.股票代码,
-            PeriodlyIncomeStatement.公告日期,
-            PeriodlyIncomeStatement.报告年度
+            PeriodlyBalanceSheet.股票代码,
+            PeriodlyBalanceSheet.公告日期,
+            PeriodlyBalanceSheet.截止日期
         )
         df = pd.DataFrame.from_records(query.all())
         df.columns = col_names
         return df
 
 
-def _get_report(only_A, table, columns=None, col='报告年度'):
+def _get_report(only_A, table, columns=None, col='截止日期'):
     """
     获取财务报告数据
     
-    使用资产负债表的公告日期作为截止日期
+    使用利润表的公告日期
     """
     engine = get_engine('szx')
     df = pd.read_sql_table(table, engine, columns=columns)
@@ -401,17 +442,20 @@ def _get_report(only_A, table, columns=None, col='报告年度'):
         df = df[~df.股票代码.str.startswith('9')]
     # df.drop(to_drop, axis=1, inplace=True, errors='ignore')
     asof_dates = _financial_report_announcement_date()
-    keys = ['股票代码', '报告年度']
-    # 原始数据列名称更改为'报告年度'
-    df.rename(columns={col: '报告年度'}, inplace=True)
+    keys = ['股票代码', '截止日期']
+    # 原始数据列名称更改为'截止日期'
+    df.rename(columns={col: '截止日期'}, inplace=True)
     df = df.join(
         asof_dates.set_index(keys), on=keys
     )
     df.rename(columns={"股票代码": "sid",
-                       "公告日期": "asof_date"},
+                       "截止日期": "asof_date",
+                       "公告日期": "timestamp"},
               inplace=True)
     # 修复截止日期
-    _fill_asof_date(df, '报告年度')
+    _fill_ad_and_ts(df)
+    # 规范列名称
+    df.columns = df.columns.map(_normalized_col_name)
     df.sort_values(['sid', 'asof_date'], inplace=True)
     return df
 
@@ -422,7 +466,7 @@ def _get_report(only_A, table, columns=None, col='报告年度'):
 def get_q_income_data(only_A=True):
     """季度利润表"""
     table = QuarterlyIncomeStatement.__tablename__
-    to_drop = ['股票简称', '开始日期', '截止日期', '合并类型编码', '合并类型']
+    to_drop = ['股票简称', '开始日期', '合并类型编码', '合并类型']
     columns = []
     for c in QuarterlyIncomeStatement.__table__.columns:
         if c.name not in to_drop:
@@ -434,7 +478,7 @@ def get_q_income_data(only_A=True):
 def get_q_cash_flow_data(only_A=True):
     """季度现金流量表"""
     table = QuarterlyCashFlowStatement.__tablename__
-    to_drop = ['股票简称', '开始日期', '截止日期', '合并类型编码', '合并类型']
+    to_drop = ['股票简称', '开始日期', '合并类型编码', '合并类型']
     columns = []
     for c in QuarterlyCashFlowStatement.__table__.columns:
         if c.name not in to_drop:
@@ -449,7 +493,7 @@ def get_q_cash_flow_data(only_A=True):
 def get_ttm_cash_flow_data(only_A=True):
     """TTM现金流量表"""
     table = TtmCashFlowStatement.__tablename__
-    to_drop = ['股票简称', '开始日期', '截止日期', '合并类型编码', '合并类型']
+    to_drop = ['股票简称', '开始日期', '合并类型编码', '合并类型']
     columns = []
     for c in TtmCashFlowStatement.__table__.columns:
         if c.name not in to_drop:
@@ -461,7 +505,7 @@ def get_ttm_cash_flow_data(only_A=True):
 def get_ttm_income_data(only_A=True):
     """TTM财务利润表"""
     table = TtmIncomeStatement.__tablename__
-    to_drop = ['股票简称', '开始日期', '截止日期', '合并类型编码', '合并类型']
+    to_drop = ['股票简称', '开始日期', '合并类型编码', '合并类型']
     columns = []
     for c in TtmIncomeStatement.__table__.columns:
         if c.name not in to_drop:
@@ -475,7 +519,7 @@ def get_ttm_income_data(only_A=True):
 def get_periodly_financial_indicator_data(only_A=True):
     """报告期指标表"""
     table = PeriodlyFinancialIndicator.__tablename__
-    to_drop = ['股票简称', '机构名称', '开始日期', '截止日期', '数据来源编码', '数据来源']
+    to_drop = ['股票简称', '机构名称', '开始日期', '数据来源编码', '数据来源']
     columns = []
     for c in PeriodlyFinancialIndicator.__table__.columns:
         if c.name not in to_drop:
@@ -487,7 +531,7 @@ def get_periodly_financial_indicator_data(only_A=True):
 def get_quarterly_financial_indicator_data(only_A=True):
     """单季财务指标"""
     table = QuarterlyFinancialIndicator.__tablename__
-    to_drop = ['股票简称', '开始日期', '截止日期', '合并类型编码', '合并类型']
+    to_drop = ['股票简称', '开始日期', '合并类型编码', '合并类型']
     columns = []
     for c in QuarterlyFinancialIndicator.__table__.columns:
         if c.name not in to_drop:
@@ -531,7 +575,7 @@ def get_performance_forecaste_data(only_A=True):
                        "公告日期": "asof_date"},
               inplace=True)
     # 修复截止日期
-    _fill_asof_date(df, '报告年度')
+    _fill_ad_and_ts(df, '报告年度')
     df.sort_values(['sid', 'asof_date'], inplace=True)
     return df
 
@@ -591,3 +635,4 @@ def get_investment_rating_data(only_A=True):
               inplace=True)
     df.sort_values(['sid', 'asof_date'], inplace=True)
     return df
+
