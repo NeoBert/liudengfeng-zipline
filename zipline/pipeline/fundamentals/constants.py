@@ -1,16 +1,8 @@
 """
+
 部门编码
-同花顺行业 -> 部门代码
+
 """
-MARKET_MAPS = {
-    9: '上海B股',
-    6: '上海主板',
-    3: '创业板',
-    2: '深圳B股',
-    1: '中小板',
-    0: '深圳主板',
-    -1: '未知',
-}
 
 SUPER_SECTOR_NAMES = {
     1: '周期',  # 'Cyclical'),
@@ -33,8 +25,3 @@ SECTOR_NAMES = {
     311: '工程技术',  # 'TECHNOLOGY'),
     -1:  '未知',
 }
-
-QUARTERLY_TABLES = [
-    'balance_sheets', 'profit_statements', 'cashflow_statements', 'chnls',
-    'cznls', 'ylnls', 'yynls', 'zyzbs'
-]

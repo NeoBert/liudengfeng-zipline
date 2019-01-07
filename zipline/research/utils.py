@@ -1,6 +1,8 @@
 """
 辅助函数
 """
+import warnings
+
 from cnswd.utils import ensure_list
 
 from .core import symbols, to_tdates
@@ -39,7 +41,6 @@ def select_output_by(output, start=None, end=None, assets=None, reduce_format=Tr
         raise ValueError('输入数据框只能是run_pipeline输出结果，MultiIndex DataFrame')
 
     _, start, end = to_tdates(start, end)
-
     if assets is not None:
         assets = symbols(assets)
     else:

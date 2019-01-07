@@ -21,12 +21,14 @@ def _investment_score(x):
         return 5
     elif x == '增持':
         return 4
-    elif x in ('-', '中性','不评级'):
+    elif x == '中性':
         return 3
     elif x == '减持':
         return 2
     elif x == '卖出':
         return 1
+    elif x in ('-', '不评级'):
+        return 0
     raise ValueError(f'无效值{x}')
 
 
@@ -72,10 +74,17 @@ def _normalize_ad_ts_sid(df, ndays=0, nhours=8, target_tz='utc'):
     return df
 
 
-def _fillna(df, start_names, default):
+def _fill_missing_value(df, start_names, default):
     """
     修改无效值
     为输入df中以指定列名称开头的列，以默认值代替nan
+
+    与默认值一致
+        整数        默认值 -1
+        浮点        默认值nan
+        对象(含str) `未知`
+        时间        NaT
+        逻辑        False
     """
     # 找出以指定列名词开头的列
     col_names = []
@@ -86,6 +95,12 @@ def _fillna(df, start_names, default):
     values = {}
     for col in col_names:
         values[col] = default
+    # 对象类别需要填充缺失值
+    for col in df.columns:
+        cond_1 = pd.core.dtypes.common.is_object_dtype(df[col])
+        cond_2 = col not in col_names
+        if cond_1 & cond_2:
+            values[col] = '未知'
     df.fillna(value=values, inplace=True)
 
 
@@ -96,7 +111,7 @@ def _handle_cate(df, col_pat, maps):
         c = df[col].astype('category')
         df[col] = c.cat.codes.astype('int64')
         maps[col] = {k: v for k, v in enumerate(c.cat.categories)}
-        maps[col].update({-1: '未定义'})
+        maps[col].update({0: '未知'})
     return df, maps
 
 
@@ -167,8 +182,8 @@ def get_static_info_table():
     maps['概念'] = name_maps
     # 填充无效值
     bool_cols = df.columns[df.columns.str.match(r'A\d{3}')]
-    _fillna(df, bool_cols, False)
-    # _fillna(df, cate_cols_pat, -1)
+    _fill_missing_value(df, bool_cols, False)
+    # _fill_missing_value(df, cate_cols_pat, 0)
     return df, maps
 
 
@@ -187,5 +202,5 @@ def get_investment_rating():
     df['投资评级'] = df['投资评级'].map(_investment_score) # 转换为整数值
     del df['投资评级经调整']
     # 填充无效值
-    _fillna(df, cate_cols_pat, -1)
+    _fill_missing_value(df, cate_cols_pat, -1)
     return df, maps

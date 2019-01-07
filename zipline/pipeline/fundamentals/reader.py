@@ -28,8 +28,7 @@ from zipline.utils.memoize import classlazyval
 
 from ..data.dataset import BoundColumn
 from .base import bcolz_table_path
-from .constants import (MARKET_MAPS, QUARTERLY_TABLES, SECTOR_NAMES,
-                        SUPER_SECTOR_NAMES)
+from .constants import SECTOR_NAMES, SUPER_SECTOR_NAMES
 from .utils import _normalized_dshape, fillvalue_for_expr, gen_odo_kwargs
 
 ITEM_CODE_PATTERN = re.compile(r'A\d{3}')
@@ -44,12 +43,17 @@ def verify_code(code):
 def _gen_expr(table_name):
     """生成表所对应的表达式"""
     rootdir = bcolz_table_path(table_name)
-    # # 此时读取的datetime丢失了时区信息
-    ctable = bcolz.ctable(rootdir=rootdir, mode='r')
-    # df = ctable.todataframe()  # 转换为DataFrame对象
-    raw_dshape = discover(ctable)
-    dshape = _normalized_dshape(raw_dshape, True)
-    expr = blaze.data(ctable, name=table_name, dshape=dshape)
+    ct = bcolz.ctable(rootdir=rootdir, mode='r')
+    df = ct.todataframe()  # 转换为DataFrame对象
+    # 所有对象类型的列，需要填充缺失值
+    values = {}
+    for col in df.columns:
+        if pd.core.dtypes.common.is_object_dtype(df[col]):
+            values[col] = '未知'
+    df.fillna(value=values, inplace=True)    
+    raw_dshape = discover(df)
+    dshape = _normalized_dshape(raw_dshape, False)
+    expr = blaze.data(df, name=table_name, dshape=dshape)
     return expr
 
 
@@ -61,7 +65,7 @@ def gen_data_set(table_name):
         # loader=global_loader,
         no_deltas_rule='ignore',
         no_checkpoints_rule='ignore',
-        odo_kwargs=gen_odo_kwargs(expr),
+        # odo_kwargs=gen_odo_kwargs(expr),
         missing_values=fillvalue_for_expr(expr),
         domain=CN_EQUITIES,
     )

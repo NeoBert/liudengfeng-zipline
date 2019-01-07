@@ -10,6 +10,7 @@
 """
 import os
 import sys
+import warnings
 from shutil import rmtree
 
 import bcolz
@@ -17,25 +18,24 @@ import logbook
 from logbook import Logger
 
 from cnswd.sql.szx import (FinancialIndicatorRanking, PerformanceForecaste,
-                           QuarterlyIncomeStatement, QuarterlyCashFlowStatement,
                            PeriodlyBalanceSheet, PeriodlyCashFlowStatement,
                            PeriodlyFinancialIndicator, PeriodlyIncomeStatement,
-                           QuarterlyFinancialIndicator, TtmCashFlowStatement,
+                           QuarterlyCashFlowStatement,
+                           QuarterlyFinancialIndicator,
+                           QuarterlyIncomeStatement, TtmCashFlowStatement,
                            TtmIncomeStatement)
 
-from ..common import AD_FIELD_NAME, TS_FIELD_NAME
+from ..common import AD_FIELD_NAME, TS_FIELD_NAME, SID_FIELD_NAME
 from .base import bcolz_table_path
 from .preprocess import (_normalize_ad_ts_sid, get_investment_rating,
                          get_static_info_table)
-from .sql import (get_dividend_data, get_equity_data, get_margin_data,
-                  get_tdata,
+from .sql import (get_dividend_data, get_equity_data,
+                  get_financial_indicator_ranking_data, get_margin_data,
                   get_p_balance_data, get_p_cash_flow_data, get_p_income_data,
-                  get_q_cash_flow_data, get_q_income_data,
                   get_performance_forecaste_data,
-                  get_financial_indicator_ranking_data,
-                  get_periodly_financial_indicator_data,
-                  get_quarterly_financial_indicator_data,
-                  get_short_name_changes, get_ttm_cash_flow_data,
+                  get_periodly_financial_indicator_data, get_q_cash_flow_data,
+                  get_q_income_data, get_quarterly_financial_indicator_data,
+                  get_short_name_changes, get_tdata, get_ttm_cash_flow_data,
                   get_ttm_income_data)
 
 # 设置显示日志
@@ -73,6 +73,10 @@ def write_dataframe(df, table_name, attr_dict=None):
     if os.path.exists(rootdir):
         rmtree(rootdir)
     df = _normalize_ad_ts_sid(df)
+    for c in (AD_FIELD_NAME, TS_FIELD_NAME, SID_FIELD_NAME):
+        if df[c].hasnans:
+            warnings.warn(f'{c}列含有空值，已移除')
+            df = df.loc[~df[c].isnan(), :]
     ct = bcolz.ctable.fromdataframe(df, rootdir=rootdir)
     log.info('写入数据至：{}'.format(rootdir))
     if attr_dict:
