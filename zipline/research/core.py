@@ -286,11 +286,12 @@ def get_pricing(assets,
     reduce_condition2 = len(fields) == 1
 
     if reduce_condition1 & (not reduce_condition2):
+        ret = ret.unstack()
         ret.columns = fields
     elif (not reduce_condition1) & reduce_condition2:
+        ret = ret.unstack()
         ret.columns = assets
     elif not (reduce_condition1 | reduce_condition2):
-        for _, v in ret.items():
-            v.columns = assets
+        ret.index.set_levels(assets, 1, inplace=True)
 
     return ret

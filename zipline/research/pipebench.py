@@ -11,10 +11,20 @@ from zipline.utils.memoize import remember_last
 
 def run_pipeline(pipeline, start_date, end_date):
     default_bundle = 'cndaily'
-    
+
     return run_pipeline_against_bundle(
         pipeline, start_date, end_date, default_bundle
     )
+
+
+def _tdate(calendar, d, direction):
+    if not calendar.is_session(d):
+        # this is not a trading session, advance to the next session
+        return calendar.minute_to_session_label(
+            d,
+            direction=direction,
+        )
+    return d
 
 
 def run_pipeline_against_bundle(pipeline, start_date, end_date, bundle):
@@ -39,22 +49,15 @@ def run_pipeline_against_bundle(pipeline, start_date, end_date, bundle):
     engine, calendar = _pipeline_engine_and_calendar_for_bundle(bundle)
 
     start_date = pd.Timestamp(start_date, tz='utc')
-    if not calendar.is_session(start_date):
-        # this is not a trading session, advance to the next session
-        start_date = calendar.minute_to_session_label(
-            start_date,
-            direction='next',
-        )
-
     end_date = pd.Timestamp(end_date, tz='utc')
-    if not calendar.is_session(end_date):
-        # this is not a trading session, advance to the previous session
-        end_date = calendar.minute_to_session_label(
-            end_date,
-            direction='previous',
-        )
-
-    return engine.run_pipeline(pipeline, start_date, end_date)
+    if start_date == end_date:
+        d1 = d2 = _tdate(calendar, end_date, 'previous')
+    else:
+        d1 = _tdate(calendar, start_date, 'next')
+        d2 = _tdate(calendar, end_date, 'previous')
+        if d1 > d2:
+            d1 = d2
+    return engine.run_pipeline(pipeline, d1, d2)
 
 
 @remember_last
@@ -74,9 +77,9 @@ def _pipeline_engine_and_calendar_for_bundle(bundle):
         The trading calendar for the bundle.
     """
     bundle_data = bundles.load(bundle)
-    
-    pipeline_loader= EquityPricingLoader(
-        bundle_data.equity_daily_bar_reader, 
+
+    pipeline_loader = EquityPricingLoader(
+        bundle_data.equity_daily_bar_reader,
         bundle_data.adjustment_reader,
     )
 
