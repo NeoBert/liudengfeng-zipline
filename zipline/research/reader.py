@@ -13,7 +13,7 @@ def get_pricing(sids, start, end, fields):
         fields {str列表} -- 字段列表
 
     Returns:
-        pd.DataFrame: 'date'+'symbol' -> index
+        pd.DataFrame: A MultiIndex DataFrame indexed by date (level 0) and asset (level 1)
     """
     _sids = ensure_list(sids)
     _fields = ensure_list(fields)
