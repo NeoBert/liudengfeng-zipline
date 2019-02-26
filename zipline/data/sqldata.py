@@ -53,13 +53,13 @@ def _stock_basic_info():
     """
     col_names = ['symbol', 'start_date', 'end_date',
                  'status', 'stock_type', 'exchange']
-    with session_scope('szx') as sess:
+    with session_scope('dataBrowse') as sess:
         query = sess.query(
-            StockInfo.股票代码,
+            StockInfo.证券代码,
             StockInfo.上市日期,
             StockInfo.摘牌日期,
             StockInfo.上市状态,
-            StockInfo.股票类别,
+            StockInfo.证券类别,
             StockInfo.上市地点,
         )
         df = pd.DataFrame.from_records(query.all())
@@ -73,7 +73,7 @@ def get_latest_short_name():
 
     Examples
     --------
-    >>> df = get_end_dates()
+    >>> df = get_latest_short_name()
     >>> df.head()
          symbol  asset_name
     0     000001    平安银行
@@ -187,6 +187,7 @@ def _fill_zero(df):
         df[col] = ohlc[col]
     return df
 
+
 # szx数据行情自2000年开始
 def fetch_single_equity(stock_code, start, end):
     """
@@ -287,8 +288,7 @@ def _handle_minutely_data(df, exclude_lunch):
                             'high': highs.values,
                             'low': lows.values,
                             'close': closes.values,
-                            'volume': volumes.values
-                            },
+                            'volume': volumes.values},
                            index=index)
         am = ohlcv.between_time('9:32', '11:30')
         pm = ohlcv.between_time('13:00', '15:00')
@@ -386,22 +386,24 @@ def fetch_single_quity_adjustments(stock_code, start, end):
     4  000333 2017-06-30      0.0      0.0     0.0           NaT         NaT        NaT        NaT
     5  000333 2017-12-31      0.0      0.0     1.2    2018-04-24  2018-05-03 2018-05-04 2018-05-04
     """
-    start = pd.Timestamp(start).date()
-    end = pd.Timestamp(end).date()
-    with session_scope('szx') as sess:
+    start = pd.Timestamp(start)
+    end = pd.Timestamp(end)
+    with session_scope('dataBrowse') as sess:
         query = sess.query(
-            Dividend.股票代码,
+            Dividend.证券代码,
             Dividend.分红年度,
             Dividend.送股比例,
             Dividend.转增比例,
-            Dividend.派息比例人民币,
+            Dividend.派息比例_人民币,
             Dividend.股东大会预案公告日期,
             Dividend.A股股权登记日,
             Dividend.A股除权日,
-            Dividend.派息日A,
+            Dividend.派息日_A,
         ).filter(
-            Dividend.股票代码 == stock_code,
-            Dividend.分红年度.between(start, end)
+            Dividend.证券代码 == stock_code,
+            # Dividend.分红年度.between(start, end),
+            Dividend.分红年度 >= start,
+            Dividend.分红年度 <= end
         )
         df = pd.DataFrame.from_records(query.all())
         if df.empty:

@@ -19,7 +19,7 @@ from zipline.finance import commission, slippage
 
 
 def initialize(context):
-    context.asset = symbol('AAPL')
+    context.asset = symbol('000333')
 
     # Explicitly set the commission/slippage to the "old" value until we can
     # rebuild example data.
@@ -31,7 +31,7 @@ def initialize(context):
 
 def handle_data(context, data):
     order(context.asset, 10)
-    record(AAPL=data.current(context.asset, 'price'))
+    record(MDJT=data.current(context.asset, 'price'))
 
 
 # Note: this function can be removed if running
@@ -41,10 +41,10 @@ def analyze(context=None, results=None):
     # Plot the portfolio and asset data.
     ax1 = plt.subplot(211)
     results.portfolio_value.plot(ax=ax1)
-    ax1.set_ylabel('Portfolio value (USD)')
+    ax1.set_ylabel('组合市值')
     ax2 = plt.subplot(212, sharex=ax1)
-    results.AAPL.plot(ax=ax2)
-    ax2.set_ylabel('AAPL price (USD)')
+    results.MDJT.plot(ax=ax2)
+    ax2.set_ylabel('美的集团股价')
 
     # Show the plot.
     plt.gcf().set_size_inches(18, 8)
