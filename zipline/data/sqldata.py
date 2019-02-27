@@ -2,14 +2,16 @@
 
 本地数据查询及预处理，适用于zipline ingest写入
 
+1. 是否需要将暂停上市、已经退市代码？
 """
 
 from sqlalchemy import func
 import pandas as pd
 import numpy as np
 from cnswd.sql.base import session_scope
-from cnswd.sql.szsh import StockDaily, CJMX
+from cnswd.sql.szsh import StockDaily, CJMX, TradingCalendar
 from cnswd.sql.szx import StockInfo, Dividend
+from functools import lru_cache
 
 
 DAILY_COLS = ['symbol', 'date',
@@ -174,6 +176,17 @@ def gen_asset_metadata(only_in=True, only_A=True):
     return df
 
 
+@lru_cache(None)
+def _tdates():
+    with session_scope('szsh') as sess:
+        res = sess.query(
+            TradingCalendar.日期
+        ).filter(
+            TradingCalendar.交易日 == True
+        ).all()
+        return pd.DatetimeIndex([x[0] for x in res])
+
+
 def _fill_zero(df):
     """填充因为停牌ohlc可能存在的0值"""
     # 将close放在第一列
@@ -188,7 +201,16 @@ def _fill_zero(df):
     return df
 
 
-# szx数据行情自2000年开始
+def _reindex(df):
+    tdates = _tdates()
+    df.set_index('date', inplace=True)
+    s = tdates.slice_locs(df.index[0], df.index[-1])
+    full_index = tdates[s[0]:s[1]]
+    res = df.reindex(full_index, method='ffill')
+    res.reset_index(inplace=True)
+    return res.rename(columns={"index": "date"})
+
+
 def fetch_single_equity(stock_code, start, end):
     """
     从本地数据库读取股票期间日线交易数据
@@ -213,9 +235,9 @@ def fetch_single_equity(stock_code, start, end):
 
     Examples
     --------
-    >>> symbol = '000333'
-    >>> start_date = '2017-4-1'
-    >>> end_date = pd.Timestamp('2018-4-16')
+    >>> symbol = '600710'
+    >>> start_date = '2016-03-29'
+    >>> end_date = pd.Timestamp('2017-07-31')
     >>> df = fetch_single_equity(symbol, start_date, end_date)
     >>> df.iloc[:,:8]
         symbol        date   open   high    low  close  prev_close  change_pct
@@ -229,8 +251,8 @@ def fetch_single_equity(stock_code, start, end):
     7  000333  2018-04-13  52.40  52.47  51.01  51.32       51.87     -1.0603
     8  000333  2018-04-16  51.31  51.80  49.15  49.79       51.32     -2.9813    
     """
-    start = pd.Timestamp(start).date()
-    end = pd.Timestamp(end).date()
+    start = pd.Timestamp(start)
+    end = pd.Timestamp(end)
     with session_scope('szsh') as sess:
         query = sess.query(
             StockDaily.股票代码,
@@ -257,7 +279,8 @@ def fetch_single_equity(stock_code, start, end):
         df = _fill_zero(df)
         df['circulating_share'] = df.cmv / df.close
         df['total_share'] = df.tmv / df.close
-        return df.sort_values('date')
+        res = df.sort_values('date')
+        return _reindex(df)
 
 
 def _handle_minutely_data(df, exclude_lunch):
