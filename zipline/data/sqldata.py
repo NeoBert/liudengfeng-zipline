@@ -280,7 +280,7 @@ def fetch_single_equity(stock_code, start, end):
         df['circulating_share'] = df.cmv / df.close
         df['total_share'] = df.tmv / df.close
         res = df.sort_values('date')
-        return _reindex(df)
+        return _reindex(res)
 
 
 def _handle_minutely_data(df, exclude_lunch):
