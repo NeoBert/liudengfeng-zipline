@@ -4,7 +4,7 @@ from cnswd.utils import data_root
 from cnswd.sql.base import db_path
 
 
-VALID_DB_NAMES = ('szsh', 'szx', 'info')
+VALID_DB_NAMES = ('szsh', 'dataBrowse', 'info', 'thematicStatistics')
 
 
 def bcolz_table_path(table_name):

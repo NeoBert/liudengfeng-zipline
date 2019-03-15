@@ -417,7 +417,7 @@ def bundles():
 
 
 @main.command()
-def sql_to_bcolz():
+def fundamental():
     """生成基础数据(Fundamental)
     """
     write_sql_data_to_bcolz()

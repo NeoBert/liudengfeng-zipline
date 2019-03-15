@@ -27,7 +27,7 @@ def _investment_score(x):
         return 2
     elif x == '卖出':
         return 1
-    elif x in ('-', '不评级'):
+    elif x in (None, '-', '不评级'):
         return 0
     raise ValueError(f'无效值{x}')
 
@@ -198,9 +198,9 @@ def get_investment_rating():
     cate_cols_pat = ['研究机构简称', '研究员名称', '是否首次评级', '评价变化',  '前一次投资评级']
     for col_pat in cate_cols_pat:
         df, maps = _handle_cate(df, col_pat, maps)
-    df['投资评级'] = df['投资评级经调整'] # 统一评级
+    df['投资评级'] = df['投资评级_经调整'] # 统一评级
     df['投资评级'] = df['投资评级'].map(_investment_score) # 转换为整数值
-    del df['投资评级经调整']
+    del df['投资评级_经调整']
     # 填充无效值
     _fill_missing_value(df, cate_cols_pat, -1)
     return df, maps

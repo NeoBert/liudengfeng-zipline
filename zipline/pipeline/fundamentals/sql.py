@@ -11,7 +11,7 @@ import pandas as pd
 from sqlalchemy import func
 
 from cnswd.sql.base import get_engine, session_scope
-from cnswd.sql.szsh import TCTGN, StockDaily, TradingCalendar
+from cnswd.sql.szsh import StockDaily, TradingCalendar, THSGN
 from cnswd.sql.szx import (Classification, ClassificationBom,
                            CompanyShareChange, Dividend,
                            FinancialIndicatorRanking, InvestmentRating,
@@ -48,7 +48,7 @@ def _normalized_col_name(x):
     """
     m = re.match(TO_DORP_PAT, x)
     if m:
-        x = re.sub(TO_DORP_PAT,'',x)
+        x = re.sub(TO_DORP_PAT, '', x)
         x = _normalized_col_name(x)
     return x
 
@@ -57,10 +57,10 @@ def _normalized_col_name(x):
 
 def get_stock_info(only_A=True):
     """股票基础信息"""
-    with session_scope('szx') as sess:
+    with session_scope('dataBrowse') as sess:
         query = sess.query(
-            StockInfo.股票代码,
-            StockInfo.股票简称,
+            StockInfo.证券代码,
+            StockInfo.证券简称,
             StockInfo.上市日期,
             StockInfo.上市地点,
             StockInfo.上市状态,
@@ -78,8 +78,8 @@ def get_stock_info(only_A=True):
         )
         if only_A:
             query = query.filter(
-                ~StockInfo.股票代码.startswith('2'),
-                ~StockInfo.股票代码.startswith('9'),
+                ~StockInfo.证券代码.startswith('2'),
+                ~StockInfo.证券代码.startswith('9'),
             )
         columns = ['sid', '股票简称', '上市日期', '市场', '状态', '省份', '城市',
                    '证监会一级行业', '证监会二级行业',
@@ -95,7 +95,7 @@ def get_stock_info(only_A=True):
 
 def get_cn_bom():
     """国证行业分类编码表"""
-    with session_scope('szx') as sess:
+    with session_scope('dataBrowse') as sess:
         query = sess.query(
             ClassificationBom.分类编码,
             ClassificationBom.分类名称,
@@ -111,9 +111,9 @@ def _get_cn_industry(only_A, level, bom):
     assert level in (1, 2, 3, 4), '国证行业只有四级分类'
     u_num = NUM_MAPS[level]
     col_names = ['sid', '国证{}行业'.format(u_num), '国证{}行业编码'.format(u_num)]
-    with session_scope('szx') as sess:
+    with session_scope('dataBrowse') as sess:
         query = sess.query(
-            Classification.股票代码,
+            Classification.证券代码,
             Classification.分类名称,
             Classification.分类编码
         ).filter(
@@ -121,8 +121,8 @@ def _get_cn_industry(only_A, level, bom):
         )
         if only_A:
             query = query.filter(
-                ~Classification.股票代码.startswith('2'),
-                ~Classification.股票代码.startswith('9'),
+                ~Classification.证券代码.startswith('2'),
+                ~Classification.证券代码.startswith('9'),
             )
         df = pd.DataFrame.from_records(query.all(), columns=col_names)
         if df.empty:
@@ -161,8 +161,8 @@ def concept_categories():
     """概念类别映射{代码:名称}"""
     with session_scope('szsh') as sess:
         query = sess.query(
-            TCTGN.概念id.distinct(),
-            TCTGN.概念简称,
+            THSGN.概念编码.distinct(),
+            THSGN.概念,
         )
         df = pd.DataFrame.from_records(query.all())
         df.columns = ['code', 'name']
@@ -212,13 +212,13 @@ def get_concept_info(only_A=True):
     id_maps, _ = field_code_concept_maps()
     with session_scope('szsh') as sess:
         query = sess.query(
-            TCTGN.股票代码,
-            TCTGN.概念id,
+            THSGN.股票代码,
+            THSGN.概念编码,
         )
         if only_A:
             query = query.filter(
-                ~TCTGN.股票代码.startswith('2'),
-                ~TCTGN.股票代码.startswith('9'),
+                ~THSGN.股票代码.startswith('2'),
+                ~THSGN.股票代码.startswith('9'),
             )
         df = pd.DataFrame.from_records(query.all())
         df.columns = ['sid', '概念']
@@ -276,9 +276,9 @@ def get_short_name_changes(only_A=True):
 
 def get_equity_data(only_A=True):
     """公司股本数据"""
-    with session_scope('szx') as sess:
+    with session_scope('dataBrowse') as sess:
         query = sess.query(
-            CompanyShareChange.股票代码,
+            CompanyShareChange.证券代码,
             CompanyShareChange.变动日期,
             CompanyShareChange.总股本,
             CompanyShareChange.已流通股份,
@@ -295,9 +295,9 @@ def get_equity_data(only_A=True):
 
 def get_margin_data(only_A=True):
     """融资融券数据"""
-    with session_scope('szx') as sess:
+    with session_scope('dataBrowse') as sess:
         query = sess.query(
-            Quote.股票代码,
+            Quote.证券代码,
             Quote.交易日期,
             Quote.本日融资余额,
             Quote.本日融资买入额,
@@ -323,21 +323,21 @@ def get_margin_data(only_A=True):
 
 def get_dividend_data(only_A=True):
     """现金股利"""
-    with session_scope('szx') as sess:
+    with session_scope('dataBrowse') as sess:
         query = sess.query(
-            Dividend.股票代码,
+            Dividend.证券代码,
             Dividend.分红年度,
             Dividend.董事会预案公告日期,
-            Dividend.派息比例人民币,
+            Dividend.派息比例_人民币,
         ).filter(
             # 数据可能为空，排除
             Dividend.董事会预案公告日期.isnot(None),
-            Dividend.派息比例人民币 > 0
+            Dividend.派息比例_人民币 > 0
         )
         if only_A:
             query = query.filter(
-                ~Dividend.股票代码.startswith('2'),
-                ~Dividend.股票代码.startswith('9'),
+                ~Dividend.证券代码.startswith('2'),
+                ~Dividend.证券代码.startswith('9'),
             )
         df = pd.DataFrame.from_records(query.all())
         df.columns = ['sid', '分红年度', 'asof_date', '每股人民币派息']
@@ -358,25 +358,27 @@ def _fill_ad_and_ts(df, col='报告年度', ndays=45):
     df.loc[cond, 'timestamp'] = df.loc[cond, col] + pd.Timedelta(days=ndays)
     # 由于存在数据不完整的情形，当timestamp为空，在asof_date基础上加ndays
     cond1 = df.timestamp.isna()
-    df.loc[cond1, 'timestamp'] = df.loc[cond1, 'asof_date'] + pd.Timedelta(days=ndays)
+    df.loc[cond1, 'timestamp'] = df.loc[cond1,
+                                        'asof_date'] + pd.Timedelta(days=ndays)
     # 1991-12-31 时段数据需要特别修正
-    cond2 = df.timestamp.map(lambda x : x.is_quarter_end)
+    cond2 = df.timestamp.map(lambda x: x.is_quarter_end)
     cond3 = df.asof_date == df.timestamp
-    df.loc[cond2 & cond3, 'timestamp'] = df.loc[cond2 & cond3, 'asof_date'] + pd.Timedelta(days=ndays)
+    df.loc[cond2 & cond3, 'timestamp'] = df.loc[cond2 &
+                                                cond3, 'asof_date'] + pd.Timedelta(days=ndays)
 
 
 def _periodly_report(only_A, table):
     # 一般而言，定期财务报告截止日期与报告年度相同
     # 但不排除数据更正等情形下，报告年度与截止日期不一致
-    to_drop = ['股票简称', '机构名称', '合并类型编码',
+    to_drop = ['证券简称', '机构名称', '合并类型编码',
                '合并类型', '报表来源编码', '报表来源']
-    engine = get_engine('szx')
+    engine = get_engine('dataBrowse')
     df = pd.read_sql_table(table, engine)
     if only_A:
-        df = df[~df.股票代码.str.startswith('2')]
-        df = df[~df.股票代码.str.startswith('9')]
+        df = df[~df.证券代码.str.startswith('2')]
+        df = df[~df.证券代码.str.startswith('9')]
     df.drop(to_drop, axis=1, inplace=True, errors='ignore')
-    df.rename(columns={"股票代码": "sid",
+    df.rename(columns={"证券代码": "sid",
                        "截止日期": "asof_date",
                        "公告日期": "timestamp"},
               inplace=True)
@@ -418,9 +420,9 @@ def _financial_report_announcement_date():
         以其利润表定期报告的公告日期作为`asof_date`
     """
     col_names = ['股票代码', '公告日期', '截止日期']
-    with session_scope('szx') as sess:
+    with session_scope('dataBrowse') as sess:
         query = sess.query(
-            PeriodlyBalanceSheet.股票代码,
+            PeriodlyBalanceSheet.证券代码,
             PeriodlyBalanceSheet.公告日期,
             PeriodlyBalanceSheet.截止日期
         )
@@ -435,14 +437,14 @@ def _get_report(only_A, table, columns=None, col='截止日期'):
     
     使用利润表的公告日期
     """
-    engine = get_engine('szx')
+    engine = get_engine('dataBrowse')
     df = pd.read_sql_table(table, engine, columns=columns)
     if only_A:
-        df = df[~df.股票代码.str.startswith('2')]
-        df = df[~df.股票代码.str.startswith('9')]
+        df = df[~df.证券代码.str.startswith('2')]
+        df = df[~df.证券代码.str.startswith('9')]
     # df.drop(to_drop, axis=1, inplace=True, errors='ignore')
     asof_dates = _financial_report_announcement_date()
-    keys = ['股票代码', '截止日期']
+    keys = ['证券代码', '截止日期']
     if col != '截止日期':
         # 处理行业排名
         df['报告年度'] = df[col]
@@ -451,7 +453,7 @@ def _get_report(only_A, table, columns=None, col='截止日期'):
     df = df.join(
         asof_dates.set_index(keys), on=keys
     )
-    df.rename(columns={"股票代码": "sid",
+    df.rename(columns={"证券代码": "sid",
                        "截止日期": "asof_date",
                        "公告日期": "timestamp"},
               inplace=True)
@@ -469,7 +471,7 @@ def _get_report(only_A, table, columns=None, col='截止日期'):
 def get_q_income_data(only_A=True):
     """季度利润表"""
     table = QuarterlyIncomeStatement.__tablename__
-    to_drop = ['股票简称', '开始日期', '合并类型编码', '合并类型']
+    to_drop = ['证券简称', '开始日期', '合并类型编码', '合并类型']
     columns = []
     for c in QuarterlyIncomeStatement.__table__.columns:
         if c.name not in to_drop:
@@ -481,7 +483,7 @@ def get_q_income_data(only_A=True):
 def get_q_cash_flow_data(only_A=True):
     """季度现金流量表"""
     table = QuarterlyCashFlowStatement.__tablename__
-    to_drop = ['股票简称', '开始日期', '合并类型编码', '合并类型']
+    to_drop = ['证券简称', '开始日期', '合并类型编码', '合并类型']
     columns = []
     for c in QuarterlyCashFlowStatement.__table__.columns:
         if c.name not in to_drop:
@@ -496,7 +498,7 @@ def get_q_cash_flow_data(only_A=True):
 def get_ttm_cash_flow_data(only_A=True):
     """TTM现金流量表"""
     table = TtmCashFlowStatement.__tablename__
-    to_drop = ['股票简称', '开始日期', '合并类型编码', '合并类型']
+    to_drop = ['证券简称', '开始日期', '合并类型编码', '合并类型']
     columns = []
     for c in TtmCashFlowStatement.__table__.columns:
         if c.name not in to_drop:
@@ -508,7 +510,7 @@ def get_ttm_cash_flow_data(only_A=True):
 def get_ttm_income_data(only_A=True):
     """TTM财务利润表"""
     table = TtmIncomeStatement.__tablename__
-    to_drop = ['股票简称', '开始日期', '合并类型编码', '合并类型']
+    to_drop = ['证券简称', '开始日期', '合并类型编码', '合并类型']
     columns = []
     for c in TtmIncomeStatement.__table__.columns:
         if c.name not in to_drop:
@@ -522,7 +524,7 @@ def get_ttm_income_data(only_A=True):
 def get_periodly_financial_indicator_data(only_A=True):
     """报告期指标表"""
     table = PeriodlyFinancialIndicator.__tablename__
-    to_drop = ['股票简称', '机构名称', '开始日期', '数据来源编码', '数据来源']
+    to_drop = ['证券简称', '机构名称', '开始日期', '数据来源编码', '数据来源']
     columns = []
     for c in PeriodlyFinancialIndicator.__table__.columns:
         if c.name not in to_drop:
@@ -534,7 +536,7 @@ def get_periodly_financial_indicator_data(only_A=True):
 def get_quarterly_financial_indicator_data(only_A=True):
     """单季财务指标"""
     table = QuarterlyFinancialIndicator.__tablename__
-    to_drop = ['股票简称', '开始日期', '合并类型编码', '合并类型']
+    to_drop = ['证券简称', '开始日期', '合并类型编码', '合并类型']
     columns = []
     for c in QuarterlyFinancialIndicator.__table__.columns:
         if c.name not in to_drop:
@@ -550,7 +552,7 @@ def get_financial_indicator_ranking_data(only_A=True):
     申银万国二级行业
     """
     table = FinancialIndicatorRanking.__tablename__
-    to_drop = ['股票简称', '行业ID', '行业级别', '级别说明']
+    to_drop = ['证券简称', '行业ID', '行业级别', '级别说明']
     columns = []
     for c in FinancialIndicatorRanking.__table__.columns:
         if c.name not in to_drop:
@@ -563,17 +565,17 @@ def get_financial_indicator_ranking_data(only_A=True):
 
 def get_performance_forecaste_data(only_A=True):
     """上市公司业绩预告"""
-    to_drop = ['股票简称', '业绩类型编码', '业绩类型']
+    to_drop = ['证券简称', '业绩类型编码', '业绩类型']
     columns = []
     for c in PerformanceForecaste.__table__.columns:
         if c.name not in to_drop:
             columns.append(c.name)
     table = PerformanceForecaste.__tablename__
-    engine = get_engine('szx')
+    engine = get_engine('dataBrowse')
     df = pd.read_sql_table(table, engine, columns=columns)
     if only_A:
-        df = df[~df.股票代码.str.startswith('2')]
-        df = df[~df.股票代码.str.startswith('9')]
+        df = df[~df.证券代码.str.startswith('2')]
+        df = df[~df.证券代码.str.startswith('9')]
     df.rename(columns={"股票代码": "sid",
                        "公告日期": "asof_date"},
               inplace=True)
@@ -622,20 +624,19 @@ def get_shareholding_concentration_data(only_A=True):
 
 def get_investment_rating_data(only_A=True):
     """投资评级"""
-    to_drop = ['股票简称']
+    to_drop = ['序号', '证券简称']
     columns = []
     for c in InvestmentRating.__table__.columns:
         if c.name not in to_drop:
             columns.append(c.name)
     table = InvestmentRating.__tablename__
-    engine = get_engine('szx')
+    engine = get_engine('dataBrowse')
     df = pd.read_sql_table(table, engine, columns=columns)
     if only_A:
-        df = df[~df.股票代码.str.startswith('2')]
-        df = df[~df.股票代码.str.startswith('9')]
-    df.rename(columns={"股票代码": "sid",
+        df = df[~df.证券代码.str.startswith('2')]
+        df = df[~df.证券代码.str.startswith('9')]
+    df.rename(columns={"证券代码": "sid",
                        "发布日期": "asof_date"},
               inplace=True)
     df.sort_values(['sid', 'asof_date'], inplace=True)
     return df
-
