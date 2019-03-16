@@ -1,4 +1,4 @@
-from .core import symbols, symbol, prices, returns, volumes, get_pricing #, ohlcv
+from .core import symbols, symbol, prices, returns, volumes, get_pricing, to_tdates #, ohlcv
 from .pipebench import run_pipeline
 from .utils import select_output_by
 from ._talib import indicators
@@ -13,6 +13,7 @@ __all__ = (
     'prices',
     'returns',
     'volumes',
+    'to_tdates',
     # 'ohlcv',
     'indicators',
     # 'get_backtest',
