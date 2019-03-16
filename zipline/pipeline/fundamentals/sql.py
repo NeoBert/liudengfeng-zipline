@@ -371,7 +371,7 @@ def _periodly_report(only_A, table):
     # 一般而言，定期财务报告截止日期与报告年度相同
     # 但不排除数据更正等情形下，报告年度与截止日期不一致
     to_drop = ['证券简称', '机构名称', '合并类型编码',
-               '合并类型', '报表来源编码', '报表来源']
+               '合并类型', '报表来源编码', '报表来源', 'last_refresh_time', '备注']
     engine = get_engine('dataBrowse')
     df = pd.read_sql_table(table, engine)
     if only_A:
@@ -419,7 +419,7 @@ def _financial_report_announcement_date():
         季度报告、财务指标是依据定期报告计算得来，并没有实际的公告日期。
         以其利润表定期报告的公告日期作为`asof_date`
     """
-    col_names = ['股票代码', '公告日期', '截止日期']
+    col_names = ['证券代码', '公告日期', '截止日期']
     with session_scope('dataBrowse') as sess:
         query = sess.query(
             PeriodlyBalanceSheet.证券代码,
@@ -471,7 +471,7 @@ def _get_report(only_A, table, columns=None, col='截止日期'):
 def get_q_income_data(only_A=True):
     """季度利润表"""
     table = QuarterlyIncomeStatement.__tablename__
-    to_drop = ['证券简称', '开始日期', '合并类型编码', '合并类型']
+    to_drop = ['证券简称', '开始日期', '合并类型编码', '合并类型', 'last_refresh_time', '备注']
     columns = []
     for c in QuarterlyIncomeStatement.__table__.columns:
         if c.name not in to_drop:
@@ -483,7 +483,7 @@ def get_q_income_data(only_A=True):
 def get_q_cash_flow_data(only_A=True):
     """季度现金流量表"""
     table = QuarterlyCashFlowStatement.__tablename__
-    to_drop = ['证券简称', '开始日期', '合并类型编码', '合并类型']
+    to_drop = ['证券简称', '开始日期', '合并类型编码', '合并类型', 'last_refresh_time', '备注']
     columns = []
     for c in QuarterlyCashFlowStatement.__table__.columns:
         if c.name not in to_drop:
@@ -498,7 +498,7 @@ def get_q_cash_flow_data(only_A=True):
 def get_ttm_cash_flow_data(only_A=True):
     """TTM现金流量表"""
     table = TtmCashFlowStatement.__tablename__
-    to_drop = ['证券简称', '开始日期', '合并类型编码', '合并类型']
+    to_drop = ['证券简称', '开始日期', '合并类型编码', '合并类型', 'last_refresh_time', '备注']
     columns = []
     for c in TtmCashFlowStatement.__table__.columns:
         if c.name not in to_drop:
@@ -510,7 +510,7 @@ def get_ttm_cash_flow_data(only_A=True):
 def get_ttm_income_data(only_A=True):
     """TTM财务利润表"""
     table = TtmIncomeStatement.__tablename__
-    to_drop = ['证券简称', '开始日期', '合并类型编码', '合并类型']
+    to_drop = ['证券简称', '开始日期', '合并类型编码', '合并类型', 'last_refresh_time', '备注']
     columns = []
     for c in TtmIncomeStatement.__table__.columns:
         if c.name not in to_drop:
@@ -524,7 +524,7 @@ def get_ttm_income_data(only_A=True):
 def get_periodly_financial_indicator_data(only_A=True):
     """报告期指标表"""
     table = PeriodlyFinancialIndicator.__tablename__
-    to_drop = ['证券简称', '机构名称', '开始日期', '数据来源编码', '数据来源']
+    to_drop = ['证券简称', '机构名称', '开始日期', '数据来源编码', '数据来源', 'last_refresh_time', '备注']
     columns = []
     for c in PeriodlyFinancialIndicator.__table__.columns:
         if c.name not in to_drop:
@@ -536,7 +536,7 @@ def get_periodly_financial_indicator_data(only_A=True):
 def get_quarterly_financial_indicator_data(only_A=True):
     """单季财务指标"""
     table = QuarterlyFinancialIndicator.__tablename__
-    to_drop = ['证券简称', '开始日期', '合并类型编码', '合并类型']
+    to_drop = ['证券简称', '开始日期', '合并类型编码', '合并类型', 'last_refresh_time', '备注']
     columns = []
     for c in QuarterlyFinancialIndicator.__table__.columns:
         if c.name not in to_drop:
@@ -552,7 +552,7 @@ def get_financial_indicator_ranking_data(only_A=True):
     申银万国二级行业
     """
     table = FinancialIndicatorRanking.__tablename__
-    to_drop = ['证券简称', '行业ID', '行业级别', '级别说明']
+    to_drop = ['证券简称', '行业ID', '行业级别', '级别说明', 'last_refresh_time', '备注']
     columns = []
     for c in FinancialIndicatorRanking.__table__.columns:
         if c.name not in to_drop:
@@ -565,7 +565,7 @@ def get_financial_indicator_ranking_data(only_A=True):
 
 def get_performance_forecaste_data(only_A=True):
     """上市公司业绩预告"""
-    to_drop = ['证券简称', '业绩类型编码', '业绩类型']
+    to_drop = ['证券简称', '业绩类型编码', '业绩类型', 'last_refresh_time', '备注']
     columns = []
     for c in PerformanceForecaste.__table__.columns:
         if c.name not in to_drop:
@@ -576,7 +576,7 @@ def get_performance_forecaste_data(only_A=True):
     if only_A:
         df = df[~df.证券代码.str.startswith('2')]
         df = df[~df.证券代码.str.startswith('9')]
-    df.rename(columns={"股票代码": "sid",
+    df.rename(columns={"证券代码": "sid",
                        "公告日期": "asof_date"},
               inplace=True)
     # 修复截止日期
@@ -624,7 +624,7 @@ def get_shareholding_concentration_data(only_A=True):
 
 def get_investment_rating_data(only_A=True):
     """投资评级"""
-    to_drop = ['序号', '证券简称']
+    to_drop = ['序号', '证券简称', 'last_refresh_time', '备注']
     columns = []
     for c in InvestmentRating.__table__.columns:
         if c.name not in to_drop:
