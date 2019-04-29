@@ -14,9 +14,7 @@ The blaze Pipeline API loader expects that data is formatted in a tabular way.
 The only required column in your table is ``asof_date`` where this column
 represents the date this data is referencing. For example, one might have a CSV
 like:
-
 ``asof_date`` 数据引用日期。
-
 asof_date,value
 2014-01-06,0
 2014-01-07,1
@@ -28,7 +26,6 @@ Optionally, we may provide a ``timestamp`` column to be used to represent
 point in time data. This column tells us when the data was known, or became
 available to for use. Using our same CSV, we could write this with a timestamp
 like:
-
 ``timestamp`` 数据已知可供使用。
 
 asof_date,timestamp,value
@@ -42,7 +39,6 @@ pipelines. If this column does not exist, the ``asof_date`` column will be used
 instead.
 
 ``asof_date`` 发生时间；``timestamp``代表知悉时间或者公布时间；
-
 If your data references a particular asset, you can add a ``sid`` column to
 your dataset to represent this. For example:
 
@@ -144,7 +140,6 @@ www.quantopian.com/help#pipeline-api
 from __future__ import division, absolute_import
 
 from abc import ABCMeta, abstractproperty
-from collections import namedtuple
 from functools import partial
 from itertools import count
 import warnings
@@ -186,6 +181,7 @@ from zipline.pipeline.domain import GENERIC
 from zipline.pipeline.sentinels import NotSpecified
 from zipline.lib.adjusted_array import can_represent_dtype
 from zipline.utils.input_validation import expect_element
+from zipline.utils.pandas_utils import ignore_pandas_nan_categorical_warning
 from zipline.utils.pool import SequentialPool
 from ._core import (  # noqa
     adjusted_arrays_from_rows_with_assets,
@@ -709,12 +705,7 @@ def from_blaze(expr,
 getdataset = op.attrgetter('dataset')
 
 
-_expr_data_base = namedtuple(
-    'ExprData', 'expr deltas checkpoints odo_kwargs'
-)
-
-
-class ExprData(_expr_data_base):
+class ExprData(object):
     """A pair of expressions and data resources. The expressions will be
     computed using the resources as the starting scope.
 
@@ -729,35 +720,77 @@ class ExprData(_expr_data_base):
     odo_kwargs : dict, optional
         The keyword arguments to forward to the odo calls internally.
     """
-    def __new__(cls,
-                expr,
-                deltas=None,
-                checkpoints=None,
-                odo_kwargs=None):
-        return super(ExprData, cls).__new__(
-            cls,
-            expr,
-            deltas,
-            checkpoints,
-            odo_kwargs or {},
-        )
+    def __init__(self,
+                 expr,
+                 deltas=None,
+                 checkpoints=None,
+                 odo_kwargs=None):
+        self.expr = expr
+        self.deltas = deltas
+        self.checkpoints = checkpoints
+        self._odo_kwargs = odo_kwargs
+
+    def replace(self, **kwargs):
+        base_kwargs = {
+            'expr': self.expr,
+            'deltas': self.deltas,
+            'checkpoints': self.checkpoints,
+            'odo_kwargs': self._odo_kwargs,
+        }
+        invalid_kwargs = set(kwargs) - set(base_kwargs)
+        if invalid_kwargs:
+            raise TypeError('invalid param(s): %s' % sorted(invalid_kwargs))
+
+        base_kwargs.update(kwargs)
+        return type(self)(**base_kwargs)
+
+    def __iter__(self):
+        yield self.expr
+        yield self.deltas
+        yield self.checkpoints
+        yield self.odo_kwargs
+
+    @property
+    def odo_kwargs(self):
+        out = self._odo_kwargs
+        if out is None:
+            out = {}
+        return out
 
     def __repr__(self):
         # If the expressions have _resources() then the repr will
         # drive computation so we take the str here.
-        cls = type(self)
-        return super(ExprData, cls).__repr__(cls(
-            str(self.expr),
-            str(self.deltas),
-            str(self.checkpoints),
-            self.odo_kwargs,
-        ))
+        return (
+            'ExprData(expr=%s, deltas=%s, checkpoints=%s, odo_kwargs=%r)' % (
+                self.expr,
+                self.deltas,
+                self.checkpoints,
+                self.odo_kwargs,
+            )
+        )
+
+    @staticmethod
+    def _expr_eq(a, b):
+        return a is b is None or a.isidentical(b)
 
     def __hash__(self):
-        return id(self)
+        return hash((
+            self.expr,
+            self.deltas,
+            self.checkpoints,
+            id(self._odo_kwargs),
+        ))
 
     def __eq__(self, other):
-        return self is other
+        if not isinstance(other, ExprData):
+            return NotImplemented
+
+        return (
+            self._expr_eq(self.expr, other.expr) and
+            self._expr_eq(self.deltas, other.deltas) and
+            self._expr_eq(self.checkpoints, other.checkpoints) and
+            self._odo_kwargs is other._odo_kwargs
+        )
 
 
 class BlazeLoader(object):
@@ -970,20 +1003,25 @@ class BlazeLoader(object):
             None
         )
 
-        all_rows = pd.concat(
-            filter(
-                # # 可能为空
-                # # 排除非空数据，确保AD_FIELD_NAME数据类型为M
-                # lambda df: df is not None, (
-                lambda df: (df is not None) and (not df.empty), (
-                    materialized_checkpoints,
-                    materialized_expr_deferred.get(),
-                    materialized_deltas,
+        # If the rows that come back from the blaze backend are constructed
+        # from LabelArrays with Nones in the categories, pandas
+        # complains. Ignore those warnings for now until we have a story for
+        # updating our categorical missing values to NaN.
+        with ignore_pandas_nan_categorical_warning():
+            all_rows = pd.concat(
+                filter(
+                    # # 可能为空
+                    # # 排除非空数据，确保AD_FIELD_NAME数据类型为M
+                    # lambda df: df is not None, (
+                    lambda df: (df is not None) and (not df.empty), (
+                            materialized_checkpoints,
+                            materialized_expr_deferred.get(),
+                            materialized_deltas,
+                        ),
                 ),
-            ),
-            ignore_index=True,
-            copy=False,
-        )
+                ignore_index=True,
+                copy=False,
+            )
 
         all_rows[TS_FIELD_NAME] = all_rows[TS_FIELD_NAME].astype(
             'datetime64[ns]',
