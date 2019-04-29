@@ -85,3 +85,4 @@ zipline.egg-info/
 *.pyd
 docs/notebooks/tutorial.ipynb
 zipline/examples/buyapple.py
+.vs/
