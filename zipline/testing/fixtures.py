@@ -24,7 +24,7 @@ from zipline.utils.memoize import classlazyval
 from zipline.pipeline import SimplePipelineEngine
 from zipline.pipeline.data import USEquityPricing
 from zipline.pipeline.domain import GENERIC, US_EQUITIES
-from zipline.pipeline.loaders import CNEquityPricingLoader
+from zipline.pipeline.loaders import CNEquityPricingLoader, USEquityPricingLoader
 from zipline.pipeline.loaders.testing import make_seeded_random_loader
 from zipline.protocol import BarData
 from zipline.utils.paths import ensure_directory, ensure_directory_containing
@@ -128,7 +128,7 @@ class ZiplineTestCase(with_metaclass(DebugMROMeta, TestCase)):
                 "This probably means that you overrode init_class_fixtures"
                 " without calling super()."
             )
-        except:
+        except BaseException:  # Clean up even on KeyboardInterrupt
             cls.tearDownClass()
             raise
 
@@ -207,7 +207,7 @@ class ZiplineTestCase(with_metaclass(DebugMROMeta, TestCase)):
                 "This probably means that you overrode"
                 " init_instance_fixtures without calling super()."
             )
-        except:
+        except BaseException:  # Clean up even on KeyboardInterrupt
             self.tearDown()
             raise
         finally:
@@ -1689,7 +1689,7 @@ class WithUSEquityPricingPipelineEngine(WithAdjustmentReader,
         cls.findata_dir = cls.data_root_dir.makedir('findata')
         super(WithUSEquityPricingPipelineEngine, cls).init_class_fixtures()
 
-        loader = CNEquityPricingLoader(
+        loader = USEquityPricingLoader(
             cls.bcolz_equity_daily_bar_reader,
             SQLiteAdjustmentReader(cls.adjustments_db_path),
         )
@@ -1894,6 +1894,7 @@ class WithResponses(object):
     a new `responses.RequestsMock` object. Users may add new endpoints to this
     with the `self.responses.add` method.
     """
+
     def init_instance_fixtures(self):
         super(WithResponses, self).init_instance_fixtures()
         self.responses = self.enter_instance_context(
