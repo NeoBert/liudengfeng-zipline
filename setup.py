@@ -166,8 +166,8 @@ def _filter_requirements(lines_iter, filter_names=None,
 
 
 REQ_UPPER_BOUNDS = {
-    'bcolz': '<=1.2.1',
-    'pandas': '<=0.23.4',
+    'bcolz': '<=1.3',
+    'pandas': '<=0.25',
     'networkx': '<=2.2',
 }
 
@@ -185,9 +185,11 @@ def _with_bounds(req):
         return ''.join(with_bounds)
 
 
-REQ_PATTERN = re.compile(r"(?P<name>[^=<>]+)(?P<comp>[<=>]{1,2})(?P<spec>[^;]+)"
-                         r"(?:(;\W*python_version\W*(?P<pycomp>[<=>]{1,2})\W*"
-                         r"(?P<pyspec>[0-9\.]+)))?")
+REQ_PATTERN = re.compile(
+    r"(?P<name>[^=<>]+)(?P<comp>[<=>]{1,2})(?P<spec>[^;]+)"
+    r"(?:(;\W*python_version\W*(?P<pycomp>[<=>]{1,2})\W*"
+    r"(?P<pyspec>[0-9\.]+)))?"
+)
 
 
 def _conda_format(req):
