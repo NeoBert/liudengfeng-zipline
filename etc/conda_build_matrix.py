@@ -4,8 +4,8 @@ import subprocess
 
 import click
 
-py_versions = ('2.7', '3.4', '3.5')
-npy_versions = ('1.9', '1.10')
+py_versions = ('2.7', '3.4', '3.5','3.7')
+npy_versions = ('1.9', '1.10', '1.16.3')
 zipline_path = os.path.join(
     os.path.dirname(__file__),
     '..',
