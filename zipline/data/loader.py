@@ -307,14 +307,16 @@ def _load_cached_data(filename, first_date, last_date, now, resource_name,
                 header=None,
                 # Pass squeeze=True so that we get a series instead of a frame.
                 squeeze=True,
-            ).tz_localize('UTC')
+            # ).tz_localize('UTC')
+            )
     else:
         def from_csv(path):
             return pd.read_csv(
                 path,
                 parse_dates=[0],
                 index_col=0,
-            ).tz_localize('UTC')
+            # ).tz_localize('UTC')
+            )
 
     # Path for the cache.
     path = get_data_filepath(filename, environ)

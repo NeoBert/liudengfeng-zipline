@@ -41,10 +41,10 @@ def analyze(context=None, results=None):
     # Plot the portfolio and asset data.
     ax1 = plt.subplot(211)
     results.portfolio_value.plot(ax=ax1)
-    ax1.set_ylabel('组合市值')
+    ax1.set_ylabel('value')
     ax2 = plt.subplot(212, sharex=ax1)
     results.MDJT.plot(ax=ax2)
-    ax2.set_ylabel('美的集团股价')
+    ax2.set_ylabel('MDJT prices')
 
     # Show the plot.
     plt.gcf().set_size_inches(18, 8)
