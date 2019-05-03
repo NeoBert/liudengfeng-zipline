@@ -652,14 +652,11 @@ class AssetFinder(object):
     def _lookup_most_recent_symbols(self, sids):
         return {
             row.sid: {c: row[c] for c in symbol_columns}
-            for row in concat(
-                self.engine.execute(
-                    self._select_most_recent_symbols_chunk(sid_group),
-                ).fetchall()
-                for sid_group in partition_all(
-                    SQLITE_MAX_VARIABLE_NUMBER,
-                    sids
-                ),
+            for row in concat(self.engine.execute(self._select_most_recent_symbols_chunk(sid_group)).fetchall()
+                              for sid_group in partition_all(
+                SQLITE_MAX_VARIABLE_NUMBER,
+                sids
+            )
             )
         }
 

@@ -29,6 +29,7 @@ from setuptools import (
     find_packages,
     setup,
 )
+from Cython.Build import cythonize
 
 import versioneer
 
@@ -300,7 +301,8 @@ setup(
     author='Quantopian Inc.',
     author_email='opensource@quantopian.com',
     packages=find_packages(include=['zipline', 'zipline.*']),
-    ext_modules=ext_modules,
+    # ext_modules=ext_modules,
+    ext_modules = cythonize(ext_modules, compiler_directives={'language_level': 3}),
     include_package_data=True,
     package_data={root.replace(os.sep, '.'):
                   ['*.pyi', '*.pyx', '*.pxi', '*.pxd']
