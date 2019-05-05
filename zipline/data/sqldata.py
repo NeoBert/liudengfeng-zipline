@@ -248,8 +248,8 @@ def fetch_single_equity(stock_code, start, end):
     326	2017-07-28	600710	9.36	9.36	9.36	9.36	9.36	NaN
     327	2017-07-31	600710	9.25	9.64	7.48	7.55	9.31	-18.9044
     """
-    start = pd.Timestamp(start)
-    end = pd.Timestamp(end)
+    start = pd.Timestamp(start).tz_localize(None)
+    end = pd.Timestamp(end).tz_localize(None)
     with session_scope('szsh') as sess:
         query = sess.query(
             StockDaily.股票代码,
@@ -267,13 +267,17 @@ def fetch_single_equity(stock_code, start, end):
             StockDaily.总市值
         ).filter(
             StockDaily.股票代码 == stock_code,
-            StockDaily.日期.between(start, end)
+            # 不限定期间，而是在处理停牌事件后再截取期间数据
+            # StockDaily.日期.between(start, end)
         )
         df = pd.DataFrame.from_records(query.all())
         if df.empty:
             return pd.DataFrame(columns=DAILY_COLS+['circulating_share', 'total_share'])
         df.columns = DAILY_COLS
+        # 处理停牌及截取期间
         df = _fill_zero(df)
+        cond = (start <= df['date']) & (df['date'] <= end)
+        df = df[cond]
         df['circulating_share'] = df.cmv / df.close
         df['total_share'] = df.tmv / df.close
         res = df.sort_values('date')
