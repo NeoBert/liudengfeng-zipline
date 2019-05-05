@@ -282,16 +282,24 @@ def get_pricing(assets,
         sids, start, end, fields
     )
 
-    reduce_condition1 = len(sids) == 1
-    reduce_condition2 = len(fields) == 1
+    single_asset = len(sids) == 1
+    single_field = len(fields) == 1
 
-    if reduce_condition1 & (not reduce_condition2):
+    if single_asset & single_field:
+        ret = pd.Series(
+            ret.values[:, 0], index=ret.index.get_level_values(0), name=assets[0])
+    elif single_asset & (not single_field):
         ret = ret.unstack()
         ret.columns = fields
-    elif (not reduce_condition1) & reduce_condition2:
+        ret.index = ret.index.get_level_values(0)
+        ret.index.name = assets[0]
+    elif (not single_asset) & single_field:
         ret = ret.unstack()
         ret.columns = assets
-    elif not (reduce_condition1 | reduce_condition2):
+        ret.index = ret.index.get_level_values(0)
+        ret.index.name = fields[0]
+    # elif not (single_asset | single_field):
+    else:
         ret.index.set_levels(assets, 1, inplace=True)
 
     return ret
