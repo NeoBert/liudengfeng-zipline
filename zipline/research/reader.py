@@ -17,6 +17,9 @@ def get_pricing(sids, start, end, fields):
     """
     _sids = ensure_list(sids)
     _fields = ensure_list(fields)
+    # 默认为收盘价
+    if _fields == ['price']:
+        _fields = ['close']
     df = pd.concat([fetch_single_equity(str(sid).zfill(6), start, end)
                     for sid in _sids])
     df = df[['symbol', 'date'] + _fields]  # _fields为列表，返回DataFrame对象
