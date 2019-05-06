@@ -3,7 +3,7 @@ import pandas as pd
 from cnswd.utils import ensure_list, sanitize_dates
 from zipline.assets import Asset, Equity
 from zipline.data.benchmarks_cn import get_cn_benchmark_returns
-
+from zipline.data.treasuries_cn import get_treasury_data, TREASURY_COL_NAMES
 from .factory import _asset_finder, _data_portal, _trading_calendar
 from .reader import get_pricing as _get_pricing
 
@@ -214,6 +214,36 @@ def returns(assets,
                 symbol_reference_date,
                 periods)
     return df.pct_change(periods).iloc[periods:]
+
+
+def treasury_returns(symbol, start, end):
+    """国库券收益率
+    
+    Arguments:
+        symbol {str} -- 期间代码，如"m1","y1"
+        start {datatime-like} -- 开始时间
+        end {datatime-like} -- 结束时间
+    """
+    assert symbol in [x for x in TREASURY_COL_NAMES if x != 'date']
+    calendar = _trading_calendar()
+
+    start = pd.Timestamp(start, tz='utc')
+    if not calendar.is_session(start):
+        # this is not a trading session, advance to the next session
+        start = calendar.minute_to_session_label(
+            start,
+            direction='next',
+        )
+
+    end = pd.Timestamp(end, tz='utc')
+    if not calendar.is_session(end):
+        # this is not a trading session, advance to the previous session
+        end = calendar.minute_to_session_label(
+            end,
+            direction='previous',
+        )
+    df = get_treasury_data(start, end)
+    return df.loc[start:end, symbol]
 
 
 def benchmark_returns(symbol, start, end):
