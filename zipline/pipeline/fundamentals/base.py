@@ -1,7 +1,7 @@
 import blaze as bz
 import os
 # from cnswd.utils import data_root
-from zipline.utils.paths import data_root
+from zipline.utils.paths import zipline_path
 from cnswd.sql.base import db_path
 
 
@@ -10,7 +10,7 @@ VALID_DB_NAMES = ('szsh', 'dataBrowse', 'info', 'thematicStatistics')
 
 def bcolz_table_path(table_name):
     """bcolz文件路径"""
-    root_dir = data_root('bcolz')
+    root_dir = zipline_path(['bcolz'])
     if not os.path.exists(root_dir):
         os.makedirs(root_dir)
     path_ = os.path.join(root_dir, '{}.bcolz'.format(table_name))
