@@ -43,15 +43,15 @@ def _to_symbol(x):
     return str(x).zfill(6)
 
 
-def _adjusted_raw_data(raw_df):
-    """调整原始数据单位，转换适用于unit32类型的数值"""
-    data = raw_df.copy()
-    # 增强兼容性
-    for col in data.columns:
-        if col in ADJUST_FACTOR.keys():
-            adj = ADJUST_FACTOR.get(col, 1)
-            data.loc[:, col] = data[col] * adj
-    return data
+# def _adjusted_raw_data(raw_df):
+#     """调整原始数据单位，转换适用于unit32类型的数值"""
+#     data = raw_df.copy()
+#     # 增强兼容性
+#     for col in data.columns:
+#         if col in ADJUST_FACTOR.keys():
+#             adj = ADJUST_FACTOR.get(col, 1)
+#             data.loc[:, col] = data[col] * adj
+#     return data
 
 
 def _update_splits(splits, asset_id, origin_data):
@@ -108,15 +108,18 @@ def gen_symbol_data(symbol_map,
 
             # 只需要ohlcv列
             raw_data = raw_data[OHLCV_COLS]
-
-            # 时区调整，以0.0填充na
-            # 转换为以日期为索引的表(与sessions保持一致)
-            asset_data = raw_data.xs(
-                symbol,
-                level=1
-            ).reindex(
-                sessions.tz_localize(None)
-            ).fillna(0.0)
+            # 新股可能存在日线延迟，会触发异常
+            if not raw_data.empty:
+                # 时区调整，以0.0填充na
+                # 转换为以日期为索引的表(与sessions保持一致)
+                asset_data = raw_data.xs(
+                    symbol,
+                    level=1
+                ).reindex(
+                    sessions.tz_localize(None)
+                ).fillna(0.0)
+            else:
+                asset_data = raw_data
         else:
             # 处理分钟级别数据
             asset_data = fetch_single_minutely_equity(
@@ -200,8 +203,6 @@ def cndaily_bundle(environ,
 
 
 # 不可包含退市或者暂停上市的股票代码
-
-
 @bundles.register('cnminutely',
                   calendar_name='XSHG',
                   start_session=pd.Timestamp(
