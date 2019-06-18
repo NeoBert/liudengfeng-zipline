@@ -1,6 +1,7 @@
 import blaze as bz
 import os
-from cnswd.utils import data_root
+# from cnswd.utils import data_root
+from zipline.utils.paths import data_root
 from cnswd.sql.base import db_path
 
 
