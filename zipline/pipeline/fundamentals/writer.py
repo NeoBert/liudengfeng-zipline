@@ -101,8 +101,8 @@ def write_dynamic_data_to_bcolz():
         2. 现金股利
         3. 股票简称变动历史
     """
-    df_t = get_tdata()
-    write_dataframe(df_t, 'tdata')
+    # df_t = get_tdata()
+    # write_dataframe(df_t, 'tdata')
     df_e = get_equity_data()
     write_dataframe(df_e, 'equity')
     df_m = get_margin_data()
