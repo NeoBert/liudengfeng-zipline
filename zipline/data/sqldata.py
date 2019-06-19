@@ -17,7 +17,7 @@ from functools import lru_cache
 DAILY_COLS = ['symbol', 'date',
               'open', 'high', 'low', 'close',
               'prev_close', 'change_pct',
-              'volume', 'amount', 'turnover', 'cmv', 'tmv']
+              'volume', 'amount', 'turnover', 'market_cap', 'total_cap']
 OHLCV_COLS = ['open', 'high', 'low', 'close', 'volume']
 MINUTELY_COLS = ['symbol', 'date'] + OHLCV_COLS
 
@@ -193,7 +193,8 @@ def _fill_zero(df):
     ohlc_cols = ['close', 'open', 'high', 'low']
     ohlc = df[ohlc_cols].copy()
     ohlc.replace(0.0, np.nan, inplace=True)
-    ohlc.close.fillna(method='ffill', inplace=True)
+    # ohlc.close.fillna(method='ffill', inplace=True)
+    ohlc.loc[ohlc.close.isna(), 'close'] = df.loc[ohlc.close.isna(), 'prev_close']
     # 按列填充
     ohlc.fillna(method='ffill', axis=1, inplace=True)
     for col in ohlc_cols:
@@ -278,8 +279,8 @@ def fetch_single_equity(stock_code, start, end):
         df = _fill_zero(df)
         cond = (start <= df['date']) & (df['date'] <= end)
         df = df[cond]
-        df['circulating_share'] = df.cmv / df.close
-        df['total_share'] = df.tmv / df.close
+        df['shares_outstanding'] = df.market_cap / df.close
+        df['total_shares'] = df.total_cap / df.close
         res = df.sort_values('date')
         return _reindex(res)
 

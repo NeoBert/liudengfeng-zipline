@@ -12,9 +12,8 @@
 
 import pandas as pd
 from logbook import Logger
-
-from . import core as bundles
 from .adjusts import ADJUST_FACTOR
+from . import core as bundles
 from ..sqldata import (fetch_single_equity, fetch_single_quity_adjustments,
                        gen_asset_metadata, fetch_single_minutely_equity, OHLCV_COLS)
 
@@ -41,17 +40,6 @@ def _to_sid(x):
 def _to_symbol(x):
     """sid转换为符号"""
     return str(x).zfill(6)
-
-
-# def _adjusted_raw_data(raw_df):
-#     """调整原始数据单位，转换适用于unit32类型的数值"""
-#     data = raw_df.copy()
-#     # 增强兼容性
-#     for col in data.columns:
-#         if col in ADJUST_FACTOR.keys():
-#             adj = ADJUST_FACTOR.get(col, 1)
-#             data.loc[:, col] = data[col] * adj
-#     return data
 
 
 def _update_splits(splits, asset_id, origin_data):
@@ -89,18 +77,14 @@ def gen_symbol_data(symbol_map,
     for _, symbol in symbol_map.iteritems():
         asset_id = _to_sid(symbol)
         if not is_minutely:
-            # 日线原始数据，只需要OHLCV列
+            # 需要ohlcv列 + list(ADJUST_FACTOR.keys())
             raw_data = fetch_single_equity(
                 symbol,
                 start=sessions[0],
                 end=sessions[-1],
             )
-            # # 不得包含涨跌幅列，含有正负号
-            # raw_data.drop('change_pct', axis=1, inplace=True)
-            # # 百分比调整为小数
-            # raw_data['turnover'] = raw_data.turnover / 100.
 
-            # 调整数据精度
+            # 调整成交量的精度
             raw_data['volume'] = raw_data['volume'] / 100.0
 
             # 以日期、符号为索引
@@ -108,6 +92,7 @@ def gen_symbol_data(symbol_map,
 
             # 需要ohlcv列 + list(ADJUST_FACTOR.keys())
             raw_data = raw_data.loc[:, OHLCV_COLS+list(ADJUST_FACTOR.keys())]
+
             # 新股可能存在日线延迟，会触发异常
             if not raw_data.empty:
                 # 时区调整，以0.0填充na
@@ -118,9 +103,6 @@ def gen_symbol_data(symbol_map,
                 ).reindex(
                     sessions.tz_localize(None)
                 ).fillna(0.0)
-                # 写入前转换单位
-                for c in ADJUST_FACTOR.keys():
-                    asset_data[c] = asset_data[c] * ADJUST_FACTOR.get(c, 1)
             else:
                 asset_data = raw_data
         else:
@@ -172,7 +154,7 @@ def cndaily_bundle(environ,
     """
     log.info('读取股票元数据......')
     metadata = gen_asset_metadata(False)
-    # 资产元数据写法要求添加sid列！！！
+    # 资产元数据写法要求添加`sid`列
     metadata['sid'] = metadata.symbol.map(_to_sid)
     symbol_map = metadata.symbol
     sessions = calendar.sessions_in_range(start_session, end_session)

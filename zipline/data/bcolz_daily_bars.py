@@ -54,7 +54,7 @@ OHLC = frozenset(['open', 'high', 'low', 'close'])
 US_EQUITY_PRICING_BCOLZ_COLUMNS = (
     'open', 'high', 'low', 'close', 'volume', 'day', 'id'
 )
-
+ALL_EQUITY_PRICING_BCOLZ_COLUMNS = list(US_EQUITY_PRICING_BCOLZ_COLUMNS | ADJUST_FACTOR.keys())
 UINT32_MAX = iinfo(np.uint32).max
 
 
@@ -252,7 +252,7 @@ class BcolzDailyBarWriter(object):
         # Maps column name -> output carray.
         columns = {
             k: carray(array([], dtype=uint32_dtype))
-            for k in US_EQUITY_PRICING_BCOLZ_COLUMNS
+            for k in ALL_EQUITY_PRICING_BCOLZ_COLUMNS
         }
 
         earliest_date = None
@@ -340,9 +340,9 @@ class BcolzDailyBarWriter(object):
         full_table = ctable(
             columns=[
                 columns[colname]
-                for colname in US_EQUITY_PRICING_BCOLZ_COLUMNS
+                for colname in ALL_EQUITY_PRICING_BCOLZ_COLUMNS
             ],
-            names=US_EQUITY_PRICING_BCOLZ_COLUMNS,
+            names=ALL_EQUITY_PRICING_BCOLZ_COLUMNS,
             rootdir=self._filename,
             mode='w',
         )
@@ -372,6 +372,9 @@ class BcolzDailyBarWriter(object):
         check_uint32_safe(dates.max().view(np.int64), 'day')
         processed['day'] = dates.astype('uint32')
         processed['volume'] = raw_data.volume.astype('uint32')
+        # 附加列同样转换为uint32
+        for c in ADJUST_FACTOR.keys():
+            processed[c] = (raw_data.loc[:, c] * ADJUST_FACTOR.get(c, 1)).astype('uint32')
         return ctable.fromdataframe(processed)
 
 
@@ -581,16 +584,7 @@ class BcolzDailyBarReader(SessionBarReader):
             assets,
         )
         read_all = len(assets) > self._read_all_threshold
-        # # 需要volume -> volume * 100
-        # return _read_bcolz_data(
-        #     self._table,
-        #     (end_idx - start_idx + 1, len(assets)),
-        #     list(columns),
-        #     first_rows,
-        #     last_rows,
-        #     offsets,
-        #     read_all,
-        # )
+
         raw_arrays = _read_bcolz_data(
             self._table,
             (end_idx - start_idx + 1, len(assets)),
@@ -600,9 +594,12 @@ class BcolzDailyBarReader(SessionBarReader):
             offsets,
             read_all,
         )
+        # # 似乎原始数据不需要调整？？？
         for i, col in enumerate(list(columns)):
             if col == 'volume':
                 adj = 100
+            elif col in ADJUST_FACTOR.keys():
+                adj = 1 / ADJUST_FACTOR[col]
             else:
                 adj = 1
             raw_arrays[i] = raw_arrays[i].dot(adj)
@@ -716,11 +713,13 @@ class BcolzDailyBarReader(SessionBarReader):
         """
         ix = self.sid_day_index(sid, dt)
         price = self._spot_col(field)[ix]
-        if field != 'volume':
+        if field == 'volume':
+            # # 成交量恢复(损失精度)
+            return price * 100            
+        else:
             if price == 0:
                 return nan
+            elif field in ADJUST_FACTOR.keys():
+                return price / ADJUST_FACTOR[field]
             else:
                 return price * 0.001
-        else:
-            # # 成交量恢复(损失精度)
-            return price * 100
