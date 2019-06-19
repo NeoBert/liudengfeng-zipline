@@ -46,7 +46,7 @@ from zipline.utils.numpy_utils import iNaT, float64_dtype, uint32_dtype
 from zipline.utils.memoize import lazyval
 from zipline.utils.cli import maybe_show_progress
 from ._equities import _compute_row_slices, _read_bcolz_data
-
+from .bundles.adjusts import ADJUST_FACTOR
 
 logger = logbook.Logger('UsEquityPricing')
 

@@ -14,7 +14,7 @@ import pandas as pd
 from logbook import Logger
 
 from . import core as bundles
-# from ..constants import ADJUST_FACTOR, TEST_SYMBOLS, OHLC
+from .adjusts import ADJUST_FACTOR
 from ..sqldata import (fetch_single_equity, fetch_single_quity_adjustments,
                        gen_asset_metadata, fetch_single_minutely_equity, OHLCV_COLS)
 
@@ -106,8 +106,8 @@ def gen_symbol_data(symbol_map,
             # 以日期、符号为索引
             raw_data.set_index(['date', 'symbol'], inplace=True)
 
-            # 只需要ohlcv列
-            raw_data = raw_data[OHLCV_COLS]
+            # 需要ohlcv列 + list(ADJUST_FACTOR.keys())
+            raw_data = raw_data.loc[:, OHLCV_COLS+list(ADJUST_FACTOR.keys())]
             # 新股可能存在日线延迟，会触发异常
             if not raw_data.empty:
                 # 时区调整，以0.0填充na
@@ -118,6 +118,9 @@ def gen_symbol_data(symbol_map,
                 ).reindex(
                     sessions.tz_localize(None)
                 ).fillna(0.0)
+                # 写入前转换单位
+                for c in ADJUST_FACTOR.keys():
+                    asset_data[c] = asset_data[c] * ADJUST_FACTOR.get(c, 1)
             else:
                 asset_data = raw_data
         else:

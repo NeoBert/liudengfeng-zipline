@@ -2,7 +2,7 @@
 Dataset representing OHLCV data.
 """
 from zipline.utils.numpy_utils import float64_dtype
-
+import numpy as np
 from ..domain import CN_EQUITIES
 from .dataset import Column, DataSet
 
@@ -16,6 +16,13 @@ class EquityPricing(DataSet):
     low = Column(float64_dtype)
     close = Column(float64_dtype)
     volume = Column(float64_dtype)
+    amount = Column(float64_dtype)
+    market_cap = Column(float64_dtype)
+    total_cap = Column(float64_dtype)
+    shares_outstanding = Column(float64_dtype)
+    total_shares = Column(float64_dtype)
+    turnover = Column(float64_dtype)
+
 
 # # 更改为`CN_EQUITIES`
 # Backwards compat alias.
