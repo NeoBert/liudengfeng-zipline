@@ -230,7 +230,7 @@ def IsST():
     1. 使用基础数据中股票简称列最新状态值
     2. 如果简称中包含ST字符，则为ST
     """
-    short_name = Fundamentals.short_name.latest
+    short_name = Fundamentals.info.股票简称.latest
     return short_name.has_substring('ST')
 
 
