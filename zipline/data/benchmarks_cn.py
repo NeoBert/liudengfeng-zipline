@@ -3,7 +3,7 @@ from cnswd.sql.base import session_scope
 from cnswd.sql.szsh import IndexDaily
 
 
-def get_cn_benchmark_returns(symbol):
+def get_cn_benchmark_returns(symbol='000300'):
     """获取基准收益率
 
     Parameters
