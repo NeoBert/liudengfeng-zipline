@@ -150,17 +150,17 @@ def future_symbol(symbol):
 
 def get_datetime(tz=None):
     """
-Returns the current simulation datetime.
+    Returns the current simulation datetime.
 
-Parameters
-----------
-tz : tzinfo or str, optional
-    The timezone to return the datetime in. This defaults to utc.
+    Parameters
+    ----------
+    tz : tzinfo or str, optional
+        The timezone to return the datetime in. This defaults to utc.
 
-Returns
--------
-dt : datetime
-    The current simulation datetime converted to ``tz``.
+    Returns
+    -------
+    dt : datetime
+        The current simulation datetime converted to ``tz``.
     """
 
 def get_environment(field='platform'):
