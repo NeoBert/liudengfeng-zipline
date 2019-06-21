@@ -1,3 +1,4 @@
+import os
 import pandas as pd
 import numpy as np
 from zipline.api import attach_pipeline, pipeline_output, get_datetime
@@ -7,21 +8,15 @@ from zipline.pipeline.data import USEquityPricing
 from zipline.pipeline.factors import Returns
 from zipline.pipeline.fundamentals import Fundamentals
 
+from zipline.utils.paths import zipline_path
 from zipline.data.treasuries_cn import earliest_possible_date, get_treasury_data
 from zipline.data.benchmarks_cn import get_cn_benchmark_returns
 
-# time frame on which we want to compute Fama-French
-normal_days = 31
-# approximate the number of trading days in that period
-# this is the number of trading days we'll look back on,
-# on every trading day.
-business_days = int(0.69 * normal_days)
 
 START_DATE = pd.Timestamp('2002-1-7',tz='utc') # 基准收益率与国债同步数据开始日期
-END_DATE = pd.Timestamp('now',tz='utc')
 
 
-# 以国债三个月利率为rf
+# 以国债三个月利率为rf。可选`1month`
 df_rf = get_treasury_data(None, None)['3month']
 df_rm = get_cn_benchmark_returns('000300')
 
@@ -30,7 +25,13 @@ df_rm = get_cn_benchmark_returns('000300')
 rm_rf = df_rm - df_rf
 result = pd.DataFrame({'Mkt-RF':rm_rf.values,'SMB':0.0,'HML':0.0}, index=rm_rf.index)
 result.loc[df_rf.index, 'RF'] = df_rf
-result = result.loc[START_DATE:END_DATE,:]
+
+# 结果存放路径
+file_name = "ff3"
+root_dir = zipline_path(['factors'])
+if not os.path.exists(root_dir):
+    os.makedirs(root_dir)
+result_path_ = os.path.join(root_dir, f'{file_name}.pkl')
 
 
 class MarketEquity(CustomFactor):
@@ -50,7 +51,7 @@ class BookEquity(CustomFactor):
     """
     window_length = 1
     # 原文使用tangible_book_value，即有形账面价值
-    # 使用所有者权益代替
+    # 使用所有者权益来代替
     inputs = [Fundamentals.balance_sheet.所有者权益或股东权益合计]
 
     def compute(self, today, assets, out, book):
@@ -78,10 +79,9 @@ def initialize(context):
     returns = Returns(window_length=2)
     pipe.add(returns, 'returns')
     
-    context.result = result
     dt = get_datetime().normalize()
-    print(f"开始日期：{dt}")
-    print(context.result.tail())
+    start_ = dt if dt > START_DATE else START_DATE
+    context.result = result.loc[start_: , :]
 
 
 def before_trading_start(context, data):
@@ -141,7 +141,10 @@ def handle_data(context, data):
     context.result.loc[dt, 'HML'] = context.hml
 
     
-# 使用分析函数处理结果    
+# 使用分析函数保存因子计算结果   
 def analyze(context, perf):
-    print(f"结束日期：{dt}")
-    # print(context.result.sort_index().tail())
+    dt = get_datetime().normalize()
+    result = context.result.sort_index()
+    result = result.loc[:dt, :].dropna()
+    # 覆盖式存储因子数据
+    result.to_pickle(result_path_)
