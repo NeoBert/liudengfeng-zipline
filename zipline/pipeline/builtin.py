@@ -522,26 +522,6 @@ def enterprise_value():
     return NotImplementedError()
 
 
-def market_cap():
-    """流通市值"""
-    return CNEquityPricing.close.latest * Fundamentals.equity.market_cap.latest
-
-
-def total_cap():
-    """总市值"""
-    return CNEquityPricing.close.latest * Fundamentals.equity.total_cap.latest
-
-
-def shares_outstanding():
-    """总股本"""
-    return Fundamentals.equity.shares_outstanding.latest
-
-
-def total_shares():
-    """流通股本"""
-    return Fundamentals.equity.total_shares.latest
-
-
 # 以下为估值相关比率
 
 
