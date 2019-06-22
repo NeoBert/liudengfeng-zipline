@@ -354,5 +354,4 @@ def get_pricing(assets,
         ret.columns = fields
         if single_asset:
             ret.index.name = assets
-    # 使用简化版本的交易日历包。对于临时调整的假日没有及时反应，需要除去`nan`行。
-    return ret.dropna()
+    return ret
