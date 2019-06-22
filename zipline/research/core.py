@@ -5,7 +5,8 @@ from zipline.assets import Asset, Equity
 from zipline.data.benchmarks_cn import get_cn_benchmark_returns
 from zipline.data.treasuries_cn import get_treasury_data, TREASURY_COL_NAMES
 from .factory import _asset_finder, _data_portal, _trading_calendar
-from .reader import get_pricing as _get_pricing
+
+OHLCV = ('open', 'high', 'low', 'close', 'volume')
 
 
 def to_tdates(start, end):
@@ -25,7 +26,7 @@ def to_tdates(start, end):
 def symbols(symbols_, symbol_reference_date=None, country=None, handle_missing='log'):
     """
     Convert a or a list of str and int into a list of Asset objects.
-    
+
     Parameters:	
         symbols_ (str, int or iterable of str and int)
             Passed strings are interpreted as ticker symbols and 
@@ -218,7 +219,7 @@ def returns(assets,
 
 def treasury_returns(symbol, start, end):
     """国库券收益率
-    
+
     Arguments:
         symbol {str} -- 期间代码，如"m1","y1"
         start {datatime-like} -- 开始时间
@@ -248,7 +249,7 @@ def treasury_returns(symbol, start, end):
 
 def benchmark_returns(symbol, start, end):
     """基准收益率
-    
+
     Arguments:
         symbol {str} -- 股指代码
         start {datatime-like} -- 开始时间
@@ -278,58 +279,79 @@ def benchmark_returns(symbol, start, end):
 def get_pricing(assets,
                 start_date,
                 end_date,
-                fields='close',
                 symbol_reference_date=None,
+                frequency='daily',
+                fields='close',
                 handle_missing='raise',
                 start_offset=0):
+    """
+    Load a table of historical trade data.
 
-    calendar = _trading_calendar()
-    fields = ensure_list(fields)
-    start = pd.Timestamp(start_date, tz='utc')
-    if not calendar.is_session(start):
-        # this is not a trading session, advance to the next session
-        start = calendar.minute_to_session_label(
-            start,
-            direction='next',
-        )
+    Parameters:	
+    -----------
 
-    end = pd.Timestamp(end_date, tz='utc')
-    if not calendar.is_session(end):
-        # this is not a trading session, advance to the previous session
-        end = calendar.minute_to_session_label(
-            end,
-            direction='previous',
-        )
+    assets (Object (or iterable of objects) convertible to Asset) – Valid input types are Asset, Integral, or basestring. 
+        In the case that the passed objects are strings, they are interpreted as ticker symbols and resolved relative to 
+        the date specified by symbol_reference_date.
+    start_date (str or pd.Timestamp, optional) – String or Timestamp representing a start date or start intraday minute for the returned data. 
+        Defaults to "2013-01-03".
+    end_date (str or pd.Timestamp, optional) – String or Timestamp representing an end date or end intraday minute for the returned data. 
+        Defaults to "2013-01-03".
+    symbol_reference_date (str or pd.Timestamp, optional) – String or Timestamp representing a date used to resolve symbols that have been held by multiple companies. 
+        Defaults to the current time.
+    frequency ({'daily', 'minute'}, optional) – Resolution of the data to be returned.
+    fields (str or list, optional) – String or list drawn from {'open', 'high', 'low', 'close', 'volume'}. 
+        Default behavior is to return all fields.
+    handle_missing ({'raise', 'log', 'ignore'}, optional) – String specifying how to handle unmatched securities. 
+        Defaults to ‘raise’.
+    start_offset (int, optional) – Number of periods before start to fetch. Default is 0.
 
-    start -= start_offset * calendar.day
+    Returns:	
+    --------
+
+    pandas Panel/DataFrame/Series – The pricing data that was requested. See note below.
+
+    Notes
+    -----
+
+    If a list of symbols is provided, data is returned in the form of a pandas Panel object with the following indices:
+
+        items = fields
+        major_axis = TimeSeries (start_date -> end_date)
+        minor_axis = symbols
+
+    If a string is passed for the value of symbols and fields is None or a list of strings, data is returned as a DataFrame 
+    with a DatetimeIndex and columns given by the passed fields.
+
+    If a list of symbols is provided, and fields is a string, data is returned as a DataFrame with a DatetimeIndex and a columns
+    given by the passed symbols.
+
+    If both parameters are passed as strings, data is returned as a Series.
+    """
+    # 此处简单判断，如果输入为`str`， 则判断为单个，否则判定为多个
+    single_asset = True if isinstance(assets, str) else False
+    single_field = True if isinstance(fields, str) else False
 
     assets = symbols(assets, symbol_reference_date)
-    sids = [
-        asset.sid
-        for asset in assets
-    ]
-    ret = _get_pricing(
-        sids, start, end, fields
-    )
-
-    single_asset = len(sids) == 1
-    single_field = len(fields) == 1
-
-    if single_asset & single_field:
-        ret = pd.Series(
-            ret.values[:, 0], index=ret.index.get_level_values(0), name=assets[0])
-    elif single_asset & (not single_field):
-        ret = ret.unstack()
-        ret.columns = fields
-        ret.index = ret.index.get_level_values(0)
-        ret.index.name = assets[0]
-    elif (not single_asset) & single_field:
-        ret = ret.unstack()
-        ret.columns = assets
-        ret.index = ret.index.get_level_values(0)
-        ret.index.name = fields[0]
-    # elif not (single_asset | single_field):
+    if single_field:
+        ret = prices(assets, start_date, end_date, 'daily', fields,
+                     symbol_reference_date, start_offset)
+        if single_asset:
+            ret = pd.Series(
+                ret.values[:, 0], index=ret.index.get_level_values(0), name=assets[0])
+        else:
+            ret.index.name = fields
     else:
-        ret.index.set_levels(assets, 1, inplace=True)
-
+        dfs = []
+        for field in fields:
+            df = prices(assets, start_date, end_date, 'daily',
+                        field, symbol_reference_date, start_offset)
+            if single_asset:
+                dfs.append(df)
+            else:
+                dfs.append(df.stack())
+        ret = pd.concat(dfs, axis=1)
+        ret.columns = fields
+        if single_asset:
+            ret.index.name = assets
     return ret
