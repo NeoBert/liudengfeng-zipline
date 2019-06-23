@@ -1,5 +1,5 @@
 import pandas as pd
-
+from collections.abc import Iterable
 from cnswd.utils import ensure_list, sanitize_dates
 from zipline.assets import Asset, Equity
 from zipline.data.benchmarks_cn import get_cn_benchmark_returns
@@ -76,7 +76,8 @@ def prices(assets,
            frequency='daily',
            price_field='price',
            symbol_reference_date=None,
-           start_offset=0):
+           start_offset=0,
+           adjust=False):
     """
     Parameters:	
         assets (int/str/Asset or iterable of same)
@@ -99,11 +100,13 @@ def prices(assets,
     """
     msg = "Only support frequency == 'daily'"
     assert frequency == 'daily', msg
-
     valid_fields = ('open', 'high', 'low', 'close', 'price', 'volume')
+    adj_fields = ('b_open', 'b_high', 'b_low', 'b_close')
     msg = '只接受单一字段，有效字段为{}'.format(valid_fields)
     assert isinstance(price_field, str), msg
-
+    if adjust:
+        msg = '当查询调整股价时，有效字段为{}'.format(adj_fields)
+        assert isinstance(price_field, str) and (price_field in adj_fields), msg
     data_portal, calendar = _data_portal()
 
     start = pd.Timestamp(start, tz='utc')
@@ -276,6 +279,17 @@ def benchmark_returns(symbol, start, end):
     return s[start:end]
 
 
+def _is_single(x):
+    if isinstance(x, str):
+        return True
+    elif isinstance(x, Iterable):
+        if len(x) > 1:
+            return False
+        else:
+            return True
+    raise TypeError(f'期望输入类型为`str`或`可迭代对象`，实际输入类型为：{type(x)}')
+
+
 def get_pricing(assets,
                 start_date,
                 end_date,
@@ -328,14 +342,13 @@ def get_pricing(assets,
 
     If both parameters are passed as strings, data is returned as a Series.
     """
-    # 此处简单判断，如果输入为`str`， 则判断为单个，否则判定为多个
-    single_asset = True if isinstance(assets, str) else False
-    single_field = True if isinstance(fields, str) else False
-
+    single_asset = _is_single(assets)
+    single_field = _is_single(fields)
     assets = symbols(assets, symbol_reference_date)
     if single_field:
+        is_adj = fields.startswith('b_')
         ret = prices(assets, start_date, end_date, 'daily', fields,
-                     symbol_reference_date, start_offset)
+                     symbol_reference_date, start_offset, is_adj)
         if single_asset:
             ret = pd.Series(
                 ret.values[:, 0], index=ret.index.get_level_values(0), name=assets[0])
@@ -344,14 +357,13 @@ def get_pricing(assets,
     else:
         dfs = []
         for field in fields:
+            is_adj = field.startswith('b_')
             df = prices(assets, start_date, end_date, 'daily',
-                        field, symbol_reference_date, start_offset)
+                        field, symbol_reference_date, start_offset, is_adj)
             if single_asset:
                 dfs.append(df)
             else:
                 dfs.append(df.stack())
         ret = pd.concat(dfs, axis=1)
         ret.columns = fields
-        if single_asset:
-            ret.index.name = assets
     return ret
