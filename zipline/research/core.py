@@ -41,7 +41,10 @@ def symbols(symbols_, symbol_reference_date=None, country=None, handle_missing='
 
     list of Asset objects – The symbols that were requested.
     """
-    symbols_ = ensure_list(symbols_)
+    if isinstance(symbols_, (Asset, Equity)):
+        symbols_ = [symbols_]
+    else:
+        symbols_ = ensure_list(symbols_)
 
     finder = _asset_finder()
 
@@ -280,6 +283,8 @@ def benchmark_returns(symbol, start, end):
 
 
 def _is_single(x):
+    if isinstance(x, (Asset, Equity)):
+        return True
     if isinstance(x, str):
         return True
     elif isinstance(x, Iterable):
