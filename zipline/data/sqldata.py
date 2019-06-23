@@ -19,6 +19,7 @@ DAILY_COLS = ['symbol', 'date',
               'prev_close', 'change_pct',
               'volume', 'amount', 'turnover', 'market_cap', 'total_cap']
 OHLCV_COLS = ['open', 'high', 'low', 'close', 'volume']
+BACK_COLS = ['b_open', 'b_high', 'b_low', 'b_close']
 MINUTELY_COLS = ['symbol', 'date'] + OHLCV_COLS
 
 ADJUSTMENT_COLS = ['symbol', 'date', 's_ratio', 'z_ratio', 'amount',
@@ -212,6 +213,24 @@ def _reindex(df):
     return res.rename(columns={"index": "date"})
 
 
+def _add_back_prices(raw_df):
+    """为原始数据添加后复权价格"""
+    # 原始数据可能存在首行为0，而第二行才为IPO当日数据
+    if raw_df['close'][0] != 0:
+        init_close = raw_df['prev_close'][0]
+    else:
+        init_close = raw_df.iloc['prev_close'][1]
+    # 累计涨跌幅调整系数（为百分比）
+    cc = (raw_df['change_pct'].fillna(0.0)/100 + 1).cumprod()
+    b_close = init_close * cc
+    adj = b_close / raw_df['close']
+    raw_df['b_close'] = b_close.round(2)
+    raw_df['b_open'] = (raw_df['open'] * adj).round(2)
+    raw_df['b_high'] = (raw_df['high'] * adj).round(2)
+    raw_df['b_low'] = (raw_df['low'] * adj).round(2)
+    return raw_df
+
+
 def fetch_single_equity(stock_code, start, end):
     """
     从本地数据库读取股票期间日线交易数据
@@ -275,8 +294,11 @@ def fetch_single_equity(stock_code, start, end):
         if df.empty:
             return pd.DataFrame(columns=DAILY_COLS+['circulating_share', 'total_share'])
         df.columns = DAILY_COLS
+        # 务必按日期升序排列
+        df = df.sort_values('date')
         # 处理停牌及截取期间
         df = _fill_zero(df)
+        df = _add_back_prices(df)
         cond = (start <= df['date']) & (df['date'] <= end)
         df = df[cond]
         df['shares_outstanding'] = df.market_cap / df.close
