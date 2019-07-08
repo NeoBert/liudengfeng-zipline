@@ -4,7 +4,7 @@ import os
 import shutil
 import warnings
 
-from contextlib2 import ExitStack
+from contextlib import ExitStack
 import click
 import pandas as pd
 from trading_calendars import get_calendar

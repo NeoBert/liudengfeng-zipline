@@ -48,7 +48,6 @@ cyordereddict>=1.0.0
 # faster array ops.
 bottleneck>=1.2.1
 
-contextlib2>=0.5.5
 
 # networkx requires decorator
 decorator>=4.3.0
