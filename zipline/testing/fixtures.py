@@ -23,8 +23,9 @@ from zipline.finance.asset_restrictions import NoRestrictions
 from zipline.utils.memoize import classlazyval
 from zipline.pipeline import SimplePipelineEngine
 from zipline.pipeline.data import USEquityPricing
+from zipline.pipeline.data.testing import TestingDataSet
 from zipline.pipeline.domain import GENERIC, US_EQUITIES
-from zipline.pipeline.loaders import CNEquityPricingLoader, USEquityPricingLoader
+from zipline.pipeline.loaders import USEquityPricingLoader
 from zipline.pipeline.loaders.testing import make_seeded_random_loader
 from zipline.protocol import BarData
 from zipline.utils.paths import ensure_directory, ensure_directory_containing
@@ -1755,12 +1756,29 @@ class WithSeededRandomPipelineEngine(WithTradingSessions, WithAssetFinder):
             cls.SEEDED_RANDOM_PIPELINE_SEED,
             cls.trading_days,
             cls._sids,
+            columns=cls.make_seeded_random_loader_columns(),
         )
         cls.seeded_random_engine = SimplePipelineEngine(
             get_loader=lambda column: loader,
             asset_finder=cls.asset_finder,
             default_domain=cls.SEEDED_RANDOM_PIPELINE_DEFAULT_DOMAIN,
+            default_hooks=cls.make_seeded_random_pipeline_engine_hooks(),
+            populate_initial_workspace=(
+                cls.make_seeded_random_populate_initial_workspace()
+            ),
         )
+
+    @classmethod
+    def make_seeded_random_pipeline_engine_hooks(cls):
+        return []
+
+    @classmethod
+    def make_seeded_random_populate_initial_workspace(cls):
+        return None
+
+    @classmethod
+    def make_seeded_random_loader_columns(cls):
+        return TestingDataSet.columns
 
     def raw_expected_values(self, column, start_date, end_date):
         """
@@ -1775,18 +1793,32 @@ class WithSeededRandomPipelineEngine(WithTradingSessions, WithAssetFinder):
         row_slice = self.trading_days.slice_indexer(start_date, end_date)
         return all_values[row_slice]
 
-    def run_pipeline(self, pipeline, start_date, end_date):
+    def run_pipeline(self, pipeline, start_date, end_date, hooks=None):
         """
         Run a pipeline with self.seeded_random_engine.
         """
-        if start_date not in self.trading_days:
-            raise AssertionError("Start date not in calendar: %s" % start_date)
-        if end_date not in self.trading_days:
-            raise AssertionError("End date not in calendar: %s" % end_date)
         return self.seeded_random_engine.run_pipeline(
             pipeline,
             start_date,
             end_date,
+            hooks=hooks,
+        )
+
+    def run_chunked_pipeline(self,
+                             pipeline,
+                             start_date,
+                             end_date,
+                             chunksize,
+                             hooks=None):
+        """
+        Run a chunked pipeline with self.seeded_random_engine.
+        """
+        return self.seeded_random_engine.run_chunked_pipeline(
+            pipeline,
+            start_date,
+            end_date,
+            chunksize=chunksize,
+            hooks=hooks,
         )
 
 
@@ -1894,7 +1926,6 @@ class WithResponses(object):
     a new `responses.RequestsMock` object. Users may add new endpoints to this
     with the `self.responses.add` method.
     """
-
     def init_instance_fixtures(self):
         super(WithResponses, self).init_instance_fixtures()
         self.responses = self.enter_instance_context(
