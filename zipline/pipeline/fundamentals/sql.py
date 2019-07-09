@@ -128,7 +128,7 @@ def _get_cn_industry(only_A, level, bom):
         if df.empty:
             msg = '在本地数据库中无法获取国证行业{}分类数据。\n'.format(u_num)
             msg += '这将导致股票分类数据缺失。\n'
-            msg += '运行`stock szx-cf`提取网络数据并存储在本地数据库。'
+            msg += '运行`stock db-classify`提取网络数据并存储在本地数据库。'
             warnings.warn(msg)
             return pd.DataFrame(columns=col_names)
         # 层级对应的编码位数长度
