@@ -17,13 +17,13 @@ import bcolz
 import logbook
 from logbook import Logger
 
-from cnswd.sql.szx import (FinancialIndicatorRanking, PerformanceForecaste,
-                           PeriodlyBalanceSheet, PeriodlyCashFlowStatement,
-                           PeriodlyFinancialIndicator, PeriodlyIncomeStatement,
-                           QuarterlyCashFlowStatement,
-                           QuarterlyFinancialIndicator,
-                           QuarterlyIncomeStatement, TtmCashFlowStatement,
-                           TtmIncomeStatement)
+from cnswd.sql.data_browse import (FinancialIndicatorRanking, PerformanceForecaste,
+                                   PeriodlyBalanceSheet, PeriodlyCashFlowStatement,
+                                   PeriodlyFinancialIndicator, PeriodlyIncomeStatement,
+                                   QuarterlyCashFlowStatement,
+                                   QuarterlyFinancialIndicator,
+                                   QuarterlyIncomeStatement, TtmCashFlowStatement,
+                                   TtmIncomeStatement)
 
 from ..common import AD_FIELD_NAME, TS_FIELD_NAME, SID_FIELD_NAME
 from .base import bcolz_table_path

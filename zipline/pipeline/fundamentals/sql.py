@@ -12,17 +12,17 @@ from sqlalchemy import func
 
 from cnswd.sql.base import get_engine, session_scope
 from cnswd.sql.szsh import StockDaily, TradingCalendar, THSGN
-from cnswd.sql.szx import (Classification, ClassificationBom,
-                           CompanyShareChange, Dividend,
-                           FinancialIndicatorRanking, InvestmentRating,
-                           PerformanceForecaste, PeriodlyBalanceSheet,
-                           PeriodlyCashFlowStatement,
-                           PeriodlyFinancialIndicator, PeriodlyIncomeStatement,
-                           QuarterlyCashFlowStatement,
-                           QuarterlyFinancialIndicator,
-                           QuarterlyIncomeStatement, Quote,
-                           ShareholdingConcentration, StockInfo,
-                           TtmCashFlowStatement, TtmIncomeStatement)
+from cnswd.sql.data_browse import (Classification, ClassificationBom,
+                                   CompanyShareChange, Dividend,
+                                   FinancialIndicatorRanking, InvestmentRating,
+                                   PerformanceForecaste, PeriodlyBalanceSheet,
+                                   PeriodlyCashFlowStatement,
+                                   PeriodlyFinancialIndicator, PeriodlyIncomeStatement,
+                                   QuarterlyCashFlowStatement,
+                                   QuarterlyFinancialIndicator,
+                                   QuarterlyIncomeStatement, Quote,
+                                   ShareholdingConcentration, StockInfo,
+                                   TtmCashFlowStatement, TtmIncomeStatement)
 
 NUM_MAPS = {
     1: '一级',
@@ -195,10 +195,10 @@ def field_code_concept_maps():
 
 def get_concept_info(only_A=True):
     """股票概念编码信息
-    
+
     Keyword Arguments:
         only_A {bool} -- 只包含A股代码 (default: {True})
-    
+
     Returns:
         pd.DataFrame -- 股票概念编码信息表
 
@@ -434,7 +434,7 @@ def _financial_report_announcement_date():
 def _get_report(only_A, table, columns=None, col='截止日期'):
     """
     获取财务报告数据
-    
+
     使用利润表的公告日期
     """
     engine = get_engine('dataBrowse')
@@ -524,7 +524,8 @@ def get_ttm_income_data(only_A=True):
 def get_periodly_financial_indicator_data(only_A=True):
     """报告期指标表"""
     table = PeriodlyFinancialIndicator.__tablename__
-    to_drop = ['证券简称', '机构名称', '开始日期', '数据来源编码', '数据来源', 'last_refresh_time', '备注']
+    to_drop = ['证券简称', '机构名称', '开始日期', '数据来源编码',
+               '数据来源', 'last_refresh_time', '备注']
     columns = []
     for c in PeriodlyFinancialIndicator.__table__.columns:
         if c.name not in to_drop:

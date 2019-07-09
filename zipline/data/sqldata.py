@@ -2,7 +2,6 @@
 
 本地数据查询及预处理，适用于zipline ingest写入
 
-1. 是否需要将暂停上市、已经退市代码？
 """
 
 from sqlalchemy import func
@@ -10,7 +9,7 @@ import pandas as pd
 import numpy as np
 from cnswd.sql.base import session_scope
 from cnswd.sql.szsh import StockDaily, CJMX, TradingCalendar
-from cnswd.sql.szx import StockInfo, Dividend
+from cnswd.sql.data_browse import StockInfo, Dividend
 from functools import lru_cache
 
 
