@@ -100,7 +100,7 @@ def get_cn_bom():
             ClassificationBom.分类编码,
             ClassificationBom.分类名称,
         ).filter(
-            ClassificationBom.平台类别 == '国证行业分类'
+            ClassificationBom.分类编码.startswith('Z')
         )
         df = pd.DataFrame.from_records(query.all(), columns=['分类编码', '分类名称'])
         return df.sort_values('分类编码')
