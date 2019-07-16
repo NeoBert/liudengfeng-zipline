@@ -54,6 +54,27 @@ class Returns(CustomFactor):
         out[:] = (close[-1] - close[0]) / close[0]
 
 
+class OpenReturns(CustomFactor):
+    """
+    Calculate the opening change rate based on the previous closing price
+    **Default Inputs**: [CNEquityPricing.close, CNEquityPricing.open]
+    """
+    inputs = [CNEquityPricing.close, CNEquityPricing.open]
+    window_safe = True
+    window_length = 2
+
+    def _validate(self):
+        super(OpenReturns, self)._validate()
+        if self.window_length != 2:
+            raise ValueError(
+                "开盘收益率窗口数量只能为2，但是"
+                "指定为 {window_length}。".format(window_length=self.window_length)
+            )
+
+    def compute(self, today, assets, out, close, open):
+        out[:] = (open[-1] - close[0]) / close[0]
+
+
 class DailyReturns(Returns):
     """
     Calculates daily percent change in close price.
