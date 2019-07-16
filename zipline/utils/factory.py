@@ -37,7 +37,7 @@ def create_simulation_parameters(year=2006,
                                  trading_calendar=None):
 
     if not trading_calendar:
-        trading_calendar = get_calendar("NYSE")
+        trading_calendar = get_calendar("XSHG")
 
     if start is None:
         start = pd.Timestamp("{0}-01-01".format(year), tz='UTC')

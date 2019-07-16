@@ -594,7 +594,6 @@ class BcolzDailyBarReader(SessionBarReader):
             offsets,
             read_all,
         )
-        # # 似乎原始数据不需要调整？？？
         for i, col in enumerate(list(columns)):
             if col == 'volume':
                 adj = 100
