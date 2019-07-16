@@ -254,10 +254,10 @@ def fetch_single_equity(stock_code, start, end):
 
     Examples
     --------
-    >>> symbol = '600710'
+    >>> stock_code = '600710'
     >>> start_date = '2016-03-29'
     >>> end_date = pd.Timestamp('2017-07-31')
-    >>> df = fetch_single_equity(symbol, start_date, end_date)
+    >>> df = fetch_single_equity(stock_code, start_date, end_date)
     >>> df.iloc[-6:,:8]
               date	symbol	open	high	low	close	prev_close	change_pct
     322	2017-07-24	600710	9.36	9.36	9.36	9.36	9.36	NaN

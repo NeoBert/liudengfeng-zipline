@@ -715,11 +715,14 @@ class BcolzDailyBarReader(SessionBarReader):
         price = self._spot_col(field)[ix]
         if field == 'volume':
             # # 成交量恢复(损失精度)
-            return price * 100            
-        else:
+            return price * 100 
+        elif field in ('open', 'high', 'low', 'close', 'b_close', 'b_open', 'b_high', 'b_low'):
             if price == 0:
                 return nan
             elif field in ADJUST_FACTOR.keys():
+                return price / ADJUST_FACTOR[field]
+        else:
+            if field in ADJUST_FACTOR.keys():
                 return price / ADJUST_FACTOR[field]
             else:
                 return price * 0.001
