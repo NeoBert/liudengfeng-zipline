@@ -38,7 +38,7 @@ class Returns(CustomFactor):
 
     **Default Inputs**: [CNEquityPricing.close]
     """
-    inputs = [CNEquityPricing.close]
+    inputs = [CNEquityPricing.b_close]
     window_safe = True
 
     def _validate(self):
@@ -81,7 +81,7 @@ class DailyReturns(Returns):
 
     **Default Inputs**: [CNEquityPricing.close]
     """
-    inputs = [CNEquityPricing.close]
+    inputs = [CNEquityPricing.b_close]
     window_safe = True
     window_length = 2
 
