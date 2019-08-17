@@ -78,7 +78,7 @@ def write_dataframe(df, table_name, attr_dict=None):
             warnings.warn(f'{c}列含有空值，已移除')
             df = df.loc[~df[c].isnan(), :]
     ct = bcolz.ctable.fromdataframe(df, rootdir=rootdir)
-    log.info('写入数据至：{}'.format(rootdir))
+    log.info('write to: {}'.format(rootdir))
     if attr_dict:
         # 设置属性
         for k, v in attr_dict.items():
