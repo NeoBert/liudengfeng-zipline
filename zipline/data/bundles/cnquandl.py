@@ -23,11 +23,12 @@ log = Logger('数据集')
 
 def _exchanges():
     # 通过 `股票.exchange = exchanges.exchange`来关联
+    # 深证信 股票信息 上市地点
     return pd.DataFrame(
         {
-            'exchange': ['深交所主板', '上交所', '深交所中小板', '深交所创业板'],
-            'canonical_name': ['XSHG', 'XSHG', 'XSHG', 'XSHG'],
-            'country_code': ['CN'] * 4
+            'exchange': ['深交所主板', '上交所', '深交所中小板', '深交所创业板', '上交所科创板'],
+            'canonical_name': ['XSHE', 'XSHG', 'XSHE', 'XSHE', 'XSHG'],
+            'country_code': ['CN'] * 5
         }
     )
 
