@@ -212,7 +212,7 @@ def _reindex(df):
     tdates = _tdates()
     df.set_index('date', inplace=True)
     s = tdates.slice_locs(df.index[0], df.index[-1])
-    full_index = tdates[s[0]:s[1]]
+    full_index = tdates[s[0]:s[1]].sort_values()
     res = df.reindex(full_index, method='ffill')
     res.reset_index(inplace=True)
     return res.rename(columns={"index": "date"})
@@ -294,20 +294,23 @@ def fetch_single_equity(stock_code, start, end):
             StockDaily.股票代码 == stock_code,
             # 不限定期间，而是在处理停牌事件后再截取期间数据
             # StockDaily.日期.between(start, end)
+        ).order_by(
+            # 务必按日期升序排列
+            StockDaily.日期.asc()
         )
         df = pd.DataFrame.from_records(query.all())
         if df.empty:
             return pd.DataFrame(columns=DAILY_COLS+['circulating_share', 'total_share'])
         df.columns = DAILY_COLS
-        # 务必按日期升序排列
-        df = df.sort_values('date')
         # 处理停牌及截取期间
         df = _fill_zero(df)
+        # 添加复权价格
+        df = _add_back_prices(df)
         cond = (start <= df['date']) & (df['date'] <= end)
         df = df[cond]
         df['shares_outstanding'] = df.market_cap / df.close
         df['total_shares'] = df.total_cap / df.close
-        return _add_back_prices(_reindex(df))
+        return _reindex(df)
 
 
 def _handle_minutely_data(df, exclude_lunch):
