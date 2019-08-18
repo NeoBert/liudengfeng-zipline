@@ -87,3 +87,4 @@ docs/notebooks/tutorial.ipynb
 zipline/examples/buyapple.py
 .vs/
 tasks/
+tests/t.py

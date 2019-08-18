@@ -166,7 +166,7 @@ def cndaily_bundle(environ,
     if show_progress:
         log.info('写入资产元数据')
     asset_db_writer.write(metadata, exchanges=_exchanges())
-
+ 
     splits = []
     dividends = []
     daily_bar_writer.write(
