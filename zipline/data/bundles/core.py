@@ -220,7 +220,7 @@ def _make_bundle_core():
     @curry
     def register(name,
                  f,
-                 calendar_name='NYSE',
+                 calendar_name='XSHE',
                  start_session=None,
                  end_session=None,
                  minutes_per_day=390,

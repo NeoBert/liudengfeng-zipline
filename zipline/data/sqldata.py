@@ -28,10 +28,16 @@ ADJUSTMENT_COLS = ['symbol', 'date', 's_ratio', 'z_ratio', 'amount',
 def get_exchange(code):
     """股票所在交易所编码"""
     # https://www.iso20022.org/10383/iso-10383-market-identifier-codes
-    if code[0] in ('0', '2', '3'):
-        return "深圳证券交易所"
-    elif code[0] in ('6', '9'):
-        return "上海证券交易所"
+    if code.startswith('688'):
+        return "上交所科创板"
+    elif code.startswith('6'):
+        return "上交所"    
+    elif code.startswith('002'):
+        return "深交所中小板"
+    elif code.startswith('3'):
+        return "深交所创业板"        
+    elif code.startswith('0'):
+        return "深交所主板"   
     else:
         return 'unknown'.upper()
 
@@ -170,7 +176,7 @@ def gen_asset_metadata(only_in=True, only_A=True):
                                                     'last_traded']
     df.sort_values('symbol', inplace=True)
     df.reset_index(inplace=True, drop=True)
-    # df['exchange'] = df['symbol'].map(get_exchange)
+    df['exchange'] = df['symbol'].map(get_exchange)
     df['auto_close_date'] = df['last_traded'].map(
         lambda x: x + pd.Timedelta(days=1))
     return df
