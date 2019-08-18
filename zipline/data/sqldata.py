@@ -229,10 +229,10 @@ def _add_back_prices(raw_df):
     cc = (raw_df['change_pct'].fillna(0.0)/100 + 1).cumprod()
     b_close = init_close * cc
     adj = b_close / raw_df['close']
-    raw_df['b_close'] = b_close.round(2)
-    raw_df['b_open'] = (raw_df['open'] * adj).round(2)
-    raw_df['b_high'] = (raw_df['high'] * adj).round(2)
-    raw_df['b_low'] = (raw_df['low'] * adj).round(2)
+    raw_df['b_close'] = b_close.round(4)
+    raw_df['b_open'] = (raw_df['open'] * adj).round(4)
+    raw_df['b_high'] = (raw_df['high'] * adj).round(4)
+    raw_df['b_low'] = (raw_df['low'] * adj).round(4)
     return raw_df
 
 
@@ -303,13 +303,11 @@ def fetch_single_equity(stock_code, start, end):
         df = df.sort_values('date')
         # 处理停牌及截取期间
         df = _fill_zero(df)
-        df = _add_back_prices(df)
         cond = (start <= df['date']) & (df['date'] <= end)
         df = df[cond]
         df['shares_outstanding'] = df.market_cap / df.close
         df['total_shares'] = df.total_cap / df.close
-        res = df.sort_values('date')
-        return _reindex(res)
+        return _add_back_prices(_reindex(df))
 
 
 def _handle_minutely_data(df, exclude_lunch):

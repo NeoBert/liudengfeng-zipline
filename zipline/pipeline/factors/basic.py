@@ -38,6 +38,7 @@ class Returns(CustomFactor):
 
     **Default Inputs**: [CNEquityPricing.close]
     """
+    # 使用后复权价格计算
     inputs = [CNEquityPricing.b_close]
     window_safe = True
 
