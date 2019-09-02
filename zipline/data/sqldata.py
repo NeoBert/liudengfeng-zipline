@@ -31,20 +31,20 @@ def get_exchange(code):
     if code.startswith('688'):
         return "上交所科创板"
     elif code.startswith('6'):
-        return "上交所"    
+        return "上交所"
     elif code.startswith('002'):
         return "深交所中小板"
     elif code.startswith('3'):
-        return "深交所创业板"        
+        return "深交所创业板"
     elif code.startswith('0'):
-        return "深交所主板"   
+        return "深交所主板"
     else:
         return 'unknown'.upper()
 
 
 def _stock_basic_info():
     """股票基础信息
-    
+
     Returns:
         DataFrame -- 六列数据框
 
@@ -200,7 +200,8 @@ def _fill_zero(df):
     ohlc = df[ohlc_cols].copy()
     ohlc.replace(0.0, np.nan, inplace=True)
     # ohlc.close.fillna(method='ffill', inplace=True)
-    ohlc.loc[ohlc.close.isna(), 'close'] = df.loc[ohlc.close.isna(), 'prev_close']
+    ohlc.loc[ohlc.close.isna(), 'close'] = df.loc[ohlc.close.isna(),
+                                                  'prev_close']
     # 按列填充
     ohlc.fillna(method='ffill', axis=1, inplace=True)
     for col in ohlc_cols:
@@ -220,14 +221,23 @@ def _reindex(df):
 
 def _add_back_prices(raw_df):
     """为原始数据添加后复权价格"""
-    # 原始数据可能存在首行为0，而第二行才为IPO当日数据
-    if raw_df['close'][0] != 0:
-        init_close = raw_df['prev_close'][0]
+    # 前收盘的表达方式：
+    # 1. 直接列出
+    # 2. 列出收盘价，前收盘为0.0与涨跌幅为空
+    if raw_df['prev_close'].values[0] > 0:
+        prev_close = raw_df['prev_close'].values[0]
+        # init_change = raw_df['change_pct'].values[0] / 100
     else:
-        init_close = raw_df.iloc['prev_close'][1]
+        # 此时涨跌幅必须为na
+        assert raw_df['change_pct'].isna()[0], "获取初始价格出错。在前收盘价格为0时，首日涨跌幅必须为na"
+        prev_close = raw_df['close'].values[0]
+        # init_change = 0.0
     # 累计涨跌幅调整系数（为百分比）
     cc = (raw_df['change_pct'].fillna(0.0)/100 + 1).cumprod()
-    b_close = init_close * cc
+    # actual_pct = raw_df['total_cap'].values[1:] / raw_df['total_cap'].values[:-1] - 1
+    # actual_pct = np.concatenate((np.array([init_change]), actual_pct))
+    # cc = (actual_pct + 1).cumprod()
+    b_close = prev_close * cc
     adj = b_close / raw_df['close']
     raw_df['b_close'] = b_close.round(4)
     raw_df['b_open'] = (raw_df['open'] * adj).round(4)
@@ -300,7 +310,7 @@ def fetch_single_equity(stock_code, start, end):
         )
         df = pd.DataFrame.from_records(query.all())
         if df.empty:
-            return pd.DataFrame(columns=DAILY_COLS+['circulating_share', 'total_share'])
+            return pd.DataFrame(columns=DAILY_COLS+BACK_COLS+['circulating_share', 'total_share'])
         df.columns = DAILY_COLS
         # 处理停牌及截取期间
         df = _fill_zero(df)
