@@ -165,7 +165,10 @@ def concept_categories():
             THSGN.概念,
         )
         df = pd.DataFrame.from_records(query.all())
-        df.columns = ['code', 'name']
+        try:
+            df.columns = ['code', 'name']
+        except ValueError:
+            raise NotImplementedError('本地数据库中"股票概念数据"为空，需要刷新')
         df.sort_values('code', inplace=True)
         return df.set_index('code').to_dict()['name']
 
