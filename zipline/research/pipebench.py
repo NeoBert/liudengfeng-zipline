@@ -9,11 +9,11 @@ from zipline.pipeline.loaders.blaze import global_loader
 from zipline.utils.memoize import remember_last
 
 
-def run_pipeline(pipeline, start_date, end_date, chunksize=None):
+def run_pipeline(pipeline, start_date, end_date):
     default_bundle = 'cndaily'
 
     return run_pipeline_against_bundle(
-        pipeline, start_date, end_date, default_bundle, chunksize
+        pipeline, start_date, end_date, default_bundle
     )
 
 
@@ -27,7 +27,7 @@ def _tdate(calendar, d, direction):
     return d
 
 
-def run_pipeline_against_bundle(pipeline, start_date, end_date, bundle, chunksize):
+def run_pipeline_against_bundle(pipeline, start_date, end_date, bundle):
     """Run a pipeline against the data in a bundle.
 
     Parameters
@@ -40,8 +40,6 @@ def run_pipeline_against_bundle(pipeline, start_date, end_date, bundle, chunksiz
         The end date of the pipeline.
     bundle : str
         The name of the bundle to run the pipeline against.
-    chunksize : int
-        The number of days to execute at a time.
 
     Returns
     -------
@@ -59,10 +57,7 @@ def run_pipeline_against_bundle(pipeline, start_date, end_date, bundle, chunksiz
         d2 = _tdate(calendar, end_date, 'previous')
         if d1 > d2:
             d1 = d2
-    if chunksize is None:
-        return engine.run_pipeline(pipeline, d1, d2)
-    else:
-        return engine.run_chunked_pipeline(pipeline, d1, d2, chunksize)
+    return engine.run_pipeline(pipeline, d1, d2)
 
 
 @remember_last

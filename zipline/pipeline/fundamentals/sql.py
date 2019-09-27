@@ -12,6 +12,7 @@ from sqlalchemy import func
 
 from cnswd.sql.base import get_engine, session_scope
 from cnswd.sql.szsh import StockDaily, TradingCalendar, THSGN
+from cnswd.sql.thematic_statistics import Margin
 from cnswd.sql.data_browse import (Classification, ClassificationBom,
                                    CompanyShareChange, Dividend,
                                    FinancialIndicatorRanking, InvestmentRating,
@@ -298,23 +299,23 @@ def get_equity_data(only_A=True):
 
 def get_margin_data(only_A=True):
     """融资融券数据"""
-    with session_scope('dataBrowse') as sess:
+    with session_scope('thematicStatistics') as sess:
         query = sess.query(
-            Quote.证券代码,
-            Quote.交易日期,
-            Quote.本日融资余额,
-            Quote.本日融资买入额,
-            Quote.本日融资偿还额,
-            Quote.本日融券余量,
-            Quote.本日融券卖出量,
-            Quote.本日融券偿还量,
-            Quote.融券余量金额,
-            Quote.融资融券余额,
+            Margin.证券代码,
+            Margin.交易日期,
+            Margin.本日融资余额,
+            Margin.本日融资买入额,
+            # Margin.本日融资偿还额,
+            Margin.本日融券余量,
+            Margin.本日融券卖出量,
+            # Margin.本日融券偿还量,
+            Margin.融券余量金额,
+            Margin.融资融券余额,
         ).filter(
-            Quote.融资融券余额 > 0
+            Margin.融资融券余额 > 0
         )
-    columns = ['sid', 'asof_date', '本日融资余额', '本日融资买入额', '本日融资偿还额',
-               '本日融券余量', '本日融券卖出量', '本日融券偿还量',
+    columns = ['sid', 'asof_date', '本日融资余额', '本日融资买入额', 
+               '本日融券余量', '本日融券卖出量', 
                '融券余量金额', '融资融券余额'
                ]
     df = pd.DataFrame.from_records(query.all(), columns=columns)
