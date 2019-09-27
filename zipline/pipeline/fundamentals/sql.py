@@ -569,7 +569,8 @@ def get_financial_indicator_ranking_data(only_A=True):
 
 def get_performance_forecaste_data(only_A=True):
     """上市公司业绩预告"""
-    to_drop = ['证券简称', '业绩类型编码', '业绩类型', 'last_refresh_time', '备注']
+    # 简化写入量，保留`业绩类型`
+    to_drop = ['证券简称', '业绩类型编码', '业绩预告内容', '业绩变化原因', 'last_refresh_time', '备注']
     columns = []
     for c in PerformanceForecaste.__table__.columns:
         if c.name not in to_drop:

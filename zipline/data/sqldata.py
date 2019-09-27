@@ -39,7 +39,7 @@ def get_exchange(code):
     elif code.startswith('0'):
         return "深交所主板"
     else:
-        return 'unknown'.upper()
+        raise ValueError(f'股票代码：{code}错误')
 
 
 def _stock_basic_info():
