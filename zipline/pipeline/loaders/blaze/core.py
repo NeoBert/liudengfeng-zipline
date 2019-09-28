@@ -405,6 +405,7 @@ class NoMetaDataWarning(UserWarning):
     field : {'deltas',  'checkpoints'}
         The field that was looked up.
     """
+
     def __init__(self, expr, field):
         self._expr = expr
         self._field = field
@@ -720,6 +721,7 @@ class ExprData(object):
     odo_kwargs : dict, optional
         The keyword arguments to forward to the odo calls internally.
     """
+
     def __init__(self,
                  expr,
                  deltas=None,
@@ -820,6 +822,7 @@ class BlazeLoader(object):
     :class:`zipline.utils.pool.SequentialPool`
     :class:`multiprocessing.Pool`
     """
+
     def __init__(self, dsmap=None, pool=SequentialPool()):
         # explicitly public
         self.pool = pool
@@ -980,7 +983,7 @@ class BlazeLoader(object):
             This can return more data than needed. The in memory reindex will
             handle this.
             """
-            # # 转换为本地时区 
+            # # 转换为本地时区
             # # upper_dt -> upper_dt.tz_localize(None)
             # # lower -> lower.tz_localize(None)
             predicate = e[TS_FIELD_NAME] < upper_dt.tz_localize(None)
@@ -1008,20 +1011,23 @@ class BlazeLoader(object):
         # complains. Ignore those warnings for now until we have a story for
         # updating our categorical missing values to NaN.
         with ignore_pandas_nan_categorical_warning():
-            all_rows = pd.concat(
-                filter(
-                    # # 可能为空
-                    # # 排除非空数据，确保AD_FIELD_NAME数据类型为M
-                    # lambda df: df is not None, (
-                    lambda df: (df is not None) and (not df.empty), (
+            try:
+                all_rows = pd.concat(
+                    filter(
+                        # # 可能为空
+                        # # 排除非空数据，确保AD_FIELD_NAME数据类型为M
+                        # lambda df: df is not None, (
+                        lambda df: (df is not None) and (not df.empty), (
                             materialized_checkpoints,
                             materialized_expr_deferred.get(),
                             materialized_deltas,
                         ),
-                ),
-                ignore_index=True,
-                copy=False,
-            )
+                    ),
+                    ignore_index=True,
+                    copy=False,
+                )
+            except ValueError:
+                raise NotImplementedError(f'列：{colnames}, 期间：{lower_dt} ~ {upper_dt} 无数据')
 
         all_rows[TS_FIELD_NAME] = all_rows[TS_FIELD_NAME].astype(
             'datetime64[ns]',

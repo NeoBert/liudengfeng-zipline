@@ -15,6 +15,7 @@ from .sql import (field_code_concept_maps, get_cn_industry, get_concept_info,
 
 # ========================辅助函数========================= #
 
+
 def _investment_score(x):
     """投资评级分数"""
     if x == '买入':
@@ -52,7 +53,8 @@ def _normalize_ad_ts_sid(df, ndays=0, nhours=8, target_tz='utc'):
     """
     if AD_FIELD_NAME in df.columns:
         # 如果asof_date存在，则只需要转换数据类型及目标时区
-        df[AD_FIELD_NAME] = _to_dt(df[AD_FIELD_NAME], target_tz) + pd.Timedelta(hours=nhours)
+        df[AD_FIELD_NAME] = _to_dt(
+            df[AD_FIELD_NAME], target_tz) + pd.Timedelta(hours=nhours)
     else:
         raise ValueError('数据必须包含"{}"列'.format(AD_FIELD_NAME))
 
@@ -111,14 +113,14 @@ def _handle_cate(df, col_pat, maps):
         c = df[col].astype('category')
         df[col] = c.cat.codes.astype('int64')
         maps[col] = {k: v for k, v in enumerate(c.cat.categories)}
-        maps[col].update({0: '未知'})
+        maps[col].update({-1: '未知'})
     return df, maps
 
 
 def sector_code_map(industry_code):
     """
     国证行业分类映射为部门行业分类
-    
+
     国证一级行业分10类，转换为sector共11组，单列出房地产。
     """
     if industry_code[:3] == 'Z01':
@@ -163,7 +165,8 @@ def get_static_info_table():
     stocks = get_stock_info()
     cn_industry = get_cn_industry()
     # 类似Sector自定义因子，代码为整数
-    cn_industry['sector_code'] = cn_industry['国证四级行业编码'].map(sector_code_map).astype('int64')
+    cn_industry['sector_code'] = cn_industry['国证四级行业编码'].map(
+        sector_code_map).astype('int64')
     cn_industry['super_sector_code'] = cn_industry['sector_code'].map(
         supper_sector_code_map).astype('int64')
     # cn_industry['部门'] = cn_industry['sector_code'].map(SECTOR_NAMES)
@@ -200,6 +203,7 @@ def get_investment_rating():
         df, maps = _handle_cate(df, col_pat, maps)
     df['投资评级'] = df['投资评级_经调整'] # 统一评级
     df['投资评级'] = df['投资评级'].map(_investment_score) # 转换为整数值
+    df['是否首次评级'] = df['是否首次评级'].map(lambda x: True if x == '是首次评级' else False) # 转换为bool
     del df['投资评级_经调整']
     # 填充无效值
     _fill_missing_value(df, cate_cols_pat, -1)

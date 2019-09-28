@@ -285,11 +285,6 @@ class Fundamentals(object):
         """每股股利数据集"""
         return gen_data_set(table_name='dividend')
 
-    # @classlazyval
-    # def tdata(self):
-    #     """成交额、换手率、总市值、流通市值"""
-    #     return gen_data_set(table_name='tdata')
-
     @classlazyval
     def rating(self):
         """股票评级"""
