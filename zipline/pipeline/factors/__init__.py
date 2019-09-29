@@ -17,6 +17,7 @@ from .basic import (
     Returns,
     OpenReturns,
     SimpleMovingAverage,
+    SMA,
     VWAP,
     WeightedAverageValue,
 )
@@ -74,6 +75,7 @@ __all__ = [
     'RSI',
     'SimpleBeta',
     'SimpleMovingAverage',
+    'SMA',
     'TrueRange',
     'VWAP',
     'WeightedAverageValue',

@@ -484,5 +484,6 @@ class AnnualizedVolatility(CustomFactor):
 
 
 # Convenience aliases
+SMA = SimpleMovingAverage
 EWMA = ExponentialWeightedMovingAverage
 EWMSTD = ExponentialWeightedMovingStdDev
