@@ -40,6 +40,11 @@ class TTM(CustomFactor):
                 2019 Q3 2100
                 2019 Q4 3000
             如原始数据为累积值，则使用季度因子调整加权平均计算TTM。
+    
+    用法：
+    >>>from zipline.pipeline.builtin import TTM
+    >>>from zipline.pipeline.fundamentals import Fundamentals
+    >>>ttm = TTM(inputs=(Fundamentals.profit_statement.管理费用, Fundamentals.profit_statement.asof_date), window_length=255, is_cum=True)
     """
     params = {
         'is_cum': True   # 如果原始数据为累计数，则标记为True
@@ -50,11 +55,15 @@ class TTM(CustomFactor):
         super(TTM, self)._validate()
         if self.window_length < 250:
             raise ValueError("有效窗口长度至少应大于等于250")
-        # TODO：检验项目一致，不得混用
         if len(self.inputs) != 2:
             raise ValueError("输入项目共二项，第一项为要计算的指标，第二项为相应指标的`asof_date`")
         if getattr(self.inputs[1], 'name') != 'asof_date':
             raise ValueError("第二项输入指标名称指标必须为`asof_date`")
+        # 必须为同一数据集
+        a = repr(self.inputs[0]).split('.')[0]
+        b = repr(self.inputs[1]).split('.')[0]
+        if a != b:
+            raise ValueError(f'项目及其日期必须在同一数据集！项目数据集：{a} 日期数据集：{b}')
 
     def _locs_and_quarterly_multiplier(self, x):
         """计算单列的位置及季度乘子"""
