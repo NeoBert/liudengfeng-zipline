@@ -76,8 +76,9 @@ class TTM(CustomFactor):
         return locs, factors[locs]
 
     def compute(self, today, assets, out, values, dates, is_cum):
+        filled = np.where(np.isnat(dates), np.datetime64('1970-03-31'), dates)
         # 按股票计算位置变化及季度乘子
-        locs = map(self._locs_and_quarterly_multiplier, dates.T)
+        locs = map(self._locs_and_quarterly_multiplier, filled.T)
         if is_cum:
             # 使用季度因子加权平均
             ttm = np.array([nanmean(value[loc] * ms)
