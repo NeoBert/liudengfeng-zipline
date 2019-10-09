@@ -232,8 +232,7 @@ class SWSector(CustomClassifier):
     }
 
     window_length = 1
-    # TODO:完成数据部分
-    # inputs = (Fundamentals.sw_sector,)
+    inputs = (Fundamentals.info.sw_sector,)
     dtype = int64_dtype
     missing_value = -1
 

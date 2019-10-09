@@ -11,19 +11,18 @@ import pandas as pd
 from sqlalchemy import func
 
 from cnswd.sql.base import get_engine, session_scope
-from cnswd.sql.szsh import StockDaily, TradingCalendar, THSGN
+from cnswd.sql.data_browse import (
+    Classification, ClassificationBom, CompanyShareChange, Dividend,
+    FinancialIndicatorRanking, InvestmentRating, PerformanceForecaste,
+    PeriodlyBalanceSheet, PeriodlyCashFlowStatement,
+    PeriodlyFinancialIndicator, PeriodlyIncomeStatement,
+    QuarterlyCashFlowStatement, QuarterlyFinancialIndicator,
+    QuarterlyIncomeStatement, Quote, ShareholdingConcentration, StockInfo,
+    TtmCashFlowStatement, TtmIncomeStatement)
+from cnswd.sql.szsh import THSGN, StockDaily, TradingCalendar
 from cnswd.sql.thematic_statistics import Margin
-from cnswd.sql.data_browse import (Classification, ClassificationBom,
-                                   CompanyShareChange, Dividend,
-                                   FinancialIndicatorRanking, InvestmentRating,
-                                   PerformanceForecaste, PeriodlyBalanceSheet,
-                                   PeriodlyCashFlowStatement,
-                                   PeriodlyFinancialIndicator, PeriodlyIncomeStatement,
-                                   QuarterlyCashFlowStatement,
-                                   QuarterlyFinancialIndicator,
-                                   QuarterlyIncomeStatement, Quote,
-                                   ShareholdingConcentration, StockInfo,
-                                   TtmCashFlowStatement, TtmIncomeStatement)
+
+from .constants import SW_SECTOR_MAPS
 
 NUM_MAPS = {
     1: '一级',
@@ -118,7 +117,8 @@ def _get_cn_industry(only_A, level, bom):
             Classification.分类名称,
             Classification.分类编码
         ).filter(
-            Classification.平台类别 == '国证行业分类'
+            Classification.分类层级.startswith('3.'),
+            Classification.平台类别 == '国证行业分类',
         )
         if only_A:
             query = query.filter(
@@ -158,6 +158,29 @@ def get_cn_industry(only_A=True):
         ],
         axis=1
     ).reset_index()
+
+
+def get_sw_industry(only_A=True):
+    """获取申万一级行业分类编码"""
+    col_names = ['sid', '申万一级行业编码']
+    code_maps = {v: k for k, v in SW_SECTOR_MAPS.items()}
+    with session_scope('dataBrowse') as sess:
+        query = sess.query(
+            Classification.证券代码,
+            Classification.分类编码
+        ).filter(
+            Classification.分类层级.startswith('1.'),
+            Classification.平台类别 == '申万行业分类',
+        )
+        if only_A:
+            query = query.filter(
+                ~Classification.证券代码.startswith('2'),
+                ~Classification.证券代码.startswith('9'),
+            )
+        df = pd.DataFrame.from_records(query.all(), columns=col_names)
+        df['sw_sector'] = df['申万一级行业编码'].map(
+            lambda x: code_maps[x[:3]]).astype('int64')
+    return df
 
 
 def concept_categories():

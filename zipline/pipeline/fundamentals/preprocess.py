@@ -11,7 +11,7 @@ import pandas as pd
 from ..common import AD_FIELD_NAME, SID_FIELD_NAME, TS_FIELD_NAME
 from .constants import SECTOR_NAMES, SUPER_SECTOR_NAMES
 from .sql import (field_code_concept_maps, get_cn_industry, get_concept_info,
-                  get_investment_rating_data, get_stock_info)
+                  get_investment_rating_data, get_stock_info, get_sw_industry)
 
 # ========================辅助函数========================= #
 
@@ -179,17 +179,21 @@ def get_static_info_table():
     注：总行数约4000行，无需将str转换为类别。
     """
     stocks = get_stock_info()
+    sw_industry = get_sw_industry()
     cn_industry = get_cn_industry()
-    # 类似Sector自定义因子，代码为整数
+
+    # Sector自定义因子，代码为整数
     cn_industry['sector_code'] = cn_industry['国证四级行业编码'].map(
         sector_code_map).astype('int64')
     cn_industry['super_sector_code'] = cn_industry['sector_code'].map(
         supper_sector_code_map).astype('int64')
     concept = get_concept_info()
     df = stocks.join(
-        cn_industry.set_index('sid'), on='sid', how='inner',
+        sw_industry.set_index('sid'), on='sid',
     ).join(
-        concept.set_index('sid'), on='sid', how='inner',
+        cn_industry.set_index('sid'), on='sid',
+    ).join(
+        concept.set_index('sid'), on='sid',
     )
     maps = {}
     _, name_maps = field_code_concept_maps()
@@ -198,7 +202,8 @@ def get_static_info_table():
     # 规范列数据类型及填充无效值
     bool_cols = df.columns[df.columns.str.match(r'A\d{3}')]
     col_dtypes = {col: 'bool' for col in bool_cols}
-    col_dtypes.update({'sector_code': 'int64', 'super_sector_code': 'int64'})
+    col_dtypes.update(
+        {'sector_code': 'int64', 'super_sector_code': 'int64', 'sw_sector': 'int64'})
     df = _handle_int_and_bool(df, col_dtypes)
 
     return df, maps
