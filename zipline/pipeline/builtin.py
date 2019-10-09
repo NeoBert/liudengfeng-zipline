@@ -40,7 +40,7 @@ class TTM(CustomFactor):
                 2019 Q3 2100
                 2019 Q4 3000
             如原始数据为累积值，则使用季度因子调整加权平均计算TTM。
-    
+
     用法：
     >>>from zipline.pipeline.builtin import TTM
     >>>from zipline.pipeline.fundamentals import Fundamentals
@@ -201,34 +201,35 @@ class SWSector(CustomClassifier):
     MACHINERY = 801890
 
     SECTOR_NAMES = {
-        801010: 'AGRICULTURE',  # 农林牧渔
-        801020: 'MINING',  # 采掘
-        801030: 'CHEMICALS',  # 化工
-        801040: 'STEEL',  # 钢铁
-        801050: 'METALS',  # 有色金属
-        801080: 'ELECTRONICS',  # 电子
-        801110: 'APPLIANCES',  # 家用电器
-        801120: 'FOOD',  # 食品饮料
-        801130: 'TEXTILES',  # 纺织服装
-        801140: 'LIGHT_MANUFACTURING',  # 轻工制造
-        801150: 'PHARMACEUTICALS',  # 医药生物
-        801160: 'UTILITIES',  # 公用事业
-        801170: 'TRANSPORTATION',  # 交通运输
-        801180: 'REAL_ESTATE',  # 房地产
-        801200: 'COMMERCE',  # 商业贸易
-        801210: 'SERVICES',  # 休闲服务
-        801230: 'CONGLOMERATE',  # 综合
-        801710: 'BUILDING_MATERIALS',  # 建筑材料
-        801720: 'BUILDING_DECORATIONS',  # 建筑装饰
-        801730: 'ELECTRICALS',  # 电气设备
-        801740: 'DEFENSE_MILITARY',  # 国防军工
-        801750: 'IT',  # 计算机
-        801760: 'MEDIA',  # 传媒
-        801770: 'COMMUNICATION_SERVICES',  # 通信
-        801780: 'BANKS',  # 银行
-        801790: 'NONBANK_FINANCIALS',  # 非银金融
-        801880: 'AUTO',  # 汽车
-        801890: 'MACHINERY',  # 机械设备
+        801010: '农林牧渔',  # 'AGRICULTURE'
+        801020: '采掘',  # MINING
+        801030: '化工',  # CHEMICALS
+        801040: '钢铁',  # STEEL
+        801050: '有色金属',  # METALS
+        801080: '电子',  # ELECTRONICS
+        801110: '家用电器',  # APPLIANCES
+        801120: '食品饮料',  # FOOD
+        801130: '纺织服装',  # TEXTILES
+        801140: '轻工制造',  # LIGHT_MANUFACTURING
+        801150: '医药生物',  # PHARMACEUTICALS
+        801160: '公用事业',  # UTILITIES
+        801170: '交通运输',  # TRANSPORTATION
+        801180: '房地产',  # REAL_ESTATE
+        801200: '商业贸易',  # COMMERCE
+        801210: '休闲服务',  # SERVICES
+        801230: '综合',  # CONGLOMERATE
+        801710: '建筑材料',  # BUILDING_MATERIALS
+        801720: '建筑装饰',  # BUILDING_DECORATIONS
+        801730: '电气设备',  # ELECTRICALS
+        801740: '国防军工',  # DEFENSE_MILITARY
+        801750: '计算机',  # IT
+        801760: '传媒',  # MEDIA
+        801770: '通信',  # COMMUNICATION_SERVICES
+        801780: '银行',  # BANKS
+        801790: '非银金融',  # NONBANK_FINANCIALS
+        801880: '汽车',  # AUTO
+        801890: '机械设备',  # MACHINERY
+        -1:  '未知',
     }
 
     window_length = 1
