@@ -149,15 +149,13 @@ def get_cn_industry(only_A=True):
     df2 = _get_cn_industry(only_A, 2, bom)
     df3 = _get_cn_industry(only_A, 3, bom)
     df4 = _get_cn_industry(only_A, 4, bom)
-    return pd.concat(
-        [
-            df1.set_index('sid'),
-            df2.set_index('sid'),
-            df3.set_index('sid'),
-            df4.set_index('sid')
-        ],
-        axis=1
-    ).reset_index()
+    return df1.join(
+        df2.set_index('sid'), on='sid'
+    ).join(
+        df3.set_index('sid'), on='sid'
+    ).join(
+        df4.set_index('sid'), on='sid'
+    )
 
 
 def get_sw_industry(only_A=True):
