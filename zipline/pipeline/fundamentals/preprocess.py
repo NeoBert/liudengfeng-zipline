@@ -76,34 +76,46 @@ def _normalize_ad_ts_sid(df, ndays=0, nhours=8, target_tz='utc'):
     return df
 
 
-def _fill_missing_value(df, start_names, default):
-    """
-    修改无效值
-    为输入df中以指定列名称开头的列，以默认值代替nan
+# def _fill_missing_value(df, start_names, default):
+#     """
+#     修改无效值
+#     为输入df中以指定列名称开头的列，以默认值代替nan
 
-    与默认值一致
-        整数        默认值 -1
-        浮点        默认值nan
-        对象(含str) `未知`
-        时间        NaT
-        逻辑        False
-    """
-    # 找出以指定列名词开头的列
-    col_names = []
-    for col_pat in start_names:
-        for col in df.columns[df.columns.str.startswith(col_pat)]:
-            col_names.append(col)
-    # 替换字典
-    values = {}
-    for col in col_names:
-        values[col] = default
-    # 对象类别需要填充缺失值
-    for col in df.columns:
-        cond_1 = pd.core.dtypes.common.is_object_dtype(df[col])
-        cond_2 = col not in col_names
-        if cond_1 & cond_2:
-            values[col] = '未知'
-    df.fillna(value=values, inplace=True)
+#     与默认值一致
+#         整数        默认值 0
+#         浮点        默认值 nan
+#         对象(含str) 默认值 None
+#         时间        默认值 NaT
+#         逻辑        默认值 False
+#     """
+#     # 找出以指定列名词开头的列
+#     col_names = []
+#     for col_pat in start_names:
+#         for col in df.columns[df.columns.str.startswith(col_pat)]:
+#             col_names.append(col)
+#     # 替换字典
+#     values = {}
+#     for col in col_names:
+#         values[col] = default
+#     # 对象类别需要填充缺失值
+#     for col in df.columns:
+#         cond_1 = pd.core.dtypes.common.is_object_dtype(df[col])
+#         cond_2 = col not in col_names
+#         if cond_1 & cond_2:
+#             values[col] = None  # '未知'
+#     df.fillna(value=values, inplace=True)
+
+
+def _handle_int_and_bool(df, col_dtypes):
+    """规范列类型及缺失值"""
+    default_miss = {'int64': -1, 'bool': False}
+    for col, dtype in col_dtypes.items():
+        if df[col].hasnans:
+            values = {}
+            values[col] = default_miss[dtype]
+            df.fillna(value=values, inplace=True)
+        df[col] = df[col].astype(dtype)
+    return df
 
 
 def _handle_cate(df, col_pat, maps):
@@ -122,6 +134,8 @@ def sector_code_map(industry_code):
     国证行业分类映射为部门行业分类
 
     国证一级行业分10类，转换为sector共11组，单列出房地产。
+
+    2019年拆分金融地产行业。
     """
     if industry_code[:3] == 'Z01':
         return 309
@@ -136,16 +150,18 @@ def sector_code_map(industry_code):
     if industry_code[:3] == 'Z06':
         return 206
     if industry_code.startswith('Z07'):
-        if industry_code[:5] == 'Z0703':
-            return 104
-        else:
-            return 103
+        # if industry_code[:5] == 'Z0703':
+        #     return 104
+        # else:
+        return 103
     if industry_code[:3] == 'Z08':
         return 311
     if industry_code[:3] == 'Z09':
         return 308
     if industry_code[:3] == 'Z10':
         return 207
+    if industry_code[:3] == 'Z11':
+        return 104
     return -1
 
 
@@ -169,24 +185,22 @@ def get_static_info_table():
         sector_code_map).astype('int64')
     cn_industry['super_sector_code'] = cn_industry['sector_code'].map(
         supper_sector_code_map).astype('int64')
-    # cn_industry['部门'] = cn_industry['sector_code'].map(SECTOR_NAMES)
-    # cn_industry['超级部门'] = cn_industry['super_sector_code'].map(
-    #     SUPER_SECTOR_NAMES)
-    # del cn_industry['sector_code']
-    # del cn_industry['super_sector_code']
     concept = get_concept_info()
     df = stocks.join(
-        cn_industry.set_index('sid'), on='sid'
+        cn_industry.set_index('sid'), on='sid', how='inner',
     ).join(
-        concept.set_index('sid'), on='sid'
+        concept.set_index('sid'), on='sid', how='inner',
     )
     maps = {}
     _, name_maps = field_code_concept_maps()
     maps['概念'] = name_maps
-    # 填充无效值
+
+    # 规范列数据类型及填充无效值
     bool_cols = df.columns[df.columns.str.match(r'A\d{3}')]
-    _fill_missing_value(df, bool_cols, False)
-    # _fill_missing_value(df, cate_cols_pat, 0)
+    col_dtypes = {col: 'bool' for col in bool_cols}
+    col_dtypes.update({'sector_code': 'int64', 'super_sector_code': 'int64'})
+    df = _handle_int_and_bool(df, col_dtypes)
+
     return df, maps
 
 
@@ -201,10 +215,10 @@ def get_investment_rating():
     cate_cols_pat = ['研究机构简称', '研究员名称', '是否首次评级', '评价变化',  '前一次投资评级']
     for col_pat in cate_cols_pat:
         df, maps = _handle_cate(df, col_pat, maps)
-    df['投资评级'] = df['投资评级_经调整'] # 统一评级
-    df['投资评级'] = df['投资评级'].map(_investment_score) # 转换为整数值
-    df['是否首次评级'] = df['是否首次评级'].map(lambda x: True if x == '是首次评级' else False) # 转换为bool
+    df['投资评级'] = df['投资评级_经调整']  # 统一评级
+    df['投资评级'] = df['投资评级'].map(_investment_score)  # 转换为整数值
+    df['是否首次评级'] = df['是否首次评级'].map(
+        lambda x: True if x == '是首次评级' else False)  # 转换为bool
     del df['投资评级_经调整']
-    # 填充无效值
-    _fill_missing_value(df, cate_cols_pat, -1)
+
     return df, maps

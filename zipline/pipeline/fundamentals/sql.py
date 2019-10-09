@@ -149,13 +149,15 @@ def get_cn_industry(only_A=True):
     df2 = _get_cn_industry(only_A, 2, bom)
     df3 = _get_cn_industry(only_A, 3, bom)
     df4 = _get_cn_industry(only_A, 4, bom)
-    return df1.join(
-        df2.set_index('sid'), how='left', on='sid'
-    ).join(
-        df3.set_index('sid'), how='left', on='sid'
-    ).merge(
-        df4.set_index('sid'), how='left', on='sid'
-    )
+    return pd.concat(
+        [
+            df1.set_index('sid'),
+            df2.set_index('sid'),
+            df3.set_index('sid'),
+            df4.set_index('sid')
+        ],
+        axis=1
+    ).reset_index()
 
 
 def concept_categories():
@@ -218,6 +220,9 @@ def get_concept_info(only_A=True):
         query = sess.query(
             THSGN.股票代码,
             THSGN.概念编码,
+        ).filter(
+            # 原始数据存在提示性信息，如'暂无成份股数据'
+            ~THSGN.股票代码.startswith('暂无')
         )
         if only_A:
             query = query.filter(
@@ -314,8 +319,8 @@ def get_margin_data(only_A=True):
         ).filter(
             Margin.融资融券余额 > 0
         )
-    columns = ['sid', 'asof_date', '本日融资余额', '本日融资买入额', 
-               '本日融券余量', '本日融券卖出量', 
+    columns = ['sid', 'asof_date', '本日融资余额', '本日融资买入额',
+               '本日融券余量', '本日融券卖出量',
                '融券余量金额', '融资融券余额'
                ]
     df = pd.DataFrame.from_records(query.all(), columns=columns)

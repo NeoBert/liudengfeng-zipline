@@ -1,6 +1,13 @@
 """
 如表行数超大，bcolz写入str数据会异常缓慢，此时应尽量避免写入字符串类型数据，而是转换为类型进行处理。
 
+使用默认输入缺失值
+    bool_value   False
+    dt_value     NaT
+    float_value  NaN
+    int_value    0
+    str_value    None
+
 替代方案：
     以附加属性写入信息
     或者更改为类别
@@ -138,5 +145,5 @@ def write_financial_data_to_bcolz():
 def write_sql_data_to_bcolz():
     """写入Fundamentals数据"""
     write_static_info_to_bcolz()
-    write_dynamic_data_to_bcolz()
-    write_financial_data_to_bcolz()
+    # write_dynamic_data_to_bcolz()
+    # write_financial_data_to_bcolz()
