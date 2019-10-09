@@ -145,5 +145,5 @@ def write_financial_data_to_bcolz():
 def write_sql_data_to_bcolz():
     """写入Fundamentals数据"""
     write_static_info_to_bcolz()
-    # write_dynamic_data_to_bcolz()
-    # write_financial_data_to_bcolz()
+    write_dynamic_data_to_bcolz()
+    write_financial_data_to_bcolz()
