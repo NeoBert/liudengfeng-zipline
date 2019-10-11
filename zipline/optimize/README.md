@@ -3,7 +3,7 @@
 
 [使用nbviewer浏览](https://nbviewer.jupyter.org/github/liudengfeng/zipline/blob/master/docs/notebooks/%E9%A3%8E%E9%99%A9%E6%A8%A1%E5%9E%8B%E7%99%BD%E7%9A%AE%E4%B9%A6.ipynb)
 
-# 概要
+# 修订记录
 
 风险建模是一个功能强大的工具，可用于了解和管理投资组合中的风险来源。 在本文中，我们列出了Quantopian风险模型（QRM）的逻辑和实现。股权风险因子模型由Quantopian开发，用于分解和归因于任意股权投资策略承担的风险敞口。 通过定义风险来源，可以将残余或剩余项视为策略的“alpha”，也可以将其视为源自技能的投资策略收益的一部分。 结合其他一些工具，Quantopian使用QRM观察一段时间内的投资组合持有量，来评估量化交易策略。
 
