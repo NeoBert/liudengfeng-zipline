@@ -8,45 +8,45 @@ from zipline.pipeline.builtin import Sector
 from .base import SectorExposure
 
 
-class BASIC_MATERIALS(SectorExposure):
+class BasicMaterials(SectorExposure):
     sector_code = Sector.BASIC_MATERIALS
 
 
-class CONSUMER_CYCLICAL(SectorExposure):
+class ConsumerCyclical(SectorExposure):
     sector_code = Sector.BASIC_MATERIALS
 
 
-class FINANCIAL_SERVICES(SectorExposure):
+class FinancialServices(SectorExposure):
     sector_code = Sector.FINANCIAL_SERVICES
 
 
-class REAL_ESTATE(SectorExposure):
+class RealEstate(SectorExposure):
     sector_code = Sector.REAL_ESTATE
 
 
-class CONSUMER_DEFENSIVE(SectorExposure):
+class ConsumerDefensive(SectorExposure):
     sector_code = Sector.CONSUMER_DEFENSIVE
 
 
-class HEALTHCARE(SectorExposure):
+class HealthCare(SectorExposure):
     sector_code = Sector.HEALTHCARE
 
 
-class UTILITIES(SectorExposure):
+class Utilities(SectorExposure):
     sector_code = Sector.UTILITIES
 
 
-class COMMUNICATION_SERVICES(SectorExposure):
+class CommunicationServices(SectorExposure):
     sector_code = Sector.COMMUNICATION_SERVICES
 
 
-class ENERGY(SectorExposure):
+class Energy(SectorExposure):
     sector_code = Sector.ENERGY
 
 
-class INDUSTRIALS(SectorExposure):
+class Industrials(SectorExposure):
     sector_code = Sector.INDUSTRIALS
 
 
-class TECHNOLOGY(SectorExposure):
+class Technology(SectorExposure):
     sector_code = Sector.TECHNOLOGY

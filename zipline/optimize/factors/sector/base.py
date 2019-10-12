@@ -18,19 +18,20 @@ class BaseExposure(CustomFactor):
 
     def compute(self, today, assets, out, closes, sectors):
         res = np.zeros(closes.shape[1])
-        rets = np.diff(closes, axis=0) / closes[:-1]
+        change_ratio = np.diff(closes, axis=0) / closes[:-1]
         sectors = sectors[-1]
         window_length = self.window_length
 
         match_col = np.where(sectors == self.sector_code)[0]
-        match_rets = rets[:, match_col]
-        target_rets = nanmean(match_rets, axis=1).reshape(-1, 1)
+        change_ratio_in_sector = change_ratio[:, match_col]
+        # 行业收益率
+        sector_returns = nanmean(change_ratio_in_sector, axis=1).reshape(-1, 1)
 
         allowed_missing = int(window_length * 0.25)
         # 行业内股票收益率基于行业收益率回归得到各股票的β值，即敞口
         beta = vectorized_beta(
-            dependents=match_rets,
-            independent=target_rets,
+            dependents=change_ratio_in_sector,
+            independent=sector_returns,
             allowed_missing=allowed_missing,
         )
         # 更新β值，其余部分为0
