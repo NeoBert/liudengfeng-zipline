@@ -137,7 +137,7 @@ class Sector(CustomClassifier):
         101: '基本材料',  # 'BASIC_MATERIALS',
         102: '主要消费',  # 'CONSUMER_CYCLICAL',
         103: '金融服务',  # 'FINANCIAL_SERVICES',
-        104: '房地产',    # 'REAL_ESTATE'),
+        104: '房地产',    # 'REAL_ESTATE',
         205: '可选消费',  # 'CONSUMER_DEFENSIVE',
         206: '医疗保健',  # 'HEALTHCARE',
         207: '公用事业',  # 'UTILITIES',
