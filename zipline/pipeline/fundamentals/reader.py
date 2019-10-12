@@ -11,6 +11,7 @@
 4. 业绩预告
 5. 概念编码
 
+TODO:考虑使用https://github.com/quantopian/blaze_loader 延迟加载，提高导入速度
 """
 
 import re

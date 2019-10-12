@@ -39,7 +39,7 @@ class BaseExposure(CustomFactor):
         out[:] = res
 
 
-class SectorExposure(BaseExposure):
+class CNSectorExposure(BaseExposure):
     # 使用复权价确保正确计算收益率
     inputs = (CNEquityPricing.b_close,
               Fundamentals.info.sector_code)
