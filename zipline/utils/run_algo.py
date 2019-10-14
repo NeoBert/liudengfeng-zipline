@@ -165,11 +165,12 @@ def _run(handle_data,
     )
 
     def choose_loader(column):
-        if column in CNEquityPricing.columns:
+        # # unspecialize ✔
+        if column.unspecialize() in CNEquityPricing.columns:
             return pipeline_loader
         # # 简单处理
         elif type(column) == BoundColumn:
-            # # 使用实例才能避免KeyError
+            # # 使用实例才能避免KeyError ✔
             return global_loader
         raise ValueError(
             "No PipelineLoader registered for column %s." % column

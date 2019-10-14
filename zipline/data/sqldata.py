@@ -4,14 +4,15 @@
 
 """
 
-from sqlalchemy import func
-import pandas as pd
-import numpy as np
-from cnswd.sql.base import session_scope
-from cnswd.sql.szsh import StockDaily, CJMX, TradingCalendar
-from cnswd.sql.data_browse import StockInfo, Dividend
 from functools import lru_cache
 
+import numpy as np
+import pandas as pd
+from sqlalchemy import func
+
+from cnswd.sql.base import session_scope
+from cnswd.sql.data_browse import Dividend, StockInfo
+from cnswd.sql.szsh import CJMX, StockDaily, TradingCalendar
 
 DAILY_COLS = ['symbol', 'date',
               'open', 'high', 'low', 'close',
@@ -189,6 +190,9 @@ def _tdates():
             TradingCalendar.日期
         ).filter(
             TradingCalendar.交易日 == True
+        ).order_by(
+            # 务必按日期升序排列
+            TradingCalendar.日期.asc()
         ).all()
         return pd.DatetimeIndex([x[0] for x in res])
 
@@ -209,41 +213,61 @@ def _fill_zero(df):
     return df
 
 
-def _reindex(df):
-    tdates = _tdates()
-    df.set_index('date', inplace=True)
-    s = tdates.slice_locs(df.index[0], df.index[-1])
-    full_index = tdates[s[0]:s[1]].sort_values()
-    res = df.reindex(full_index, method='ffill')
-    res.reset_index(inplace=True)
-    return res.rename(columns={"index": "date"})
+def _preprocessing(df):
+    """选取首日上市交易后的数据"""
+    for i in range(len(df)):
+        if df['prev_close'][i] > 0 and df['close'][i] > 0:
+            return df.iloc[i:, :]
 
 
 def _add_back_prices(raw_df):
     """为原始数据添加后复权价格"""
-    # 前收盘的表达方式：
-    # 1. 直接列出
-    # 2. 列出收盘价，前收盘为0.0与涨跌幅为空
-    if raw_df['prev_close'].values[0] > 0:
-        prev_close = raw_df['prev_close'].values[0]
-        # init_change = raw_df['change_pct'].values[0] / 100
-    else:
-        # 此时涨跌幅必须为na
-        assert raw_df['change_pct'].isna()[0], "获取初始价格出错。在前收盘价格为0时，首日涨跌幅必须为na"
-        prev_close = raw_df['close'].values[0]
-        # init_change = 0.0
+    raw_df = _preprocessing(raw_df)
+    assert raw_df['prev_close'].values[0] > 0, '首个前收盘价必须大于0'
+    prev_close = raw_df['prev_close'].values[0]
+
     # 累计涨跌幅调整系数（为百分比）
     cc = (raw_df['change_pct'].fillna(0.0)/100 + 1).cumprod()
-    # actual_pct = raw_df['total_cap'].values[1:] / raw_df['total_cap'].values[:-1] - 1
-    # actual_pct = np.concatenate((np.array([init_change]), actual_pct))
-    # cc = (actual_pct + 1).cumprod()
+
     b_close = prev_close * cc
     adj = b_close / raw_df['close']
-    raw_df['b_close'] = b_close.round(4)
-    raw_df['b_open'] = (raw_df['open'] * adj).round(4)
-    raw_df['b_high'] = (raw_df['high'] * adj).round(4)
-    raw_df['b_low'] = (raw_df['low'] * adj).round(4)
+    raw_df.loc[:, 'b_close'] = b_close.round(4)
+    raw_df.loc[:, 'b_open'] = (raw_df['open'] * adj).round(4)
+    raw_df.loc[:, 'b_high'] = (raw_df['high'] * adj).round(4)
+    raw_df.loc[:, 'b_low'] = (raw_df['low'] * adj).round(4)
     return raw_df
+
+
+def _fetch_single_equity(stock_code, start, end):
+    """读取数据库的原始数据"""
+    with session_scope('szsh') as sess:
+        query = sess.query(
+            StockDaily.股票代码,
+            StockDaily.日期,
+            StockDaily.开盘价,
+            StockDaily.最高价,
+            StockDaily.最低价,
+            StockDaily.收盘价,
+            StockDaily.前收盘,
+            StockDaily.涨跌幅,
+            StockDaily.成交量,
+            StockDaily.成交金额,
+            StockDaily.换手率,
+            StockDaily.流通市值,
+            StockDaily.总市值
+        ).filter(
+            StockDaily.股票代码 == stock_code,
+            # 不限定期间，而是在处理停牌事件后再截取期间数据
+            # StockDaily.日期.between(start, end)
+        ).order_by(
+            # 务必按日期升序排列
+            StockDaily.日期.asc()
+        )
+        df = pd.DataFrame.from_records(query.all())
+        if df.empty:
+            return pd.DataFrame(columns=DAILY_COLS+BACK_COLS+['circulating_share', 'total_share'])
+        df.columns = DAILY_COLS
+        return df
 
 
 def fetch_single_equity(stock_code, start, end):
@@ -253,7 +277,7 @@ def fetch_single_equity(stock_code, start, end):
     注
     --
     1. 除OHLCV外，还包括涨跌幅、成交额、换手率、流通市值、总市值、流通股本、总股本
-    2. 使用bcolz格式写入时，由于涨跌幅存在负数，必须剔除该列！！！
+    2. 使用bcolz格式写入时，由于涨跌幅存在负数，必须剔除该列
 
     Parameters
     ----------
@@ -285,42 +309,21 @@ def fetch_single_equity(stock_code, start, end):
     """
     start = pd.Timestamp(start).tz_localize(None)
     end = pd.Timestamp(end).tz_localize(None)
-    with session_scope('szsh') as sess:
-        query = sess.query(
-            StockDaily.股票代码,
-            StockDaily.日期,
-            StockDaily.开盘价,
-            StockDaily.最高价,
-            StockDaily.最低价,
-            StockDaily.收盘价,
-            StockDaily.前收盘,
-            StockDaily.涨跌幅,
-            StockDaily.成交量,
-            StockDaily.成交金额,
-            StockDaily.换手率,
-            StockDaily.流通市值,
-            StockDaily.总市值
-        ).filter(
-            StockDaily.股票代码 == stock_code,
-            # 不限定期间，而是在处理停牌事件后再截取期间数据
-            # StockDaily.日期.between(start, end)
-        ).order_by(
-            # 务必按日期升序排列
-            StockDaily.日期.asc()
-        )
-        df = pd.DataFrame.from_records(query.all())
-        if df.empty:
-            return pd.DataFrame(columns=DAILY_COLS+BACK_COLS+['circulating_share', 'total_share'])
-        df.columns = DAILY_COLS
-        # 处理停牌及截取期间
-        df = _fill_zero(df)
-        # 添加复权价格
-        df = _add_back_prices(df)
-        cond = (start <= df['date']) & (df['date'] <= end)
-        df = df[cond]
-        df['shares_outstanding'] = df.market_cap / df.close
-        df['total_shares'] = df.total_cap / df.close
-        return _reindex(df)
+    df = _fetch_single_equity(stock_code, start, end)
+    # 处理停牌及截取期间
+    df = _fill_zero(df)
+    # 添加复权价格
+    df = _add_back_prices(df)
+    cond = (start <= df['date']) & (df['date'] <= end)
+    df = df.loc[cond, :]
+    t_start, t_end = df['date'].values[0], df['date'].values[-1]
+    # # 判断数据长度是否缺失
+    # dts = [t for t in _tdates() if t >= t_start and t <= t_end]
+    # assert len(df) == len(dts), f"股票：{stock_code}，期间{t_start} ~ {t_end} 数据不足"
+    df.loc[:, 'shares_outstanding'] = df.market_cap / df.close
+    df.loc[:, 'total_shares'] = df.total_cap / df.close
+    # return _reindex(df)
+    return df
 
 
 def _handle_minutely_data(df, exclude_lunch):

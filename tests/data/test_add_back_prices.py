@@ -1,9 +1,11 @@
 from pathlib import Path
-import pytest
+
 import pandas as pd
+import pytest
 from numpy.testing import assert_array_almost_equal
-from zipline.data.sqldata import _add_back_prices, fetch_single_equity
 from trading_calendars import get_calendar
+
+from zipline.data.sqldata import fetch_single_equity
 
 DAILY_COLS = ['date', 'symbol', 'name',
               'close', 'high', 'low', 'open',
@@ -42,7 +44,7 @@ def _test_fetch_single_equity(stock_code, calendar):
     # 不得包含nan
     assert not actual_df.b_close.hasnans
     # 测试所有交易日内数据完整
-    expected = len(calendar.sessions_in_range(start_date, end_date)) 
+    expected = len(calendar.sessions_in_range(start_date, end_date))
     actual = len(actual_df)
     assert expected == actual
 
@@ -51,3 +53,14 @@ def test_fetch_single_equity():
     calendar = get_calendar('XSHG')
     for stock_code in TEST_CODES:
         _test_fetch_single_equity(stock_code, calendar)
+
+
+def test_adj():
+    # '603279' 正好在2019-09-30除权
+    df = fetch_single_equity('603279', '2019-01-01', END_DATE)
+    cond = df['date'] == pd.Timestamp(END_DATE)
+    assert df[cond].close.values[0] != df[cond].b_close.values[0]
+    # 除最后一行外，其余各行都相等
+    ohlc = df[['open', 'high', 'low', 'close']].iloc[:-1, :]
+    adj_ohlc = df[['b_open', 'b_high', 'b_low', 'b_close']].iloc[:-1, :]
+    assert_array_almost_equal(ohlc.values, adj_ohlc.values, decimal=2)

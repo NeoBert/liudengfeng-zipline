@@ -83,7 +83,7 @@ def sw_sector_columns():
     }
 
 
-def risk_loading_pipeline(sector_type):
+def risk_loading_pipeline(sector_type='cn'):
     """
     为风险模型创建一个包含所有风险加载pipeline
 

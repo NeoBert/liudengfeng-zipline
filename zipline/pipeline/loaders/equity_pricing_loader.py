@@ -18,7 +18,7 @@ from zipline.lib.adjusted_array import AdjustedArray
 
 from .base import PipelineLoader
 from .utils import shift_dates
-
+OHLCV = ['open', 'high', 'low', 'close', 'volume']
 UINT32_MAX = iinfo(uint32).max
 
 
@@ -32,6 +32,7 @@ class EquityPricingLoader(implements(PipelineLoader)):
     adjustments_reader : zipline.data.adjustments.SQLiteAdjustmentReader
         Reader providing price/volume adjustments.
     """
+
     def __init__(self, raw_price_reader, adjustments_reader):
         self.raw_price_reader = raw_price_reader
         self.adjustments_reader = adjustments_reader
@@ -47,23 +48,42 @@ class EquityPricingLoader(implements(PipelineLoader)):
             sessions, dates[0], dates[-1], shift=1,
         )
         colnames = [c.name for c in columns]
-        raw_arrays = self.raw_price_reader.load_raw_arrays(
-            colnames,
+        # √ 调整与非调整列名称
+        adj_colnames = [col for col in colnames if col in OHLCV]
+        non_adj_colnames = [col for col in colnames if col not in OHLCV]
+        # √ 调整与非调整列对象
+        adj_columns = [col for col in columns if col.name in adj_colnames]
+        non_adj_columns = [
+            col for col in columns if col.name in non_adj_colnames]
+        adj_raw_arrays = self.raw_price_reader.load_raw_arrays(
+            adj_colnames,
+            start_date,
+            end_date,
+            sids,
+        )
+        non_adj_raw_arrays = self.raw_price_reader.load_raw_arrays(
+            non_adj_colnames,
             start_date,
             end_date,
             sids,
         )
         adjustments = self.adjustments_reader.load_pricing_adjustments(
-            colnames,
+            adj_colnames,
             dates,
             sids,
         )
-
+        # √ 分别对调整与非调整列进行操作
         out = {}
-        for c, c_raw, c_adjs in zip(columns, raw_arrays, adjustments):
+        for c, c_raw, c_adjs in zip(adj_columns, adj_raw_arrays, adjustments):
             out[c] = AdjustedArray(
                 c_raw.astype(c.dtype),
                 c_adjs,
+                c.missing_value,
+            )
+        for c, c_raw in zip(non_adj_columns, non_adj_raw_arrays):
+            out[c] = AdjustedArray(
+                c_raw.astype(c.dtype),
+                {},
                 c.missing_value,
             )
         return out

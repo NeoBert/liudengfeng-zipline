@@ -73,20 +73,6 @@ SQLITE_STOCK_DIVIDEND_PAYOUT_COLUMN_DTYPES = {
     'ratio': float,
 }
 
-# # 直接重复输入
-ADJUST_FACTOR = {
-    'amount': 0.0001,
-    'market_cap': 0.0001,
-    'total_cap': 0.0001,
-    'shares_outstanding': 1,
-    'total_shares': 1,
-    'turnover': 10000,
-    'b_open': 100,
-    'b_high': 100,
-    'b_low': 100,
-    'b_close': 100,
-}
-
 
 def specialize_any_integer(d):
     out = {}
@@ -202,16 +188,7 @@ class SQLiteAdjustmentReader(object):
             adjustment_type = 'volume'
         else:
             adjustment_type = 'all'
-        # # 在此处理非调整列
-        # # 将ADJUST_FACTOR键名称列全部作为非调整对象来简化处理
-        # # 实际上，按可比匹配原则，流通股本、总股本也应该予以调整。
-        # # 换手率、总市值、流通市值均不得调整。
-        # # 由于后复权价格来自于每日涨跌幅累积计算得出，不需要调整。
-        # # 通过添加非调整列，把调整价格和成交量专用于账户管理
-        # # 而附加列用于计算期间收益率和其他因子的数据源
-        # # ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-        # # 原代码做出此调整的主要目的在于账户管理
-        # # ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
         adjustments = self.load_adjustments(
             dates,
             assets,
@@ -223,29 +200,11 @@ class SQLiteAdjustmentReader(object):
         price_adjustments = adjustments.get('price')
         volume_adjustments = adjustments.get('volume')
 
-        # # 使用'volume'简单些
-        non_adjustments = self.load_adjustments(
-            dates,
-            assets,
-            should_include_splits=False,
-            should_include_mergers=False,
-            should_include_dividends=False,
-            adjustment_type='volume',
-        )
-        res = []
-        for column in columns:
-            if column in ADJUST_FACTOR.keys():
-                res.append(non_adjustments.get('volume'))
-            elif column == 'volume':
-                res.append(volume_adjustments)
-            else:
-                res.append(price_adjustments)
-        # return [
-        #     volume_adjustments if column == 'volume'
-        #     else price_adjustments
-        #     for column in columns
-        # ]
-        return res
+        return [
+            volume_adjustments if column == 'volume'
+            else price_adjustments
+            for column in columns
+        ]
 
     def get_adjustments_for_sid(self, table_name, sid):
         t = (sid,)

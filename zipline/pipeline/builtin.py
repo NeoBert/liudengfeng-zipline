@@ -162,7 +162,7 @@ class Sector(CustomClassifier):
     INDUSTRIALS = 310
     TECHNOLOGY = 311
 
-    inputs = [Fundamentals.info.sector_code]
+    inputs = (Fundamentals.info.sector_code,)
     window_length = 1
     dtype = int64_dtype
     missing_value = -1

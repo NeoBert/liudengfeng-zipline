@@ -594,6 +594,7 @@ class BcolzDailyBarReader(SessionBarReader):
             offsets,
             read_all,
         )
+        # √ 恢复原始单位
         for i, col in enumerate(list(columns)):
             if col == 'volume':
                 adj = 100
@@ -601,7 +602,10 @@ class BcolzDailyBarReader(SessionBarReader):
                 adj = 1 / ADJUST_FACTOR[col]
             else:
                 adj = 1
-            raw_arrays[i] = raw_arrays[i].dot(adj)
+            raw_arrays[i] = raw_arrays[i] * adj
+            # √ 为0值 无效值
+            if col in ADJUST_FACTOR.keys():
+                raw_arrays[i] = np.where(raw_arrays[i] == 0., np.nan, raw_arrays[i])
         return raw_arrays
 
     def _load_raw_arrays_date_to_index(self, date):
@@ -713,8 +717,11 @@ class BcolzDailyBarReader(SessionBarReader):
         ix = self.sid_day_index(sid, dt)
         price = self._spot_col(field)[ix]
         if field == 'volume':
-            # # 成交量恢复(损失精度)
-            return price * 100 
+            if price != 0.0:
+                # # 成交量恢复(损失精度)
+                return price * 100 
+            else:
+                return nan
         else:
             if price == 0:
                 return nan
