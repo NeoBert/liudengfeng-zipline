@@ -983,12 +983,10 @@ class BlazeLoader(object):
             This can return more data than needed. The in memory reindex will
             handle this.
             """
-            # # 转换为本地时区
-            # # upper_dt -> upper_dt.tz_localize(None)
-            # # lower -> lower.tz_localize(None)
-            predicate = e[TS_FIELD_NAME] < upper_dt.tz_localize(None)
+            # √ 字段数据类型为datetime64，而upper_dt为Timestamp，需要转换才能比较
+            predicate = e[TS_FIELD_NAME] < upper_dt.to_datetime64()
             if lower is not None:
-                predicate &= e[TS_FIELD_NAME] >= lower.tz_localize(None)
+                predicate &= e[TS_FIELD_NAME] >= lower.to_datetime64()
 
             return odo(e[predicate][colnames], pd.DataFrame, **odo_kwargs)
 

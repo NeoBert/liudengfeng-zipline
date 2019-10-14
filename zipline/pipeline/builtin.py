@@ -125,6 +125,38 @@ def QTradableStocksUS():
     v200 = TradingDays(window_length=200)
     return (v20 >= 20) & (v200 >= 180)
 
+
+class PE(CustomFactor):
+    """股价与每股收益比率(市盈率)"""
+    window_length = 1
+    window_safe = True
+    inputs = (CNEquityPricing.close, Fundamentals.profit_statement.基本每股收益)
+
+    def compute(self, today, assets, out, n, d):
+        out[:] = n[-1] / d[-1]
+
+
+class PB(CustomFactor):
+    """市值与账面资产净值比率(市净率)"""
+    window_length = 1
+    window_safe = True
+    inputs = (CNEquityPricing.total_cap,
+              Fundamentals.balance_sheet.所有者权益或股东权益合计)
+
+    def compute(self, today, assets, out, n, d):
+        out[:] = n[-1] / d[-1]
+
+
+class PS(CustomFactor):
+    """市值与销售总额比率(市销率)"""
+    window_length = 1
+    window_safe = True
+    inputs = (CNEquityPricing.total_cap, Fundamentals.profit_statement.其中_营业收入)
+
+    def compute(self, today, assets, out, n, d):
+        out[:] = n[-1] / d[-1]
+
+
 ##############################################################################
 #                                 自定义分类器                                #
 ##############################################################################

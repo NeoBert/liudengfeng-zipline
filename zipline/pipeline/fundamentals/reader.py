@@ -45,16 +45,9 @@ def _gen_expr(table_name):
     """生成表所对应的表达式"""
     rootdir = bcolz_table_path(table_name)
     ct = bcolz.ctable(rootdir=rootdir, mode='r')
-    df = ct.todataframe()  # 转换为DataFrame对象
-    # 所有对象类型的列，需要填充缺失值
-    values = {}
-    for col in df.columns:
-        if pd.core.dtypes.common.is_object_dtype(df[col]):
-            values[col] = '未知'
-    df.fillna(value=values, inplace=True)    
-    raw_dshape = discover(df)
-    dshape = _normalized_dshape(raw_dshape, False)
-    expr = blaze.data(df, name=table_name, dshape=dshape)
+    raw_dshape = discover(ct)
+    dshape_ = _normalized_dshape(raw_dshape, False)
+    expr = blaze.data(ct, name=table_name, dshape=dshape_)
     return expr
 
 
