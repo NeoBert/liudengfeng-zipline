@@ -178,7 +178,7 @@ class Sector(CustomClassifier):
         309: '能源',      # 'ENERGY',
         310: '工业领域',  # 'INDUSTRIALS',
         311: '工程技术',  # 'TECHNOLOGY',
-        -1:  '未知',
+        # -1:  '未知',
     }
 
     BASIC_MATERIALS = 101
@@ -262,7 +262,7 @@ class SWSector(CustomClassifier):
         801790: '非银金融',  # NONBANK_FINANCIALS
         801880: '汽车',  # AUTO
         801890: '机械设备',  # MACHINERY
-        -1:  '未知',
+        # -1:  '未知',
     }
 
     window_length = 1
