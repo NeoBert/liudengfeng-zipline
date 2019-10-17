@@ -1,8 +1,7 @@
 """其他自定义因子、分类器、过滤器
 
 由于存在大量依赖，整合在一个模块中
-TODO:参考修订
-参考：https://github.com/quantopian/algorithm-component-library/blob/master/factors_project/factors_all.py
+
 """
 import numpy as np
 import pandas as pd
