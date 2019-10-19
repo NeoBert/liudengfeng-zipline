@@ -2,17 +2,24 @@
 
 本地数据查询及预处理，适用于zipline ingest写入
 
+网易数据不可用，改用深证信行情数据。
+
 """
 
+import os
 from functools import lru_cache
+from pathlib import Path
 
 import numpy as np
 import pandas as pd
 from sqlalchemy import func
 
+from cnswd.scripts.cninfo.market_data import read_data
 from cnswd.sql.base import session_scope
 from cnswd.sql.data_browse import Dividend, StockInfo
 from cnswd.sql.szsh import CJMX, StockDaily, TradingCalendar
+from cnswd.utils import data_root
+from cnswd.websource.tencent import fetch_minutely_prices
 
 DAILY_COLS = ['symbol', 'date',
               'open', 'high', 'low', 'close',
@@ -76,6 +83,34 @@ def _stock_basic_info():
         return df
 
 
+# def get_latest_short_name():
+#     """
+#     获取股票最新股票简称
+
+#     Examples
+#     --------
+#     >>> df = get_latest_short_name()
+#     >>> df.head()
+#          symbol  asset_name
+#     0     000001    平安银行
+#     1     000002    万 科Ａ
+#     2     000003   PT金田Ａ
+#     3     000004    国农科技
+#     4     000005    世纪星源
+#     """
+#     col_names = ['symbol', 'last_date', 'asset_name']
+#     with session_scope('szsh') as sess:
+#         query = sess.query(
+#             StockDaily.股票代码,
+#             func.max(StockDaily.日期),
+#             StockDaily.名称
+#         ).group_by(
+#             StockDaily.股票代码
+#         )
+#         df = pd.DataFrame.from_records(query.all())
+#         df.columns = col_names
+#         return df.iloc[:, [0, 2]]
+
 def get_latest_short_name():
     """
     获取股票最新股票简称
@@ -91,18 +126,40 @@ def get_latest_short_name():
     3     000004    国农科技
     4     000005    世纪星源     
     """
-    col_names = ['symbol', 'last_date', 'asset_name']
-    with session_scope('szsh') as sess:
-        query = sess.query(
-            StockDaily.股票代码,
-            func.max(StockDaily.日期),
-            StockDaily.名称
-        ).group_by(
-            StockDaily.股票代码
-        )
-        df = pd.DataFrame.from_records(query.all())
-        df.columns = col_names
-        return df.iloc[:, [0, 2]]
+    col_names = ['symbol', 'asset_name']
+    df = fetch_minutely_prices()['名称'].reset_index()
+    df.columns = col_names
+    df['symbol'] = df['symbol'].map(lambda x: x[2:])
+    return df
+
+
+# def _stock_first_and_last():
+#     """
+#     自股票日线交易数据查询开始交易及结束交易日期
+
+#     Examples
+#     --------
+#     >>> df = _stock_first_and_last()
+#     >>> df.head()
+#         symbol first_traded last_traded
+#     0     000001   1991-04-03  2018-12-21
+#     1     000002   1991-01-29  2018-12-21
+#     2     000003   1991-01-02  2002-04-26
+#     3     000004   1991-01-02  2018-12-21
+#     4     000005   1991-01-02  2018-12-21
+#     """
+#     col_names = ['symbol', 'first_traded', 'last_traded']
+#     with session_scope('szsh') as sess:
+#         query = sess.query(
+#             StockDaily.股票代码,
+#             func.min(StockDaily.日期),
+#             func.max(StockDaily.日期)
+#         ).group_by(
+#             StockDaily.股票代码
+#         )
+#         df = pd.DataFrame.from_records(query.all())
+#         df.columns = col_names
+#         return df
 
 
 def _stock_first_and_last():
@@ -120,18 +177,15 @@ def _stock_first_and_last():
     3     000004   1991-01-02  2018-12-21
     4     000005   1991-01-02  2018-12-21   
     """
-    col_names = ['symbol', 'first_traded', 'last_traded']
-    with session_scope('szsh') as sess:
-        query = sess.query(
-            StockDaily.股票代码,
-            func.min(StockDaily.日期),
-            func.max(StockDaily.日期)
-        ).group_by(
-            StockDaily.股票代码
-        )
-        df = pd.DataFrame.from_records(query.all())
-        df.columns = col_names
-        return df
+    p = Path(data_root('market_data'))
+    fs = p.glob('??????.pkl')
+
+    def f(fp):
+        df = pd.read_pickle(str(fp))
+        return {'symbol': df.iat[0, 0][:6], 'first_traded': df.iat[0, 1], 'last_traded': df.iat[-1, 1]}
+    res = map(f, fs)
+    df = pd.DataFrame.from_dict(res)
+    return df
 
 
 def gen_asset_metadata(only_in=True, only_A=True):
@@ -197,15 +251,15 @@ def _tdates():
         return pd.DatetimeIndex([x[0] for x in res])
 
 
-def _fill_zero(df):
+def _fill_zero(df, first_col='close'):
     """填充因为停牌ohlc可能存在的0值"""
-    # 将close放在第一列
-    ohlc_cols = ['close', 'open', 'high', 'low']
+    ohlc = ['close', 'open', 'high', 'low']
+    ohlc_cols = [first_col] + list(set(ohlc).difference([first_col]))
     ohlc = df[ohlc_cols].copy()
     ohlc.replace(0.0, np.nan, inplace=True)
-    # ohlc.close.fillna(method='ffill', inplace=True)
-    ohlc.loc[ohlc.close.isna(), 'close'] = df.loc[ohlc.close.isna(),
-                                                  'prev_close']
+    if 'prev_close' in df.columns:
+        ohlc.loc[ohlc.close.isna(), 'close'] = df.loc[ohlc.close.isna(),
+                                                      'prev_close']
     # 按列填充
     ohlc.fillna(method='ffill', axis=1, inplace=True)
     for col in ohlc_cols:
@@ -238,46 +292,106 @@ def _add_back_prices(raw_df):
     return raw_df
 
 
-def _fetch_single_equity(stock_code, start, end):
+# def _fetch_single_equity(stock_code, start, end):
+#     """读取数据库的原始数据"""
+#     with session_scope('szsh') as sess:
+#         query = sess.query(
+#             StockDaily.股票代码,
+#             StockDaily.日期,
+#             StockDaily.开盘价,
+#             StockDaily.最高价,
+#             StockDaily.最低价,
+#             StockDaily.收盘价,
+#             StockDaily.前收盘,
+#             StockDaily.涨跌幅,
+#             StockDaily.成交量,
+#             StockDaily.成交金额,
+#             StockDaily.换手率,
+#             StockDaily.流通市值,
+#             StockDaily.总市值
+#         ).filter(
+#             StockDaily.股票代码 == stock_code,
+#             # 不限定期间，而是在处理停牌事件后再截取期间数据
+#             # StockDaily.日期.between(start, end)
+#         ).order_by(
+#             # 务必按日期升序排列
+#             StockDaily.日期.asc()
+#         )
+#         df = pd.DataFrame.from_records(query.all())
+#         if df.empty:
+#             return pd.DataFrame(columns=DAILY_COLS+BACK_COLS+['circulating_share', 'total_share'])
+#         df.columns = DAILY_COLS
+#         return df
+
+def _fetch_single_equity(stock_code):
     """读取数据库的原始数据"""
-    with session_scope('szsh') as sess:
-        query = sess.query(
-            StockDaily.股票代码,
-            StockDaily.日期,
-            StockDaily.开盘价,
-            StockDaily.最高价,
-            StockDaily.最低价,
-            StockDaily.收盘价,
-            StockDaily.前收盘,
-            StockDaily.涨跌幅,
-            StockDaily.成交量,
-            StockDaily.成交金额,
-            StockDaily.换手率,
-            StockDaily.流通市值,
-            StockDaily.总市值
-        ).filter(
-            StockDaily.股票代码 == stock_code,
-            # 不限定期间，而是在处理停牌事件后再截取期间数据
-            # StockDaily.日期.between(start, end)
-        ).order_by(
-            # 务必按日期升序排列
-            StockDaily.日期.asc()
-        )
-        df = pd.DataFrame.from_records(query.all())
-        if df.empty:
-            return pd.DataFrame(columns=DAILY_COLS+BACK_COLS+['circulating_share', 'total_share'])
-        df.columns = DAILY_COLS
-        return df
+    df = read_data(stock_code)
+    df = df.iloc[:, :7]
+    df.columns = ['symbol', 'date', 'open', 'high', 'low', 'close', 'volume']
+    df['symbol'] = df['symbol'].map(lambda x: x[:6])
+    df['date'] = df['date'].map(lambda x: pd.Timestamp(x))
+    return df
+
+
+# def fetch_single_equity(stock_code, start, end):
+#     """
+#     从本地数据库读取股票期间日线交易数据
+
+#     注
+#     --
+#     1. 除OHLCV外，还包括涨跌幅、成交额、换手率、流通市值、总市值、流通股本、总股本
+#     2. 使用bcolz格式写入时，由于涨跌幅存在负数，必须剔除该列
+
+#     Parameters
+#     ----------
+#     stock_code : str
+#         要获取数据的股票代码
+#     start_date : datetime-like
+#         自开始日期(包含该日)
+#     end_date : datetime-like
+#         至结束日期
+
+#     return
+#     ----------
+#     DataFrame: OHLCV列的DataFrame对象。
+
+#     Examples
+#     --------
+#     >>> stock_code = '600710'
+#     >>> start_date = '2016-03-29'
+#     >>> end_date = pd.Timestamp('2017-07-31')
+#     >>> df = fetch_single_equity(stock_code, start_date, end_date)
+#     >>> df.iloc[-6:,:8]
+#               date	symbol	open	high	low	close	prev_close	change_pct
+#     322	2017-07-24	600710	9.36	9.36	9.36	9.36	9.36	NaN
+#     323	2017-07-25	600710	9.36	9.36	9.36	9.36	9.36	NaN
+#     324	2017-07-26	600710	9.36	9.36	9.36	9.36	9.36	NaN
+#     325	2017-07-27	600710	9.36	9.36	9.36	9.36	9.36	NaN
+#     326	2017-07-28	600710	9.36	9.36	9.36	9.36	9.36	NaN
+#     327	2017-07-31	600710	9.25	9.64	7.48	7.55	9.31	-18.9044
+#     """
+#     start = pd.Timestamp(start).tz_localize(None)
+#     end = pd.Timestamp(end).tz_localize(None)
+#     df = _fetch_single_equity(stock_code, start, end)
+#     # 处理停牌及截取期间
+#     df = _fill_zero(df)
+#     # 添加复权价格
+#     df = _add_back_prices(df)
+#     cond = (start <= df['date']) & (df['date'] <= end)
+#     df = df.loc[cond, :]
+#     t_start, t_end = df['date'].values[0], df['date'].values[-1]
+#     # # 判断数据长度是否缺失
+#     # dts = [t for t in _tdates() if t >= t_start and t <= t_end]
+#     # assert len(df) == len(dts), f"股票：{stock_code}，期间{t_start} ~ {t_end} 数据不足"
+#     df.loc[:, 'shares_outstanding'] = df.market_cap / df.close
+#     df.loc[:, 'total_shares'] = df.total_cap / df.close
+#     # return _reindex(df)
+#     return df
 
 
 def fetch_single_equity(stock_code, start, end):
     """
-    从本地数据库读取股票期间日线交易数据
-
-    注
-    --
-    1. 除OHLCV外，还包括涨跌幅、成交额、换手率、流通市值、总市值、流通股本、总股本
-    2. 使用bcolz格式写入时，由于涨跌幅存在负数，必须剔除该列
+    从本地数据库读取股票期间日线交易数据，仅含OHLCV
 
     Parameters
     ----------
@@ -294,35 +408,31 @@ def fetch_single_equity(stock_code, start, end):
 
     Examples
     --------
-    >>> stock_code = '600710'
+    >>> stock_code = '000333'
     >>> start_date = '2016-03-29'
     >>> end_date = pd.Timestamp('2017-07-31')
     >>> df = fetch_single_equity(stock_code, start_date, end_date)
-    >>> df.iloc[-6:,:8]
-              date	symbol	open	high	low	close	prev_close	change_pct
-    322	2017-07-24	600710	9.36	9.36	9.36	9.36	9.36	NaN
-    323	2017-07-25	600710	9.36	9.36	9.36	9.36	9.36	NaN
-    324	2017-07-26	600710	9.36	9.36	9.36	9.36	9.36	NaN
-    325	2017-07-27	600710	9.36	9.36	9.36	9.36	9.36	NaN
-    326	2017-07-28	600710	9.36	9.36	9.36	9.36	9.36	NaN
-    327	2017-07-31	600710	9.25	9.64	7.48	7.55	9.31	-18.9044
+    >>> df
+    symbol	date	open	high	low	close	volume
+    866	000333	2016-03-29	30.75	30.78	29.80	29.99	16149949
+    865	000333	2016-03-30	30.16	30.55	29.98	30.53	19376003
+    864	000333	2016-03-31	30.68	31.39	30.68	30.85	20354021
+    863	000333	2016-04-01	31.00	31.00	30.20	30.59	10261031
+    862	000333	2016-04-05	30.26	30.94	30.26	30.79	14647165
+    ...	...	...	...	...	...	...	...
+    543	000333	2017-07-25	43.44	43.65	42.95	43.42	32736712
+    542	000333	2017-07-26	43.60	43.60	41.93	42.34	38917650
+    541	000333	2017-07-27	42.34	42.34	40.77	41.20	41800681
+    540	000333	2017-07-28	41.23	41.84	41.07	41.40	24093240
+    539	000333	2017-07-31	41.58	41.58	40.78	41.20	33013694
     """
     start = pd.Timestamp(start).tz_localize(None)
     end = pd.Timestamp(end).tz_localize(None)
-    df = _fetch_single_equity(stock_code, start, end)
+    df = _fetch_single_equity(stock_code)
     # 处理停牌及截取期间
-    df = _fill_zero(df)
-    # 添加复权价格
-    df = _add_back_prices(df)
+    df = _fill_zero(df, 'open')
     cond = (start <= df['date']) & (df['date'] <= end)
     df = df.loc[cond, :]
-    t_start, t_end = df['date'].values[0], df['date'].values[-1]
-    # # 判断数据长度是否缺失
-    # dts = [t for t in _tdates() if t >= t_start and t <= t_end]
-    # assert len(df) == len(dts), f"股票：{stock_code}，期间{t_start} ~ {t_end} 数据不足"
-    df.loc[:, 'shares_outstanding'] = df.market_cap / df.close
-    df.loc[:, 'total_shares'] = df.total_cap / df.close
-    # return _reindex(df)
     return df
 
 

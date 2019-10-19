@@ -10,7 +10,7 @@ class Momentum(CustomFactor):
     '''
     从12个月前到1个月前的11个月的累积收益率
     '''
-    inputs = (CNEquityPricing.b_close,)
+    inputs = (CNEquityPricing.close,)
     params = {'t0': 21}
     window_length = 244
 
@@ -41,7 +41,7 @@ def STR():
 
 class Volatility(CustomFactor):
     """收益率波动"""
-    inputs = (CNEquityPricing.b_close,)
+    inputs = (CNEquityPricing.close,)
     window_length = 122 # 半年
 
     def compute(self, today, assets, out, closes):

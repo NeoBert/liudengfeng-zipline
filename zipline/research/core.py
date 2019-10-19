@@ -104,6 +104,8 @@ def prices(assets,
     msg = "Only support frequency == 'daily'"
     assert frequency == 'daily', msg
     valid_fields = ('open', 'high', 'low', 'close', 'price', 'volume')
+    if adjust:
+        raise 
     adj_fields = ('b_open', 'b_high', 'b_low', 'b_close')
     msg = '只接受单一字段，有效字段为{}'.format(valid_fields)
     assert isinstance(price_field, str), msg

@@ -39,7 +39,7 @@ class Returns(CustomFactor):
     **Default Inputs**: [CNEquityPricing.close]
     """
     # 使用后复权价格计算
-    inputs = [CNEquityPricing.b_close]
+    inputs = [CNEquityPricing.close]
     window_safe = True
 
     def _validate(self):
@@ -60,7 +60,7 @@ class OpenReturns(CustomFactor):
     Calculate the opening change rate based on the previous closing price
     **Default Inputs**: [CNEquityPricing.close, CNEquityPricing.open]
     """
-    inputs = [CNEquityPricing.b_close, CNEquityPricing.b_open]
+    inputs = [CNEquityPricing.close, CNEquityPricing.b_open]
     window_safe = True
     window_length = 2
 
@@ -82,7 +82,7 @@ class DailyReturns(Returns):
 
     **Default Inputs**: [CNEquityPricing.close]
     """
-    inputs = [CNEquityPricing.b_close]
+    inputs = [CNEquityPricing.close]
     window_safe = True
     window_length = 2
 

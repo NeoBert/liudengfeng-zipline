@@ -12,7 +12,6 @@
 
 import pandas as pd
 from logbook import Logger
-from .adjusts import ADJUST_FACTOR
 from . import core as bundles
 from ..sqldata import (fetch_single_equity, fetch_single_quity_adjustments,
                        gen_asset_metadata, fetch_single_minutely_equity, OHLCV_COLS)
@@ -78,7 +77,6 @@ def gen_symbol_data(symbol_map,
     for _, symbol in symbol_map.iteritems():
         asset_id = _to_sid(symbol)
         if not is_minutely:
-            # 需要ohlcv列 + list(ADJUST_FACTOR.keys())
             raw_data = fetch_single_equity(
                 symbol,
                 start=sessions[0],
@@ -91,8 +89,7 @@ def gen_symbol_data(symbol_map,
             # 以日期、符号为索引
             raw_data.set_index(['date', 'symbol'], inplace=True)
 
-            # 需要ohlcv列 + list(ADJUST_FACTOR.keys())
-            raw_data = raw_data.loc[:, OHLCV_COLS+list(ADJUST_FACTOR.keys())]
+            raw_data = raw_data.loc[:, OHLCV_COLS]
 
             # 新股可能存在日线延迟，会触发异常
             if not raw_data.empty:

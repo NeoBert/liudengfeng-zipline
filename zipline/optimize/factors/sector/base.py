@@ -45,11 +45,13 @@ class BaseExposure(CustomFactor):
 
 class CNSectorExposure(BaseExposure):
     # 使用复权价确保正确计算收益率
-    inputs = (CNEquityPricing.b_close,
+    # 暂时缺失 b_close
+    inputs = (CNEquityPricing.close,
               Fundamentals.info.sector_code)
 
 
 class SWSectorExposure(BaseExposure):
     # 使用复权价确保正确计算收益率
-    inputs = (CNEquityPricing.b_close,
+    # 暂时缺失 b_close
+    inputs = (CNEquityPricing.close,
               Fundamentals.info.sw_sector)

@@ -46,7 +46,7 @@ from zipline.utils.numpy_utils import iNaT, float64_dtype, uint32_dtype
 from zipline.utils.memoize import lazyval
 from zipline.utils.cli import maybe_show_progress
 from ._equities import _compute_row_slices, _read_bcolz_data
-from .bundles.adjusts import ADJUST_FACTOR
+
 
 logger = logbook.Logger('UsEquityPricing')
 
@@ -54,7 +54,6 @@ OHLC = frozenset(['open', 'high', 'low', 'close'])
 US_EQUITY_PRICING_BCOLZ_COLUMNS = (
     'open', 'high', 'low', 'close', 'volume', 'day', 'id'
 )
-ALL_EQUITY_PRICING_BCOLZ_COLUMNS = list(US_EQUITY_PRICING_BCOLZ_COLUMNS | ADJUST_FACTOR.keys())
 UINT32_MAX = iinfo(np.uint32).max
 
 
@@ -198,7 +197,7 @@ class BcolzDailyBarWriter(object):
         ctx = maybe_show_progress(
             (
                 (sid, self.to_ctable(df, invalid_data_behavior))
-                for sid, df in data if not df.empty # 空白表不需要写入！！！
+                for sid, df in data if not df.empty  # 空白表不需要写入！！！
             ),
             show_progress=show_progress,
             item_show_func=self.progress_bar_item_show_func,
@@ -252,7 +251,7 @@ class BcolzDailyBarWriter(object):
         # Maps column name -> output carray.
         columns = {
             k: carray(array([], dtype=uint32_dtype))
-            for k in ALL_EQUITY_PRICING_BCOLZ_COLUMNS
+            for k in US_EQUITY_PRICING_BCOLZ_COLUMNS
         }
 
         earliest_date = None
@@ -340,9 +339,9 @@ class BcolzDailyBarWriter(object):
         full_table = ctable(
             columns=[
                 columns[colname]
-                for colname in ALL_EQUITY_PRICING_BCOLZ_COLUMNS
+                for colname in US_EQUITY_PRICING_BCOLZ_COLUMNS
             ],
-            names=ALL_EQUITY_PRICING_BCOLZ_COLUMNS,
+            names=US_EQUITY_PRICING_BCOLZ_COLUMNS,
             rootdir=self._filename,
             mode='w',
         )
@@ -372,9 +371,6 @@ class BcolzDailyBarWriter(object):
         check_uint32_safe(dates.max().view(np.int64), 'day')
         processed['day'] = dates.astype('uint32')
         processed['volume'] = raw_data.volume.astype('uint32')
-        # 附加列同样转换为uint32
-        for c in ADJUST_FACTOR.keys():
-            processed[c] = (raw_data.loc[:, c] * ADJUST_FACTOR.get(c, 1)).astype('uint32')
         return ctable.fromdataframe(processed)
 
 
@@ -449,6 +445,7 @@ class BcolzDailyBarReader(SessionBarReader):
     --------
     zipline.data.bcolz_daily_bars.BcolzDailyBarWriter
     """
+
     def __init__(self, table, read_all_threshold=3000):
         self._maybe_table_rootdir = table
         # Cache of fully read np.array for the carrays in the daily bar table.
@@ -584,7 +581,6 @@ class BcolzDailyBarReader(SessionBarReader):
             assets,
         )
         read_all = len(assets) > self._read_all_threshold
-
         raw_arrays = _read_bcolz_data(
             self._table,
             (end_idx - start_idx + 1, len(assets)),
@@ -593,19 +589,16 @@ class BcolzDailyBarReader(SessionBarReader):
             last_rows,
             offsets,
             read_all,
-        )
+        )        
         # √ 恢复原始单位
         for i, col in enumerate(list(columns)):
             if col == 'volume':
                 adj = 100
-            elif col in ADJUST_FACTOR.keys():
-                adj = 1 / ADJUST_FACTOR[col]
             else:
                 adj = 1
             raw_arrays[i] = raw_arrays[i] * adj
             # √ 为0值 无效值
-            if col in ADJUST_FACTOR.keys():
-                raw_arrays[i] = np.where(raw_arrays[i] == 0., np.nan, raw_arrays[i])
+            raw_arrays[i] = np.where(raw_arrays[i] == 0., np.nan, raw_arrays[i])
         return raw_arrays
 
     def _load_raw_arrays_date_to_index(self, date):
@@ -716,16 +709,10 @@ class BcolzDailyBarReader(SessionBarReader):
         """
         ix = self.sid_day_index(sid, dt)
         price = self._spot_col(field)[ix]
-        if field == 'volume':
-            if price != 0.0:
-                # # 成交量恢复(损失精度)
-                return price * 100 
-            else:
-                return nan
-        else:
+        if field != 'volume':
             if price == 0:
                 return nan
-            elif field in ADJUST_FACTOR.keys():
-                return price / ADJUST_FACTOR[field]
             else:
                 return price * 0.001
+        else:
+            return price
