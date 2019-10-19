@@ -139,21 +139,22 @@ class PB(CustomFactor):
     """市值与账面资产净值比率(市净率)"""
     window_length = 1
     window_safe = True
-    inputs = (CNEquityPricing.total_cap,
+    inputs = (CNEquityPricing.close, Fundamentals.equity.总股本,
               Fundamentals.balance_sheet.所有者权益或股东权益合计)
 
-    def compute(self, today, assets, out, n, d):
-        out[:] = n[-1] / d[-1]
+    def compute(self, today, assets, out, c, n, d):
+        out[:] = c[-1] * n[-1] / d[-1]
 
 
 class PS(CustomFactor):
     """市值与销售总额比率(市销率)"""
     window_length = 1
     window_safe = True
-    inputs = (CNEquityPricing.total_cap, Fundamentals.profit_statement.其中_营业收入)
+    inputs = (CNEquityPricing.close, Fundamentals.equity.总股本,
+              Fundamentals.profit_statement.其中_营业收入)
 
-    def compute(self, today, assets, out, n, d):
-        out[:] = n[-1] / d[-1]
+    def compute(self, today, assets, out, c, n, d):
+        out[:] = c[-1] * n[-1] / d[-1]
 
 
 ##############################################################################

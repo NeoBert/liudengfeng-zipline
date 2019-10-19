@@ -182,7 +182,7 @@ def _stock_first_and_last():
 
     def f(fp):
         df = pd.read_pickle(str(fp))
-        return {'symbol': df.iat[0, 0][:6], 'first_traded': df.iat[0, 1], 'last_traded': df.iat[-1, 1]}
+        return {'symbol': df.iat[0, 0][:6], 'first_traded': pd.Timestamp(df.iat[0, 1]), 'last_traded': pd.Timestamp(df.iat[-1, 1])}
     res = map(f, fs)
     df = pd.DataFrame.from_dict(res)
     return df

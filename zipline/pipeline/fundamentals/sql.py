@@ -285,23 +285,37 @@ def get_tdata(only_A=True):
         return df
 
 
+# def get_short_name_changes(only_A=True):
+#     """股票简称变动历史"""
+#     def f(g):
+#         return g[g['股票简称'] != g['股票简称'].shift(1)]
+#     with session_scope('szsh') as sess:
+#         query = sess.query(
+#             StockDaily.股票代码,
+#             StockDaily.日期,
+#             StockDaily.名称
+#         )
+#         df = pd.DataFrame.from_records(query.all())
+#         df.columns = ['sid', 'asof_date', '股票简称']
+#         if only_A:
+#             df = df[~df.sid.str.startswith('2')]
+#             df = df[~df.sid.str.startswith('9')]
+#         df.sort_values(['sid', 'asof_date'], inplace=True)
+#         return df.groupby('sid').apply(f).reset_index(drop=True)
+
+
 def get_short_name_changes(only_A=True):
     """股票简称变动历史"""
-    def f(g):
-        return g[g['股票简称'] != g['股票简称'].shift(1)]
-    with session_scope('szsh') as sess:
-        query = sess.query(
-            StockDaily.股票代码,
-            StockDaily.日期,
-            StockDaily.名称
-        )
-        df = pd.DataFrame.from_records(query.all())
-        df.columns = ['sid', 'asof_date', '股票简称']
-        if only_A:
-            df = df[~df.sid.str.startswith('2')]
-            df = df[~df.sid.str.startswith('9')]
-        df.sort_values(['sid', 'asof_date'], inplace=True)
-        return df.groupby('sid').apply(f).reset_index(drop=True)
+    # TODO:数据不全。要么使用替代数据，要么废弃
+    stmt = 'SELECT DISTINCT 名称,股票代码,日期 FROM stock_dailies'
+    df = pd.read_sql(stmt, get_engine('szsh'))
+    df.columns = ['股票简称', 'sid', 'asof_date']
+    df.sort_values(['sid', 'asof_date'], inplace=True)
+    df.drop_duplicates(subset=['股票简称', 'sid'], inplace=True)
+    if only_A:
+        df = df[~df.sid.str.startswith('2')]
+        df = df[~df.sid.str.startswith('9')]
+    return df
 
 
 def get_equity_data(only_A=True):
