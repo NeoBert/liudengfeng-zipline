@@ -24,15 +24,17 @@ import bcolz
 import logbook
 from logbook import Logger
 
-from cnswd.sql.data_browse import (FinancialIndicatorRanking, PerformanceForecaste,
-                                   PeriodlyBalanceSheet, PeriodlyCashFlowStatement,
-                                   PeriodlyFinancialIndicator, PeriodlyIncomeStatement,
+from cnswd.sql.data_browse import (FinancialIndicatorRanking,
+                                   PerformanceForecaste, PeriodlyBalanceSheet,
+                                   PeriodlyCashFlowStatement,
+                                   PeriodlyFinancialIndicator,
+                                   PeriodlyIncomeStatement,
                                    QuarterlyCashFlowStatement,
                                    QuarterlyFinancialIndicator,
-                                   QuarterlyIncomeStatement, TtmCashFlowStatement,
-                                   TtmIncomeStatement)
+                                   QuarterlyIncomeStatement,
+                                   TtmCashFlowStatement, TtmIncomeStatement)
 
-from ..common import AD_FIELD_NAME, TS_FIELD_NAME, SID_FIELD_NAME
+from ..common import AD_FIELD_NAME, SID_FIELD_NAME, TS_FIELD_NAME
 from .base import bcolz_table_path
 from .preprocess import (_normalize_ad_ts_sid, get_investment_rating,
                          get_static_info_table)
