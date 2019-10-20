@@ -669,6 +669,7 @@ class DataSetFamilySlice(DataSet):
     """Marker type for slices of a
     :class:`zipline.pipeline.data.dataset.DataSetFamily` objects
     """
+    pass
 
 
 # XXX: This docstring was mostly written when the abstraction here was
