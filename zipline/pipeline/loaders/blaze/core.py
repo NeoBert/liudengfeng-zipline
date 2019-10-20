@@ -38,7 +38,7 @@ until 2014-01-02. This is useful for avoiding look-ahead bias in your
 pipelines. If this column does not exist, the ``asof_date`` column will be used
 instead.
 
-``asof_date`` 发生时间；``timestamp``代表知悉时间或者公布时间；
+``asof_date`` 发生时间。``timestamp``代表知悉时间或者公布时间。
 If your data references a particular asset, you can add a ``sid`` column to
 your dataset to represent this. For example:
 
@@ -183,14 +183,27 @@ from zipline.lib.adjusted_array import can_represent_dtype
 from zipline.utils.input_validation import expect_element
 from zipline.utils.pandas_utils import ignore_pandas_nan_categorical_warning
 from zipline.utils.pool import SequentialPool
-from ._core import (  # noqa
-    adjusted_arrays_from_rows_with_assets,
-    adjusted_arrays_from_rows_without_assets,
-    baseline_arrays_from_rows_with_assets,  # reexport
-    baseline_arrays_from_rows_without_assets,  # reexport
-    getname,
-)
+try:
+    from ._core import (  # noqa
+        adjusted_arrays_from_rows_with_assets,
+        adjusted_arrays_from_rows_without_assets,
+        baseline_arrays_from_rows_with_assets,  # reexport
+        baseline_arrays_from_rows_without_assets,  # reexport
+        getname,
+    )
+except ImportError:
+    def getname(column):
+        return column.get('blaze_column_name', column.name)
 
+    def barf(*args, **kwargs):
+        raise RuntimeError(
+            "zipline.pipeline.loaders.blaze._core failed to import"
+        )
+
+    adjusted_arrays_from_rows_with_assets = barf
+    adjusted_arrays_from_rows_without_assets = barf
+    baseline_arrays_from_rows_with_assets = barf
+    baseline_arrays_from_rows_without_assets = barf
 
 valid_deltas_node_types = (
     bz.expr.Field,
@@ -405,7 +418,6 @@ class NoMetaDataWarning(UserWarning):
     field : {'deltas',  'checkpoints'}
         The field that was looked up.
     """
-
     def __init__(self, expr, field):
         self._expr = expr
         self._field = field
@@ -447,7 +459,13 @@ def _get_metadata(field, expr, metadata_expr, no_metadata_rule):
         return metadata_expr
 
     try:
-        return expr._child['_'.join(((expr._name or ''), field))]
+        # The error produced by expr[field_name] when field_name doesn't exist
+        # is very expensive. Avoid that cost by doing the check ourselves.
+        field_name = '_'.join(((expr._name or ''), field))
+        child = expr._child
+        if field_name not in child.fields:
+            raise AttributeError(field_name)
+        return child[field_name]
     except (ValueError, AttributeError):
         if no_metadata_rule == 'raise':
             raise ValueError(
@@ -721,7 +739,6 @@ class ExprData(object):
     odo_kwargs : dict, optional
         The keyword arguments to forward to the odo calls internally.
     """
-
     def __init__(self,
                  expr,
                  deltas=None,
@@ -822,7 +839,6 @@ class BlazeLoader(object):
     :class:`zipline.utils.pool.SequentialPool`
     :class:`multiprocessing.Pool`
     """
-
     def __init__(self, dsmap=None, pool=SequentialPool()):
         # explicitly public
         self.pool = pool
@@ -960,7 +976,7 @@ class BlazeLoader(object):
         )
         requested_columns = set(map(getname, columns))
         colnames = sorted(added_query_fields | requested_columns)
-        # # 时区:utc
+
         lower_dt, upper_dt = data_query_cutoff_times[[0, -1]]
 
         def collect_expr(e, lower):
@@ -1026,6 +1042,7 @@ class BlazeLoader(object):
                 )
             except ValueError:
                 raise NotImplementedError(f'列：{colnames}, 期间：{lower_dt} ~ {upper_dt} 无数据')
+
 
         all_rows[TS_FIELD_NAME] = all_rows[TS_FIELD_NAME].astype(
             'datetime64[ns]',
