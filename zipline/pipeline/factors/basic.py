@@ -549,3 +549,4 @@ class PeerCount(SingleInputMixin, CustomFactor):
 # Convenience aliases
 EWMA = ExponentialWeightedMovingAverage
 EWMSTD = ExponentialWeightedMovingStdDev
+SMA = SimpleMovingAverage
