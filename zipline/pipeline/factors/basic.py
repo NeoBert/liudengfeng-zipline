@@ -4,6 +4,7 @@ from numbers import Number
 from numpy import (
     arange,
     average,
+    copyto,
     exp,
     fmax,
     full,
@@ -12,9 +13,10 @@ from numpy import (
     NINF,
     sqrt,
     sum as np_sum,
+    unique,
 )
 
-from zipline.pipeline.data import CNEquityPricing # # EquityPricing -> CNEquityPricing
+from zipline.pipeline.data import EquityPricing
 from zipline.utils.input_validation import expect_types
 from zipline.utils.math_utils import (
     nanargmax,
@@ -36,10 +38,9 @@ class Returns(CustomFactor):
     """
     Calculates the percent change in close price over the given window_length.
 
-    **Default Inputs**: [CNEquityPricing.close]
+    **Default Inputs**: [EquityPricing.close]
     """
-    # 使用后复权价格计算
-    inputs = [CNEquityPricing.close]
+    inputs = [EquityPricing.close]
     window_safe = True
 
     def _validate(self):
@@ -60,7 +61,7 @@ class OpenReturns(CustomFactor):
     Calculate the opening change rate based on the previous closing price
     **Default Inputs**: [CNEquityPricing.close, CNEquityPricing.open]
     """
-    inputs = [CNEquityPricing.close, CNEquityPricing.open]
+    inputs = [EquityPricing.close, EquityPricing.open]
     window_safe = True
     window_length = 2
 
@@ -76,18 +77,46 @@ class OpenReturns(CustomFactor):
         out[:] = (open[-1] - close[0]) / close[0]
 
 
+class PercentChange(SingleInputMixin, CustomFactor):
+    """
+    Calculates the percent change over the given window_length.
+
+    **Default Inputs:** None
+
+    **Default Window Length:** None
+
+    Notes
+    -----
+    Percent change is calculated as ``(new - old) / abs(old)``.
+    """
+    window_safe = True
+
+    def _validate(self):
+        super(PercentChange, self)._validate()
+        if self.window_length < 2:
+            raise ValueError(
+                "'PercentChange' expected a window length"
+                "of at least 2, but was given {window_length}. "
+                "For daily percent change, use a window "
+                "length of 2.".format(window_length=self.window_length)
+            )
+
+    def compute(self, today, assets, out, values):
+        out[:] = (values[-1] - values[0]) / abs(values[0])
+
+
 class DailyReturns(Returns):
     """
     Calculates daily percent change in close price.
 
-    **Default Inputs**: [CNEquityPricing.close]
+    **Default Inputs**: [EquityPricing.close]
     """
-    inputs = [CNEquityPricing.close]
+    inputs = [EquityPricing.close]
     window_safe = True
     window_length = 2
 
 
-class SimpleMovingAverage(CustomFactor, SingleInputMixin):
+class SimpleMovingAverage(SingleInputMixin, CustomFactor):
     """
     Average Value of an arbitrary column
 
@@ -112,6 +141,7 @@ class WeightedAverageValue(CustomFactor):
 
     **Default Window Length:** None
     """
+
     def compute(self, today, assets, out, base, weight):
         out[:] = nansum(base * weight, axis=0) / nansum(weight, axis=0)
 
@@ -120,14 +150,14 @@ class VWAP(WeightedAverageValue):
     """
     Volume Weighted Average Price
 
-    **Default Inputs:** [CNEquityPricing.close, CNEquityPricing.volume]
+    **Default Inputs:** [EquityPricing.close, EquityPricing.volume]
 
     **Default Window Length:** None
     """
-    inputs = (CNEquityPricing.close, CNEquityPricing.volume)
+    inputs = (EquityPricing.close, EquityPricing.volume)
 
 
-class MaxDrawdown(CustomFactor, SingleInputMixin):
+class MaxDrawdown(SingleInputMixin, CustomFactor):
     """
     Max Drawdown
 
@@ -152,11 +182,11 @@ class AverageDollarVolume(CustomFactor):
     """
     Average Daily Dollar Volume
 
-    **Default Inputs:** [CNEquityPricing.close, CNEquityPricing.volume]
+    **Default Inputs:** [EquityPricing.close, EquityPricing.volume]
 
     **Default Window Length:** None
     """
-    inputs = [CNEquityPricing.close, CNEquityPricing.volume]
+    inputs = [EquityPricing.close, EquityPricing.volume]
 
     def compute(self, today, assets, out, close, volume):
         out[:] = nansum(close * volume, axis=0) / len(close)
@@ -230,12 +260,12 @@ class _ExponentialWeightedFactor(SingleInputMixin, CustomFactor):
 
             # Equivalent to:
             # my_ewma = EWMA(
-            #    inputs=[CNEquityPricing.close],
+            #    inputs=[EquityPricing.close],
             #    window_length=30,
             #    decay_rate=(1 - (2.0 / (1 + 15.0))),
             # )
             my_ewma = EWMA.from_span(
-                inputs=[CNEquityPricing.close],
+                inputs=[EquityPricing.close],
                 window_length=30,
                 span=15,
             )
@@ -277,12 +307,12 @@ class _ExponentialWeightedFactor(SingleInputMixin, CustomFactor):
 
             # Equivalent to:
             # my_ewma = EWMA(
-            #    inputs=[CNEquityPricing.close],
+            #    inputs=[EquityPricing.close],
             #    window_length=30,
             #    decay_rate=np.exp(np.log(0.5) / 15),
             # )
             my_ewma = EWMA.from_halflife(
-                inputs=[CNEquityPricing.close],
+                inputs=[EquityPricing.close],
                 window_length=30,
                 halflife=15,
             )
@@ -326,12 +356,12 @@ class _ExponentialWeightedFactor(SingleInputMixin, CustomFactor):
 
             # Equivalent to:
             # my_ewma = EWMA(
-            #    inputs=[CNEquityPricing.close],
+            #    inputs=[EquityPricing.close],
             #    window_length=30,
             #    decay_rate=(1 - (1 / 15.0)),
             # )
             my_ewma = EWMA.from_center_of_mass(
-                inputs=[CNEquityPricing.close],
+                inputs=[EquityPricing.close],
                 window_length=30,
                 center_of_mass=15,
             )
@@ -378,8 +408,9 @@ class ExponentialWeightedMovingAverage(_ExponentialWeightedFactor):
 
     See Also
     --------
-    :func:`pandas.ewma`
+    :meth:`pandas.DataFrame.ewm`
     """
+
     def compute(self, today, assets, out, data, decay_rate):
         out[:] = average(
             data,
@@ -416,7 +447,7 @@ class ExponentialWeightedMovingStdDev(_ExponentialWeightedFactor):
 
     See Also
     --------
-    :func:`pandas.ewmstd`
+    :func:`pandas.DataFrame.ewm`
     """
 
     def compute(self, today, assets, out, data, decay_rate):
@@ -432,7 +463,7 @@ class ExponentialWeightedMovingStdDev(_ExponentialWeightedFactor):
         out[:] = sqrt(variance * bias_correction)
 
 
-class LinearWeightedMovingAverage(CustomFactor, SingleInputMixin):
+class LinearWeightedMovingAverage(SingleInputMixin, CustomFactor):
     """
     Weighted Average Value of an arbitrary column
 
@@ -467,7 +498,7 @@ class AnnualizedVolatility(CustomFactor):
     the standard deviation of daily returns.
     https://en.wikipedia.org/wiki/Volatility_(finance)
 
-    **Default Inputs:** :data:`zipline.pipeline.factors.Returns(window_length=2)`  # noqa
+    **Default Inputs:** [Returns(window_length=2)]
 
     Parameters
     ----------
@@ -483,7 +514,38 @@ class AnnualizedVolatility(CustomFactor):
         out[:] = nanstd(returns, axis=0) * (annualization_factor ** .5)
 
 
+class PeerCount(SingleInputMixin, CustomFactor):
+    """
+    Peer Count of distinct categories in a given classifier.  This factor
+    is returned by the classifier instance method peer_count()
+
+    **Default Inputs:** None
+
+    **Default Window Length:** 1
+    """
+    window_length = 1
+
+    def _validate(self):
+        super(PeerCount, self)._validate()
+        if self.window_length != 1:
+            raise ValueError(
+                "'PeerCount' expected a window length of 1, but was given"
+                "{window_length}.".format(window_length=self.window_length)
+            )
+
+    def compute(self, today, assets, out, classifier_values):
+        # Convert classifier array to group label int array
+        group_labels, null_label = self.inputs[0]._to_integral(
+            classifier_values[0]
+        )
+        _, inverse, counts = unique(  # Get counts, idx of unique groups
+            group_labels,
+            return_counts=True,
+            return_inverse=True,
+        )
+        copyto(out, counts[inverse], where=(group_labels != null_label))
+
+
 # Convenience aliases
-SMA = SimpleMovingAverage
 EWMA = ExponentialWeightedMovingAverage
 EWMSTD = ExponentialWeightedMovingStdDev
