@@ -44,6 +44,7 @@ from .sql import (get_dividend_data, get_equity_data,
                   get_q_income_data, get_quarterly_financial_indicator_data,
                   get_short_name_changes, get_tdata, get_ttm_cash_flow_data,
                   get_ttm_income_data)
+from .yahoo import YAHOO_ITEMS, read_item_data
 
 # 设置显示日志
 logbook.set_datetime_format('local')
@@ -142,8 +143,15 @@ def write_financial_data_to_bcolz():
         write_dataframe(func(), table)
 
 
+def write_yahoo():
+    for item in YAHOO_ITEMS:
+        df = read_item_data(item)
+        write_dataframe(df, item)
+
+
 def write_sql_data_to_bcolz():
     """写入Fundamentals数据"""
     write_static_info_to_bcolz()
     write_dynamic_data_to_bcolz()
     write_financial_data_to_bcolz()
+    write_yahoo()

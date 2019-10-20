@@ -10,8 +10,7 @@
 3. 投资评级
 4. 业绩预告
 5. 概念编码
-
-TODO:考虑使用https://github.com/quantopian/blaze_loader 延迟加载，提高导入速度
+6. 雅虎财经 自由现金流、息税前利润
 """
 
 import re
@@ -353,3 +352,35 @@ class Fundamentals(object):
     def performance_forecastes(self):
         """业绩预告数据集"""
         return gen_data_set(table_name='performance_forecastes')
+
+# region 雅虎财经
+    @classlazyval
+    def annual_ebitda(self):
+        """年度税息折旧及摊销前利润"""
+        return gen_data_set(table_name='annual_ebitda')
+
+    @classlazyval
+    def annual_free_cash_flow(self):
+        """年度自由现金流"""
+        return gen_data_set(table_name='annual_free_cash_flow')
+
+    @classlazyval
+    def annual_total_assets(self):
+        """年度总资产"""
+        return gen_data_set(table_name='annual_total_assets')
+
+    @classlazyval
+    def quarterly_ebitda(self):
+        """季度税息折旧及摊销前利润"""
+        return gen_data_set(table_name='quarterly_ebitda')
+
+    @classlazyval
+    def quarterly_free_cash_flow(self):
+        """季度自由现金流"""
+        return gen_data_set(table_name='quarterly_free_cash_flow')
+
+    @classlazyval
+    def quarterly_total_assets(self):
+        """季度总资产"""
+        return gen_data_set(table_name='quarterly_total_assets')
+# endregion
