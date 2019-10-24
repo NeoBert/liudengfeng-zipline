@@ -2,6 +2,8 @@
 
 由于存在大量依赖，整合在一个模块中
 
+说明：
+    1. 雅虎数据基础单位：千
 """
 import numpy as np
 import pandas as pd
@@ -15,10 +17,8 @@ from .factors import (AverageDollarVolume, CustomFactor, DailyReturns,
 from .filters import CustomFilter, StaticSids
 from .fundamentals import Fundamentals
 
-##############################################################################
-#                                  自定义因子                                 #
-##############################################################################
 
+# region 自定义因子
 
 class TTM(CustomFactor):
     """
@@ -45,7 +45,9 @@ class TTM(CustomFactor):
     用法：
     >>>from zipline.pipeline.builtin import TTM
     >>>from zipline.pipeline.fundamentals import Fundamentals
-    >>>ttm = TTM(inputs=(Fundamentals.profit_statement.管理费用, Fundamentals.profit_statement.asof_date), window_length=255, is_cum=True)
+    >>>ttm = TTM(inputs=[Fundamentals.profit_statement.管理费用,
+                         Fundamentals.profit_statement.asof_date],
+                 window_length=255, is_cum=True)
     """
     params = {
         'is_cum': True   # 如果原始数据为累计数，则标记为True
@@ -139,11 +141,12 @@ class PB(CustomFactor):
     """市值与账面资产净值比率(市净率)"""
     window_length = 1
     window_safe = True
+
     inputs = (CNEquityPricing.close, Fundamentals.equity.总股本,
               Fundamentals.balance_sheet.所有者权益或股东权益合计)
 
     def compute(self, today, assets, out, c, n, d):
-        out[:] = c[-1] * n[-1] / d[-1]
+        out[:] = c[-1] * n[-1] / d[-1] * 10000.0
 
 
 class PS(CustomFactor):
@@ -154,12 +157,17 @@ class PS(CustomFactor):
               Fundamentals.profit_statement.其中_营业收入)
 
     def compute(self, today, assets, out, c, n, d):
-        out[:] = c[-1] * n[-1] / d[-1]
+        out[:] = c[-1] * n[-1] / d[-1] * 10000.0
 
 
-##############################################################################
-#                                 自定义分类器                                #
-##############################################################################
+def ttm_sales():
+    return TTM(inputs=[Fundamentals.profit_statement.其中_营业收入,
+                       Fundamentals.profit_statement.asof_date],
+               is_cum=True)
+
+# endregion
+
+# region 行业分类器
 
 
 class Sector(CustomClassifier):
@@ -273,7 +281,174 @@ class SWSector(CustomClassifier):
 
     def compute(self, today, assets, out, cats):
         out[:] = cats[0]
+# endregion
 
 
-# 别名
+# region 别名
 QTradableStocksCN = QTradableStocksUS
+# endregion
+
+# region Valuation
+
+
+def enterprise_value():
+    """This number tells you what cash return you would get if you bought the entire company,
+    including its debt. Enterprise Value = Market Cap + Preferred stock + Long-Term Debt And
+    Capital Lease + Short Term Debt And Capital Lease + Securities Sold But Not Yet Repurchased
+     - Cash, Cash Equivalent And Market Securities - Securities Purchased with Agreement to Resell
+     - Securities Borrowed.
+    """
+    raise NotImplementedError()
+
+
+def market_cap():
+    """Price * Total SharesOutstanding. The most current market cap for example, would be
+    the most recent closing price x the most recent reported shares outstanding. For ADR
+    share classes, market cap is price * (ordinary shares outstanding / adr ratio).
+    """
+    return shares_outstanding() * CNEquityPricing.close.latest
+
+
+def share_class_level_shares_outstanding():
+    """The latest shares outstanding reported by the company of a particular share class;
+    most common source of this information is from the cover of the 10K, 10Q, or 20F filing.
+    This figure is an aggregated shares outstanding number for a particular share class of
+    the company. This field is updated quarterly and it is not adjusted for corporate action
+    events including splits.
+    """
+    raise NotImplementedError()
+
+
+def shares_outstanding():
+    """The latest total shares outstanding reported by the company; most common source of
+    this information is from the cover of the 10K, 10Q, or 20F filing. This figure is an
+    aggregated shares outstanding number for a company in terms of a particular share class.
+    It can be used to calculate market cap, based on each individual share’s trading price
+    and the total aggregated shares outstanding figure. This field is updated quarterly and
+    it is not adjusted for corporate action events including splits.
+    """
+    return Fundamentals.equity.总股本.latest * 10000.0
+# endregion
+
+# region 辅助类
+
+
+class ClipRatio(CustomFactor):
+    """
+    计算二个因子的比率。当数值低于给定下限时，以Nan替代
+
+    **Default Inputs:** None
+    **Default window_length:** 1
+
+    params:
+        **lower:** 数值下限
+    """
+    window_length = 1
+    params = {'lower': 0.0}   # 数值下限
+
+    def _validate(self):
+        super(ClipRatio, self)._validate()
+        if len(self.inputs) != 2:
+            raise ValueError("计算因子之间的比率，输入项目长度只能为2")
+
+    def compute(self, today, assets, out, n, d, lower):
+        res = n[-1] / d[-1]
+        out[:] = np.where(res < lower, np.nan, res)
+
+# endregion
+
+# region Valuation Ratios
+
+
+def book_value_per_share():
+    """Common Shareholder’s Equity / Diluted Shares Outstanding.
+    """
+    return Fundamentals.financial_indicators.每股净资产.latest
+
+
+def book_value_yield():
+    """BookValuePerShare / Price
+    """
+    return book_value_per_share() / CNEquityPricing.close.latest
+
+
+def cash_return():
+    """指自由现金流量与企业价值之比。 
+    Morningstar通过使用公司文件或报告中报告的基础数据来计算比率：FCF / 企业价值.
+    """
+    return NotImplementedError()
+
+
+def cf_yield():
+    """CFOPerShare / Price.
+    """
+    return cfo_per_share() / CNEquityPricing.close.latest
+
+
+def cfo_per_share():
+    """Cash Flow from Operations / Average Diluted Shares Outstanding
+    """
+    n = TTM(inputs=[Fundamentals.quarterly_free_cash_flow.quarterlyOperatingCashFlow,
+                    Fundamentals.quarterly_free_cash_flow.asof_date],
+            is_cum=True)
+    d = SimpleMovingAverage(
+        inputs=[Fundamentals.equity.总股本],
+        window_length=244) * 10000.0
+    return n / d
+
+
+def trailing_dividend_yield():
+    """
+    Dividends Per Share over the trailing 12 months / Price
+    """
+    ttm = TTM(inputs=[Fundamentals.dividend.每股人民币派息,
+                      Fundamentals.dividend.asof_date], is_cum=False)
+    return ttm / CNEquityPricing.close.latest
+
+
+def earning_yield():
+    """
+    Diluted EPS / Price
+    """
+    n = profit_statement.稀释每股收益.latest
+    return n / CNEquityPricing.close.latest
+
+
+def ev_to_ebitda():
+    """
+    This reflects the fair market value of a company, and allows comparability 
+    to other companies as this is capital structure-neutral.
+    """
+    n = market_cap()
+    d = Fundamentals.quarterly_ebitda.quarterlyEbitda.latest * 1000.0
+    return n / d
+
+
+def fcf_per_share():
+    """
+    Free Cash Flow / Average Diluted Shares Outstanding
+    """
+    n = Fundamentals.quarterly_free_cash_flow.quarterlyFreeCashFlow.latest * 1000.0
+    # 暂时以总股本代替
+    d = shares_outstanding()
+    return n / d
+
+
+def trailing_pb_ratio():
+    """Adjusted close price / Book Value Per Share.
+    If the result is negative or zero, then null.
+    """
+    b = SimpleMovingAverage(
+        inputs=[Fundamentals.financial_indicators.每股净资产],
+        window_length=244
+    )
+    return ClipRatio(inputs=[b, CNEquityPricing.close])
+
+
+def trailing_ps_ratio():
+    ttm_sales = TTM(inputs=[Fundamentals.profit_statement.其中_营业收入,
+                            Fundamentals.profit_statement.asof_date],
+                    is_cum=True)
+
+    return ttm_sales / CNEquityPricing.close.latest
+# endregion
