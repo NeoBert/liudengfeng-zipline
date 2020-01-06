@@ -14,7 +14,7 @@ The blaze Pipeline API loader expects that data is formatted in a tabular way.
 The only required column in your table is ``asof_date`` where this column
 represents the date this data is referencing. For example, one might have a CSV
 like:
-``asof_date`` 数据引用日期。
+
 asof_date,value
 2014-01-06,0
 2014-01-07,1
@@ -26,7 +26,6 @@ Optionally, we may provide a ``timestamp`` column to be used to represent
 point in time data. This column tells us when the data was known, or became
 available to for use. Using our same CSV, we could write this with a timestamp
 like:
-``timestamp`` 数据已知可供使用。
 
 asof_date,timestamp,value
 2014-01-06,2014-01-07,0
@@ -37,7 +36,6 @@ This says that the value was 0 on 2014-01-01; however, we did not learn this
 until 2014-01-02. This is useful for avoiding look-ahead bias in your
 pipelines. If this column does not exist, the ``asof_date`` column will be used
 instead.
-
 ``asof_date`` 发生时间。``timestamp``代表知悉时间或者公布时间。
 If your data references a particular asset, you can add a ``sid`` column to
 your dataset to represent this. For example:
@@ -155,6 +153,7 @@ from datashape import (
     isscalar,
     integral,
 )
+from interface import implements
 import numpy as np
 from odo import odo
 import pandas as pd
@@ -178,6 +177,7 @@ from zipline.pipeline.common import (
 )
 from zipline.pipeline.data.dataset import DataSet, Column
 from zipline.pipeline.domain import GENERIC
+from zipline.pipeline.loaders.base import PipelineLoader
 from zipline.pipeline.sentinels import NotSpecified
 from zipline.lib.adjusted_array import can_represent_dtype
 from zipline.utils.input_validation import expect_element
@@ -392,12 +392,7 @@ def _check_datetime_field(name, measure):
     TypeError
         If the field is not a datetime inside ``measure``.
     """
-    # TODO:接受OPtion? 初步可行，还需要检验存在空白列的情形！
-    to_check = measure[name]
-    if isinstance(to_check, Option):
-        to_check = to_check.ty
-    # if not isinstance(measure[name], (Date, DateTime)):
-    if not isinstance(to_check, (Date, DateTime)):
+    if not isinstance(measure[name], (Date, DateTime)):
         raise TypeError(
             "'{name}' field must be a '{dt}', not: '{dshape}'".format(
                 name=name,
@@ -812,7 +807,7 @@ class ExprData(object):
         )
 
 
-class BlazeLoader(object):
+class BlazeLoader(implements(PipelineLoader)):
     """A PipelineLoader for datasets constructed with ``from_blaze``.
 
     Parameters
@@ -1042,8 +1037,7 @@ class BlazeLoader(object):
                 )
             except ValueError:
                 raise NotImplementedError(f'列：{colnames}, 期间：{lower_dt} ~ {upper_dt} 无数据')
-
-
+            
         all_rows[TS_FIELD_NAME] = all_rows[TS_FIELD_NAME].astype(
             'datetime64[ns]',
         )
