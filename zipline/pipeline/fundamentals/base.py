@@ -2,7 +2,7 @@ import blaze as bz
 import os
 # from cnswd.utils import data_root
 from zipline.utils.paths import zipline_path
-from cnswd.sql.base import db_path
+# from cnswd.sql.base import db_path
 
 
 VALID_DB_NAMES = ('szsh', 'dataBrowse', 'info', 'thematicStatistics')

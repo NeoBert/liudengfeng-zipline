@@ -3,7 +3,7 @@ from collections.abc import Iterable
 from cnswd.utils import ensure_list, sanitize_dates
 from zipline.assets import Asset, Equity
 from zipline.data.benchmarks_cn import get_cn_benchmark_returns
-from zipline.data.treasuries_cn import get_treasury_data, TREASURY_COL_NAMES
+from zipline.data.treasuries_cn import get_treasury_data, TREASURY_COL_MAPS
 from .factory import _asset_finder, _data_portal, _trading_calendar
 
 OHLCV = ('open', 'high', 'low', 'close', 'volume')
@@ -104,8 +104,9 @@ def prices(assets,
     msg = "Only support frequency == 'daily'"
     assert frequency == 'daily', msg
     valid_fields = ('open', 'high', 'low', 'close', 'price', 'volume')
+    # TODO:?
     if adjust:
-        raise 
+        raise ValueError('')
     adj_fields = ('b_open', 'b_high', 'b_low', 'b_close')
     msg = '只接受单一字段，有效字段为{}'.format(valid_fields)
     assert isinstance(price_field, str), msg
@@ -233,7 +234,7 @@ def treasury_returns(symbol, start, end):
         start {datatime-like} -- 开始时间
         end {datatime-like} -- 结束时间
     """
-    assert symbol in [x for x in TREASURY_COL_NAMES if x != 'date']
+    assert symbol in [x for x in TREASURY_COL_MAPS.values() if x != 'date']
     calendar = _trading_calendar()
 
     start = pd.Timestamp(start, tz='utc')

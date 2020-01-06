@@ -1,6 +1,6 @@
 import pandas as pd
 from cnswd.utils import ensure_list
-from ..data.sqldata import fetch_single_equity
+from ..data.localdata import fetch_single_equity
 
 
 def get_pricing(sids, start, end, fields):

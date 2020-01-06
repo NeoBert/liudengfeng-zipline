@@ -10,8 +10,10 @@ import pandas as pd
 
 from ..common import AD_FIELD_NAME, SID_FIELD_NAME, TS_FIELD_NAME
 from .constants import SECTOR_NAMES, SUPER_SECTOR_NAMES
-from .sql import (field_code_concept_maps, get_cn_industry, get_concept_info,
-                  get_investment_rating_data, get_stock_info, get_sw_industry)
+from .localdata import (field_code_concept_maps, get_cn_industry,
+                        get_concept_info, get_investment_rating_data,
+                        get_short_name_changes, get_stock_info,
+                        get_sw_industry)
 
 # ========================辅助函数========================= #
 
@@ -28,7 +30,7 @@ def _investment_score(x):
         return 2
     elif x == '卖出':
         return 1
-    elif x in (None, '-', '不评级'):
+    elif x in ('None', np.nan, None, '-', '不评级'):
         return 0
     raise ValueError(f'无效值{x}')
 
@@ -53,8 +55,8 @@ def _normalize_ad_ts_sid(df, ndays=0, nhours=8, target_tz='utc'):
     """
     if AD_FIELD_NAME in df.columns:
         # 如果asof_date存在，则只需要转换数据类型及目标时区
-        df[AD_FIELD_NAME] = _to_dt(
-            df[AD_FIELD_NAME], target_tz) + pd.Timedelta(hours=nhours)
+        df[AD_FIELD_NAME] = _to_dt(df[AD_FIELD_NAME],
+                                   target_tz) + pd.Timedelta(hours=nhours)
     else:
         raise ValueError('数据必须包含"{}"列'.format(AD_FIELD_NAME))
 
@@ -70,40 +72,14 @@ def _normalize_ad_ts_sid(df, ndays=0, nhours=8, target_tz='utc'):
             df[TS_FIELD_NAME] = df[AD_FIELD_NAME] + \
                 pd.Timedelta(hours=nhours+1)
 
-    if SID_FIELD_NAME in df.columns:
-        df[SID_FIELD_NAME] = df[SID_FIELD_NAME].map(lambda x: int(x))
+    if SID_FIELD_NAME not in df.columns:
+        if '证券代码' in df.columns:
+            df.rename(columns={"证券代码": "sid"}, inplace=True)
+        if '股票代码' in df.columns:
+            df.rename(columns={"股票代码": "sid"}, inplace=True)
+    df[SID_FIELD_NAME] = df[SID_FIELD_NAME].map(lambda x: int(x))
 
     return df
-
-
-# def _fill_missing_value(df, start_names, default):
-#     """
-#     修改无效值
-#     为输入df中以指定列名称开头的列，以默认值代替nan
-
-#     与默认值一致
-#         整数        默认值 0
-#         浮点        默认值 nan
-#         对象(含str) 默认值 None
-#         时间        默认值 NaT
-#         逻辑        默认值 False
-#     """
-#     # 找出以指定列名词开头的列
-#     col_names = []
-#     for col_pat in start_names:
-#         for col in df.columns[df.columns.str.startswith(col_pat)]:
-#             col_names.append(col)
-#     # 替换字典
-#     values = {}
-#     for col in col_names:
-#         values[col] = default
-#     # 对象类别需要填充缺失值
-#     for col in df.columns:
-#         cond_1 = pd.core.dtypes.common.is_object_dtype(df[col])
-#         cond_2 = col not in col_names
-#         if cond_1 & cond_2:
-#             values[col] = None  # '未知'
-#     df.fillna(value=values, inplace=True)
 
 
 def _handle_int_and_bool(df, col_dtypes):
@@ -189,11 +165,14 @@ def get_static_info_table():
         supper_sector_code_map).astype('int64')
     concept = get_concept_info()
     df = stocks.join(
-        sw_industry.set_index('sid'), on='sid',
+        sw_industry.set_index('sid'),
+        on='sid',
     ).join(
-        cn_industry.set_index('sid'), on='sid',
+        cn_industry.set_index('sid'),
+        on='sid',
     ).join(
-        concept.set_index('sid'), on='sid',
+        concept.set_index('sid'),
+        on='sid',
     )
     maps = {}
     _, name_maps = field_code_concept_maps()
@@ -202,8 +181,11 @@ def get_static_info_table():
     # 规范列数据类型及填充无效值
     bool_cols = df.columns[df.columns.str.match(r'A\d{3}')]
     col_dtypes = {col: 'bool' for col in bool_cols}
-    col_dtypes.update(
-        {'sector_code': 'int64', 'super_sector_code': 'int64', 'sw_sector': 'int64'})
+    col_dtypes.update({
+        'sector_code': 'int64',
+        'super_sector_code': 'int64',
+        'sw_sector': 'int64'
+    })
     df = _handle_int_and_bool(df, col_dtypes)
 
     return df, maps
@@ -217,13 +199,20 @@ def get_investment_rating():
     """
     maps = {}
     df = get_investment_rating_data()
-    cate_cols_pat = ['研究机构简称', '研究员名称', '是否首次评级', '评价变化',  '前一次投资评级']
+    cate_cols_pat = ['研究机构简称', '研究员名称', '评级变化', '前一次投资评级']
     for col_pat in cate_cols_pat:
         df, maps = _handle_cate(df, col_pat, maps)
-    df['投资评级'] = df['投资评级_经调整']  # 统一评级
     df['投资评级'] = df['投资评级'].map(_investment_score)  # 转换为整数值
-    df['是否首次评级'] = df['是否首次评级'].map(
-        lambda x: True if x == '是首次评级' else False)  # 转换为bool
-    del df['投资评级_经调整']
+    df['是否首次评级'] = df['是否首次评级'].map(lambda x: True
+                                    if x == '是首次评级' else False)  # 转换为bool
+    return df, maps
 
+
+def get_short_name_history():
+    """股票简称更改历史"""
+    maps = {}
+    df = get_short_name_changes()
+    cate_cols_pat = ['股票简称']
+    for col_pat in cate_cols_pat:
+        df, maps = _handle_cate(df, col_pat, maps)
     return df, maps

@@ -12,24 +12,26 @@
 
 import pandas as pd
 from logbook import Logger
+
+from ..localdata import (fetch_single_equity, fetch_single_quity_adjustments,
+                         gen_asset_metadata)
 from . import core as bundles
-from ..sqldata import (fetch_single_equity, fetch_single_quity_adjustments,
-                       gen_asset_metadata, fetch_single_minutely_equity, OHLCV_COLS)
+from .adjusts import ADJUST_FACTOR
 
 TODAY = pd.Timestamp('today').normalize()
 log = Logger('数据集')
+
+OHLCV_COLS = ['open', 'high', 'low', 'close', 'volume']
 
 
 def _exchanges():
     # 通过 `股票.exchange = exchanges.exchange`来关联
     # 深证信 股票信息 上市地点
-    return pd.DataFrame(
-        {
-            'exchange': ['深交所主板', '上交所', '深交所中小板', '深交所创业板', '上交所科创板'],
-            'canonical_name': ['XSHE', 'XSHG', 'XSHE', 'XSHE', 'XSHG'],
-            'country_code': ['CN'] * 5
-        }
-    )
+    return pd.DataFrame({
+        'exchange': ['深交所主板', '上交所', '深交所中小板', '深交所创业板', '上交所科创板'],
+        'canonical_name': ['XSHE', 'XSHG', 'XSHE', 'XSHE', 'XSHG'],
+        'country_code': ['CN'] * 5
+    })
 
 
 def _to_sid(x):
@@ -49,9 +51,11 @@ def _update_splits(splits, asset_id, origin_data):
     ratio = origin_data['s_ratio'] + origin_data['z_ratio']
     # 调整适应于zipline算法
     # date -> datetime64[ns]
-    df = pd.DataFrame({'ratio': 1 / (1 + ratio),
-                       'effective_date': pd.to_datetime(origin_data.ex_date),
-                       'sid': asset_id})
+    df = pd.DataFrame({
+        'ratio': 1 / (1 + ratio),
+        'effective_date': pd.to_datetime(origin_data.ex_date),
+        'sid': asset_id
+    })
     # df['ratio'] = df.ratio.astype('float')
     splits.append(df)
 
@@ -60,20 +64,24 @@ def _update_dividends(dividends, asset_id, origin_data):
     if origin_data.empty:
         return
     # date -> datetime64[ns]
-    df = pd.DataFrame({'record_date': pd.to_datetime(origin_data['record_date']),
-                       'ex_date': pd.to_datetime(origin_data['ex_date']),
-                       'declared_date': pd.to_datetime(origin_data['declared_date']),
-                       'pay_date': pd.to_datetime(origin_data['pay_date']),
-                       'amount': origin_data['amount'],
-                       'sid': asset_id})
+    df = pd.DataFrame({
+        'record_date':
+        pd.to_datetime(origin_data['record_date']),
+        'ex_date':
+        pd.to_datetime(origin_data['ex_date']),
+        'declared_date':
+        pd.to_datetime(origin_data['declared_date']),
+        'pay_date':
+        pd.to_datetime(origin_data['pay_date']),
+        'amount':
+        origin_data['amount'],
+        'sid':
+        asset_id
+    })
     dividends.append(df)
 
 
-def gen_symbol_data(symbol_map,
-                    sessions,
-                    splits,
-                    dividends,
-                    is_minutely):
+def gen_symbol_data(symbol_map, sessions, splits, dividends, is_minutely):
     for _, symbol in symbol_map.iteritems():
         asset_id = _to_sid(symbol)
         if not is_minutely:
@@ -82,25 +90,21 @@ def gen_symbol_data(symbol_map,
                 start=sessions[0],
                 end=sessions[-1],
             )
-
-            # 调整成交量的精度
-            raw_data['volume'] = raw_data['volume'] / 100.0
-
-            # 以日期、符号为索引
-            raw_data.set_index(['date', 'symbol'], inplace=True)
-
-            raw_data = raw_data.loc[:, OHLCV_COLS]
-
             # 新股可能存在日线延迟，会触发异常
             if not raw_data.empty:
+                # 调整成交量的精度
+                raw_data['volume'] = raw_data['volume'] / 100.0
+
+                # 以日期、符号为索引
+                raw_data.set_index(['date', 'symbol'], inplace=True)
+
+                raw_data = raw_data.loc[:, OHLCV_COLS +
+                                        list(ADJUST_FACTOR.keys())]
+
                 # 时区调整，以0.0填充na
                 # 转换为以日期为索引的表(与sessions保持一致)
-                asset_data = raw_data.xs(
-                    symbol,
-                    level=1
-                ).reindex(
-                    sessions.tz_localize(None)
-                ).fillna(0.0)
+                asset_data = raw_data.xs(symbol, level=1).reindex(
+                    sessions.tz_localize(None)).fillna(0.0)
             else:
                 asset_data = raw_data
         else:
@@ -133,20 +137,14 @@ def gen_symbol_data(symbol_map,
         yield asset_id, asset_data
 
 
-@bundles.register('cndaily',
-                  calendar_name='XSHG',
-                  #   end_session=pd.Timestamp('now', tz='Asia/Shanghai'),
-                  minutes_per_day=241)
-def cndaily_bundle(environ,
-                   asset_db_writer,
-                   minute_bar_writer,
-                   daily_bar_writer,
-                   adjustment_writer,
-                   calendar,
-                   start_session,
-                   end_session,
-                   cache,
-                   show_progress,
+@bundles.register(
+    'cndaily',
+    calendar_name='XSHG',
+    #   end_session=pd.Timestamp('now', tz='Asia/Shanghai'),
+    minutes_per_day=241)
+def cndaily_bundle(environ, asset_db_writer, minute_bar_writer,
+                   daily_bar_writer, adjustment_writer, calendar,
+                   start_session, end_session, cache, show_progress,
                    output_dir):
     """Build a zipline data bundle from the cnstock dataset.
     """
@@ -163,45 +161,37 @@ def cndaily_bundle(environ,
     if show_progress:
         log.info('写入资产元数据')
     asset_db_writer.write(metadata, exchanges=_exchanges())
- 
+
     splits = []
     dividends = []
     daily_bar_writer.write(
-        gen_symbol_data(
-            symbol_map,
-            sessions,
-            splits,
-            dividends,
-            is_minutely=False
-        ),
+        gen_symbol_data(symbol_map,
+                        sessions,
+                        splits,
+                        dividends,
+                        is_minutely=False),
         show_progress=show_progress,
     )
 
     adjustment_writer.write(
-        splits=None if len(splits) == 0 else pd.concat(
-            splits, ignore_index=True),
-        dividends=None if len(dividends) == 0 else pd.concat(
-            dividends, ignore_index=True),
+        splits=None if len(splits) == 0 else pd.concat(splits,
+                                                       ignore_index=True),
+        dividends=None
+        if len(dividends) == 0 else pd.concat(dividends, ignore_index=True),
     )
 
 
 # 不可包含退市或者暂停上市的股票代码
-@bundles.register('cnminutely',
-                  calendar_name='XSHG',
-                  start_session=pd.Timestamp(
-                      'now', tz='Asia/Shanghai') - pd.Timedelta(days=30),
-                  #   end_session=pd.Timestamp('now', tz='Asia/Shanghai'),
-                  minutes_per_day=241)
-def cnminutely_bundle(environ,
-                      asset_db_writer,
-                      minute_bar_writer,
-                      daily_bar_writer,
-                      adjustment_writer,
-                      calendar,
-                      start_session,
-                      end_session,
-                      cache,
-                      show_progress,
+@bundles.register(
+    'cnminutely',
+    calendar_name='XSHG',
+    start_session=pd.Timestamp('now', tz='Asia/Shanghai') -
+    pd.Timedelta(days=30),
+    #   end_session=pd.Timestamp('now', tz='Asia/Shanghai'),
+    minutes_per_day=241)
+def cnminutely_bundle(environ, asset_db_writer, minute_bar_writer,
+                      daily_bar_writer, adjustment_writer, calendar,
+                      start_session, end_session, cache, show_progress,
                       output_dir):
     """Build a zipline data bundle from the cnstock dataset.
     """
@@ -221,21 +211,19 @@ def cnminutely_bundle(environ,
     splits = []
     dividends = []
     minute_bar_writer.write(
-        gen_symbol_data(
-            symbol_map,
-            sessions,
-            splits,
-            dividends,
-            is_minutely=True
-        ),
+        gen_symbol_data(symbol_map,
+                        sessions,
+                        splits,
+                        dividends,
+                        is_minutely=True),
         show_progress=show_progress,
     )
 
     adjustment_writer.write(
-        splits=None if len(splits) == 0 else pd.concat(
-            splits, ignore_index=True),
-        dividends=None if len(dividends) == 0 else pd.concat(
-            dividends, ignore_index=True),
+        splits=None if len(splits) == 0 else pd.concat(splits,
+                                                       ignore_index=True),
+        dividends=None
+        if len(dividends) == 0 else pd.concat(dividends, ignore_index=True),
     )
 
 
@@ -243,20 +231,15 @@ def cnminutely_bundle(environ,
 
 # 不可包含退市或者暂停上市的股票代码
 
-@bundles.register('cdtest',
-                  calendar_name='XSHG',
-                  #   end_session=pd.Timestamp('now', tz='Asia/Shanghai'),
-                  minutes_per_day=241)
-def cntdaily_bundle(environ,
-                    asset_db_writer,
-                    minute_bar_writer,
-                    daily_bar_writer,
-                    adjustment_writer,
-                    calendar,
-                    start_session,
-                    end_session,
-                    cache,
-                    show_progress,
+
+@bundles.register(
+    'cdtest',
+    calendar_name='XSHG',
+    #   end_session=pd.Timestamp('now', tz='Asia/Shanghai'),
+    minutes_per_day=241)
+def cntdaily_bundle(environ, asset_db_writer, minute_bar_writer,
+                    daily_bar_writer, adjustment_writer, calendar,
+                    start_session, end_session, cache, show_progress,
                     output_dir):
     """Build a zipline test data bundle from the cnstock dataset.
     """
@@ -287,27 +270,21 @@ def cntdaily_bundle(environ,
     )
     adjustment_writer.write(
         splits=pd.concat(splits, ignore_index=True) if len(splits) else None,
-        dividends=pd.concat(dividends, ignore_index=True) if len(
-            dividends) else None,
+        dividends=pd.concat(dividends, ignore_index=True)
+        if len(dividends) else None,
     )
 
 
-@bundles.register('cmtest',
-                  calendar_name='XSHG',
-                  start_session=pd.Timestamp(
-                      'now', tz='Asia/Shanghai') - pd.Timedelta(days=30),
-                  #   end_session=pd.Timestamp('now', tz='Asia/Shanghai'),
-                  minutes_per_day=241)
-def cntminutely_bundle(environ,
-                       asset_db_writer,
-                       minute_bar_writer,
-                       daily_bar_writer,
-                       adjustment_writer,
-                       calendar,
-                       start_session,
-                       end_session,
-                       cache,
-                       show_progress,
+@bundles.register(
+    'cmtest',
+    calendar_name='XSHG',
+    start_session=pd.Timestamp('now', tz='Asia/Shanghai') -
+    pd.Timedelta(days=30),
+    #   end_session=pd.Timestamp('now', tz='Asia/Shanghai'),
+    minutes_per_day=241)
+def cntminutely_bundle(environ, asset_db_writer, minute_bar_writer,
+                       daily_bar_writer, adjustment_writer, calendar,
+                       start_session, end_session, cache, show_progress,
                        output_dir):
     """Build a zipline test data bundle from the cnstock dataset.
     """
@@ -327,19 +304,17 @@ def cntminutely_bundle(environ,
     asset_db_writer.write(metadata, exchanges=_exchanges())
 
     minute_bar_writer.write(
-        gen_symbol_data(
-            symbol_map,
-            sessions,
-            splits,
-            dividends,
-            is_minutely=True
-        ),
+        gen_symbol_data(symbol_map,
+                        sessions,
+                        splits,
+                        dividends,
+                        is_minutely=True),
         show_progress=show_progress,
     )
 
     adjustment_writer.write(
-        splits=None if len(splits) == 0 else pd.concat(
-            splits, ignore_index=True),
-        dividends=None if len(dividends) == 0 else pd.concat(
-            dividends, ignore_index=True),
+        splits=None if len(splits) == 0 else pd.concat(splits,
+                                                       ignore_index=True),
+        dividends=None
+        if len(dividends) == 0 else pd.concat(dividends, ignore_index=True),
     )

@@ -46,22 +46,22 @@ from zipline.utils.numpy_utils import iNaT, float64_dtype, uint32_dtype
 from zipline.utils.memoize import lazyval
 from zipline.utils.cli import maybe_show_progress
 from ._equities import _compute_row_slices, _read_bcolz_data
-
+from .bundles.adjusts import ADJUST_FACTOR
 
 logger = logbook.Logger('UsEquityPricing')
 
 OHLC = frozenset(['open', 'high', 'low', 'close'])
-US_EQUITY_PRICING_BCOLZ_COLUMNS = (
-    'open', 'high', 'low', 'close', 'volume', 'day', 'id'
-)
+US_EQUITY_PRICING_BCOLZ_COLUMNS = ('open', 'high', 'low', 'close', 'volume',
+                                   'day', 'id')
+ALL_EQUITY_PRICING_BCOLZ_COLUMNS = list(US_EQUITY_PRICING_BCOLZ_COLUMNS
+                                        | ADJUST_FACTOR.keys())
 UINT32_MAX = iinfo(np.uint32).max
 
 
 def check_uint32_safe(value, colname):
     if value >= UINT32_MAX:
-        raise ValueError(
-            "Value %s from column '%s' is too large" % (value, colname)
-        )
+        raise ValueError("Value %s from column '%s' is too large" %
+                         (value, colname))
 
 
 @expect_element(invalid_data_behavior={'warn', 'raise', 'ignore'})
@@ -82,7 +82,7 @@ def winsorise_uint32(df, invalid_data_behavior, column, *columns):
     truncated : pd.DataFrame
         ``df`` with values that do not fit into a uint32 zeroed out.
     """
-    columns = list((column,) + columns)
+    columns = list((column, ) + columns)
     mask = df[columns] > UINT32_MAX
 
     if invalid_data_behavior != 'ignore':
@@ -97,14 +97,15 @@ def winsorise_uint32(df, invalid_data_behavior, column, *columns):
         if invalid_data_behavior == 'raise':
             raise ValueError(
                 '%d values out of bounds for uint32: %r' % (
-                    mv.sum(), df[mask.any(axis=1)],
-                ),
-            )
+                    mv.sum(),
+                    df[mask.any(axis=1)],
+                ), )
         if invalid_data_behavior == 'warn':
             warnings.warn(
                 'Ignoring %d values because they are out of bounds for'
                 ' uint32: %r' % (
-                    mv.sum(), df[mask.any(axis=1)],
+                    mv.sum(),
+                    df[mask.any(axis=1)],
                 ),
                 stacklevel=3,  # one extra frame for `expect_element`
             )
@@ -146,13 +147,10 @@ class BcolzDailyBarWriter(object):
 
         if start_session != end_session:
             if not calendar.is_session(start_session):
-                raise ValueError(
-                    "Start session %s is invalid!" % start_session
-                )
+                raise ValueError("Start session %s is invalid!" %
+                                 start_session)
             if not calendar.is_session(end_session):
-                raise ValueError(
-                    "End session %s is invalid!" % end_session
-                )
+                raise ValueError("End session %s is invalid!" % end_session)
 
         self._start_session = start_session
         self._end_session = end_session
@@ -251,15 +249,15 @@ class BcolzDailyBarWriter(object):
         # Maps column name -> output carray.
         columns = {
             k: carray(array([], dtype=uint32_dtype))
-            for k in US_EQUITY_PRICING_BCOLZ_COLUMNS
+            for k in ALL_EQUITY_PRICING_BCOLZ_COLUMNS
         }
 
         earliest_date = None
-        sessions = self._calendar.sessions_in_range(
-            self._start_session, self._end_session
-        )
+        sessions = self._calendar.sessions_in_range(self._start_session,
+                                                    self._end_session)
 
         if assets is not None:
+
             @apply
             def iterator(iterator=iterator, assets=set(assets)):
                 for asset_id, table in iterator:
@@ -274,8 +272,7 @@ class BcolzDailyBarWriter(object):
                     # We know what the content of this column is, so don't
                     # bother reading it.
                     columns['id'].append(
-                        full((nrows,), asset_id, dtype='uint32'),
-                    )
+                        full((nrows, ), asset_id, dtype='uint32'), )
                     continue
 
                 columns[column_name].append(table[column_name])
@@ -303,9 +300,8 @@ class BcolzDailyBarWriter(object):
             asset_first_day = table_day_to_session(table['day'][0])
             asset_last_day = table_day_to_session(table['day'][-1])
 
-            asset_sessions = sessions[
-                sessions.slice_indexer(asset_first_day, asset_last_day)
-            ]
+            asset_sessions = sessions[sessions.slice_indexer(
+                asset_first_day, asset_last_day)]
             assert len(table) == len(asset_sessions), (
                 'Got {} rows for daily bars table with first day={}, last '
                 'day={}, expected {} rows.\n'
@@ -320,15 +316,13 @@ class BcolzDailyBarWriter(object):
                             np.array(table['day']),
                             unit='s',
                             utc=True,
-                        )
-                    ).tolist(),
+                        )).tolist(),
                     to_datetime(
                         np.array(table['day']),
                         unit='s',
                         utc=True,
                     ).difference(asset_sessions).tolist(),
-                )
-            )
+                ))
 
             # Calculate the number of trading days between the first date
             # in the stored data and the first date of **this** asset. This
@@ -339,16 +333,15 @@ class BcolzDailyBarWriter(object):
         full_table = ctable(
             columns=[
                 columns[colname]
-                for colname in US_EQUITY_PRICING_BCOLZ_COLUMNS
+                for colname in ALL_EQUITY_PRICING_BCOLZ_COLUMNS
             ],
-            names=US_EQUITY_PRICING_BCOLZ_COLUMNS,
+            names=ALL_EQUITY_PRICING_BCOLZ_COLUMNS,
             rootdir=self._filename,
             mode='w',
         )
 
         full_table.attrs['first_trading_day'] = (
-            earliest_date if earliest_date is not None else iNaT
-        )
+            earliest_date if earliest_date is not None else iNaT)
 
         full_table.attrs['first_row'] = first_row
         full_table.attrs['last_row'] = last_row
@@ -371,6 +364,10 @@ class BcolzDailyBarWriter(object):
         check_uint32_safe(dates.max().view(np.int64), 'day')
         processed['day'] = dates.astype('uint32')
         processed['volume'] = raw_data.volume.astype('uint32')
+        # 附加列同样转换为uint32
+        for c in ADJUST_FACTOR.keys():
+            processed[c] = (raw_data.loc[:, c] *
+                            ADJUST_FACTOR.get(c, 1)).astype('uint32')
         return ctable.fromdataframe(processed)
 
 
@@ -445,7 +442,6 @@ class BcolzDailyBarReader(SessionBarReader):
     --------
     zipline.data.bcolz_daily_bars.BcolzDailyBarWriter
     """
-
     def __init__(self, table, read_all_threshold=3000):
         self._maybe_table_rootdir = table
         # Cache of fully read np.array for the carrays in the daily bar table.
@@ -485,36 +481,31 @@ class BcolzDailyBarReader(SessionBarReader):
         return {
             int(asset_id): start_index
             for asset_id, start_index in iteritems(
-                self._table.attrs['first_row'],
-            )
+                self._table.attrs['first_row'], )
         }
 
     @lazyval
     def _last_rows(self):
         return {
             int(asset_id): end_index
-            for asset_id, end_index in iteritems(
-                self._table.attrs['last_row'],
-            )
+            for asset_id, end_index in iteritems(self._table.attrs['last_row'],
+                                                 )
         }
 
     @lazyval
     def _calendar_offsets(self):
         return {
             int(id_): offset
-            for id_, offset in iteritems(
-                self._table.attrs['calendar_offset'],
-            )
+            for id_, offset in iteritems(self._table.attrs['calendar_offset'],
+                                         )
         }
 
     @lazyval
     def first_trading_day(self):
         try:
-            return Timestamp(
-                self._table.attrs['first_trading_day'],
-                unit='s',
-                tz='UTC'
-            )
+            return Timestamp(self._table.attrs['first_trading_day'],
+                             unit='s',
+                             tz='UTC')
         except KeyError:
             return None
 
@@ -589,16 +580,17 @@ class BcolzDailyBarReader(SessionBarReader):
             last_rows,
             offsets,
             read_all,
-        )        
+        )
         # √ 恢复原始单位
         for i, col in enumerate(list(columns)):
             if col == 'volume':
                 adj = 100
             else:
-                adj = 1
+                adj = 1 / ADJUST_FACTOR.get(col, 1)
             raw_arrays[i] = raw_arrays[i] * adj
             # √ 为0值 无效值
-            raw_arrays[i] = np.where(raw_arrays[i] == 0., np.nan, raw_arrays[i])
+            raw_arrays[i] = np.where(raw_arrays[i] == 0., np.nan,
+                                     raw_arrays[i])
         return raw_arrays
 
     def _load_raw_arrays_date_to_index(self, date):
@@ -678,13 +670,11 @@ class BcolzDailyBarReader(SessionBarReader):
         offset = day_loc - self._calendar_offsets[sid]
         if offset < 0:
             raise NoDataBeforeDate(
-                "No data on or before day={0} for sid={1}".format(
-                    day, sid))
+                "No data on or before day={0} for sid={1}".format(day, sid))
         ix = self._first_rows[sid] + offset
         if ix > self._last_rows[sid]:
             raise NoDataAfterDate(
-                "No data on or after day={0} for sid={1}".format(
-                    day, sid))
+                "No data on or after day={0} for sid={1}".format(day, sid))
         return ix
 
     def get_value(self, sid, dt, field):
@@ -709,10 +699,14 @@ class BcolzDailyBarReader(SessionBarReader):
         """
         ix = self.sid_day_index(sid, dt)
         price = self._spot_col(field)[ix]
-        if field != 'volume':
+        if field == 'volume':
+            # # 恢复成交量(损失精度)
+            return price * 100            
+        elif field in OHLC:
             if price == 0:
                 return nan
             else:
                 return price * 0.001
-        else:
-            return price
+        elif field in ADJUST_FACTOR.keys():
+            return price / ADJUST_FACTOR[field]
+        raise ValueError(f"表没有列：'{field}'")

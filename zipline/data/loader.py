@@ -19,28 +19,28 @@ import pandas as pd
 from six.moves.urllib_error import HTTPError
 from trading_calendars import get_calendar
 
-from .benchmarks import get_benchmark_returns
-from .benchmarks_cn import get_cn_benchmark_returns
-from . import treasuries, treasuries_can, treasuries_cn
-from ..utils.paths import (
-    cache_root,
-    data_root,
-)
+# from .benchmarks import get_benchmark_returns
+# from .benchmarks_cn import get_cn_benchmark_returns
+# from . import treasuries, treasuries_can, treasuries_cn
+# from ..utils.paths import (
+#     cache_root,
+#     data_root,
+# )
 
 
 logger = logbook.Logger('Loader')
 
 # Mapping from index symbol to appropriate bond data
-INDEX_MAPPING = {
-    '000001':
-    (treasuries_cn, 'treasury_cn.csv', ''),
-    'SPY':
-    (treasuries, 'treasury_curves.csv', 'www.federalreserve.gov'),
-    '^GSPTSE':
-    (treasuries_can, 'treasury_curves_can.csv', 'bankofcanada.ca'),
-    '^FTSE':  # use US treasuries until UK bonds implemented
-    (treasuries, 'treasury_curves.csv', 'www.federalreserve.gov'),
-}
+# INDEX_MAPPING = {
+#     '000001':
+#     (treasuries_cn, 'treasury_cn.csv', ''),
+#     'SPY':
+#     (treasuries, 'treasury_curves.csv', 'www.federalreserve.gov'),
+#     '^GSPTSE':
+#     (treasuries_can, 'treasury_curves_can.csv', 'bankofcanada.ca'),
+#     '^FTSE':  # use US treasuries until UK bonds implemented
+#     (treasuries, 'treasury_curves.csv', 'www.federalreserve.gov'),
+# }
 
 ONE_HOUR = pd.Timedelta(hours=1)
 

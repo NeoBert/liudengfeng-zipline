@@ -17,6 +17,7 @@
 """
 import os
 import sys
+import time
 import warnings
 from shutil import rmtree
 
@@ -24,28 +25,18 @@ import bcolz
 import logbook
 from logbook import Logger
 
-from cnswd.sql.data_browse import (FinancialIndicatorRanking,
-                                   PerformanceForecaste, PeriodlyBalanceSheet,
-                                   PeriodlyCashFlowStatement,
-                                   PeriodlyFinancialIndicator,
-                                   PeriodlyIncomeStatement,
-                                   QuarterlyCashFlowStatement,
-                                   QuarterlyFinancialIndicator,
-                                   QuarterlyIncomeStatement,
-                                   TtmCashFlowStatement, TtmIncomeStatement)
-
 from ..common import AD_FIELD_NAME, SID_FIELD_NAME, TS_FIELD_NAME
 from .base import bcolz_table_path
+from .localdata import (get_dividend_data,
+                        get_financial_indicator_ranking_data, get_margin_data,
+                        get_p_balance_data, get_p_cash_flow_data,
+                        get_p_income_data, get_performance_forecaste_data,
+                        get_periodly_financial_indicator_data,
+                        get_q_cash_flow_data, get_q_income_data,
+                        get_quarterly_financial_indicator_data,
+                        get_ttm_cash_flow_data, get_ttm_income_data)
 from .preprocess import (_normalize_ad_ts_sid, get_investment_rating,
-                         get_static_info_table)
-from .sql import (get_dividend_data, get_equity_data,
-                  get_financial_indicator_ranking_data, get_margin_data,
-                  get_p_balance_data, get_p_cash_flow_data, get_p_income_data,
-                  get_performance_forecaste_data,
-                  get_periodly_financial_indicator_data, get_q_cash_flow_data,
-                  get_q_income_data, get_quarterly_financial_indicator_data,
-                  get_short_name_changes, get_tdata, get_ttm_cash_flow_data,
-                  get_ttm_income_data)
+                         get_short_name_history, get_static_info_table)
 from .yahoo import YAHOO_ITEMS, read_item_data
 
 # 设置显示日志
@@ -54,30 +45,31 @@ logbook.StreamHandler(sys.stdout).push_application()
 
 TAB_MAPS = {
     # 定期财务报告
-    PeriodlyBalanceSheet.__tablename__: get_p_balance_data,
-    PeriodlyIncomeStatement.__tablename__: get_p_income_data,
-    PeriodlyCashFlowStatement.__tablename__: get_p_cash_flow_data,
+    'periodly_balance_sheets': get_p_balance_data,
+    'periodly_income_statements': get_p_income_data,
+    'periodly_cash_flow_statements': get_p_cash_flow_data,
     # TTM财务报告
-    TtmIncomeStatement.__tablename__: get_ttm_income_data,
-    TtmCashFlowStatement.__tablename__: get_ttm_cash_flow_data,
+    'ttm_income_statements': get_ttm_income_data,
+    'ttm_cash_flow_statements': get_ttm_cash_flow_data,
     # 报告期财务指标
-    PeriodlyFinancialIndicator.__tablename__: get_periodly_financial_indicator_data,
+    'periodly_financial_indicators': get_periodly_financial_indicator_data,
     # 季度财务指标
-    QuarterlyFinancialIndicator.__tablename__: get_quarterly_financial_indicator_data,
+    'quarterly_financial_indicators': get_quarterly_financial_indicator_data,
     # 财务指标行业排名
-    FinancialIndicatorRanking.__tablename__: get_financial_indicator_ranking_data,
+    'financial_indicator_rankings': get_financial_indicator_ranking_data,
     # 上市公司业绩预告
-    PerformanceForecaste.__tablename__: get_performance_forecaste_data,
+    'performance_forecastes': get_performance_forecaste_data,
     # 季度利润表
-    QuarterlyIncomeStatement.__tablename__: get_q_income_data,
+    'quarterly_income_statements': get_q_income_data,
     # 季度现金流量表
-    QuarterlyCashFlowStatement.__tablename__: get_q_cash_flow_data,
+    'quarterly_cash_flow_statements': get_q_cash_flow_data,
 }
 
 
 def write_dataframe(df, table_name, attr_dict=None):
     """以bcolz格式写入数据框"""
     log = Logger(table_name)
+    log.info('......')
     # 转换为bcolz格式并存储
     rootdir = bcolz_table_path(table_name)
     if os.path.exists(rootdir):
@@ -110,17 +102,14 @@ def write_dynamic_data_to_bcolz():
         1. 交易数据(含融资融券)
         2. 现金股利
         3. 股票简称变动历史
+        4. 投资评级
     """
-    # df_t = get_tdata()
-    # write_dataframe(df_t, 'tdata')
-    df_e = get_equity_data()
-    write_dataframe(df_e, 'equity')
     df_m = get_margin_data()
     write_dataframe(df_m, 'margin')
     df_dd = get_dividend_data()
     write_dataframe(df_dd, 'dividend')
-    df_sn = get_short_name_changes()
-    write_dataframe(df_sn, 'shortname')
+    df_sn, sn_maps = get_short_name_history()
+    write_dataframe(df_sn, 'shortname', sn_maps)
     df_ir, attr_dic = get_investment_rating()
     write_dataframe(df_ir, 'investment_rating', attr_dic)
 
@@ -153,7 +142,10 @@ def write_yahoo():
 
 def write_sql_data_to_bcolz():
     """写入Fundamentals数据"""
+    print('准备写入Fundamentals数据......')
+    s = time.time()
     write_static_info_to_bcolz()
     write_dynamic_data_to_bcolz()
     write_financial_data_to_bcolz()
     write_yahoo()
+    print(f"用时{time.time() - s:.2f}秒")

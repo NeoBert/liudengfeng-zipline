@@ -1,6 +1,5 @@
 import pandas as pd
-from cnswd.sql.base import session_scope
-from cnswd.sql.szsh import IndexDaily
+from cnswd.reader import daily_history
 
 
 def get_cn_benchmark_returns(symbol='000300'):
@@ -14,17 +13,7 @@ def get_cn_benchmark_returns(symbol='000300'):
     Returns:
         Series -- 基准收益率
     """
-
-    with session_scope('szsh') as sess:
-        query = sess.query(
-            IndexDaily.日期, 
-            IndexDaily.涨跌幅
-        ).filter(
-            IndexDaily.指数代码 == symbol
-        )
-        df = pd.DataFrame.from_records(query.all())
-        s = pd.Series(
-            data=df[1].values / 100,
-            index=pd.DatetimeIndex(df[0].values)
-        )
-        return s.sort_index().tz_localize('UTC').dropna()
+    data = daily_history(symbol, None, None, True)
+    s = pd.Series(data['涨跌幅'].values / 100.0,
+                  index=pd.DatetimeIndex(data['日期'].values))
+    return s.sort_index().tz_localize('UTC').dropna()

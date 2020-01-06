@@ -17,6 +17,17 @@ class EquityPricing(DataSet):
     low = Column(float64_dtype)
     close = Column(float64_dtype)
     volume = Column(float64_dtype)
+    amount = Column(float64_dtype)
+    market_cap = Column(float64_dtype)
+    total_cap = Column(float64_dtype)
+    shares_outstanding = Column(float64_dtype)
+    total_shares = Column(float64_dtype)
+    turnover = Column(float64_dtype)
+    # 后复权股价。以首次交易价格为基准，涨跌幅累计计算
+    b_open = Column(float64_dtype)
+    b_high = Column(float64_dtype)
+    b_low = Column(float64_dtype)
+    b_close = Column(float64_dtype)
 
 
 # # 更改为`CN_EQUITIES`

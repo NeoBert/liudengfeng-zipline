@@ -64,7 +64,7 @@ from zipline.utils.pandas_utils import (
     timedelta_to_integral_minutes,
 )
 from zipline.errors import HistoryWindowStartsBeforeData
-
+from .bundles.adjusts import ADJUST_FACTOR
 
 log = Logger('DataPortal')
 
@@ -84,10 +84,10 @@ OHLCV_FIELDS = frozenset([
     "open", "high", "low", "close", "volume"
 ])
 
+
 OHLCVP_FIELDS = frozenset([
     "open", "high", "low", "close", "volume", "price"
-])
-
+] + list(ADJUST_FACTOR.keys()))
 HISTORY_FREQUENCIES = set(["1m", "1d"])
 
 DEFAULT_MINUTE_HISTORY_PREFETCH = 1560
