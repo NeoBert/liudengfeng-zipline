@@ -23,8 +23,11 @@ NUM_MAPS = {
     4: '四级',
 }
 
+TO_DORP_PAT_0 = re.compile(r'^[（]?[一二三四五六七八九][）]?([(（]\d[)）])?[、]?')
+TO_DORP_PAT_1 = re.compile(r'^[1-9][、]?')
 TO_REPL_PAT = re.compile(r'[、：（）()-]')  # 不符合列名称命名规则，替换为`_`
-TO_DORP_PAT = re.compile(r'^_{1,}|^[1-9]|^[一二三四五六七八九][、]?|[^_]_{2,}\w|_{1,}$')
+TO_DORP_PAT = re.compile(r'^_{1,}|[^_]_{2,}\w|_{1,}$')
+
 
 # region 辅助函数
 
@@ -41,7 +44,10 @@ def _normalized_col_name(x):
         加_公允价值变动净收益               ->  加_公允价值变动净收益
         其中_对联营企业和合营企业的投资收益  ->  其中_对联营企业和合营企业的投资收益
     """
-    # 首先替代
+    # 去除前导序号
+    x = re.sub(TO_DORP_PAT_0, '', x)
+    x = re.sub(TO_DORP_PAT_1, '', x)
+    # 替代
     x = re.sub(TO_REPL_PAT, '_', x)
     # 然后除去前缀及尾缀`_`
     x = re.sub(TO_DORP_PAT, '', x)
