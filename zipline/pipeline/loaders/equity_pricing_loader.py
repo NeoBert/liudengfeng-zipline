@@ -82,6 +82,12 @@ class EquityPricingLoader(implements(PipelineLoader)):
         shifted_dates = shift_dates(sessions, dates[0], dates[-1], shift=1)
 
         colnames = [c.name for c in columns]
+        # raw_arrays = self.raw_price_reader.load_raw_arrays(
+        #     colnames,
+        #     shifted_dates[0],
+        #     shifted_dates[-1],
+        #     sids,
+        # )
         # √ 调整与非调整列名称
         adj_colnames = [col for col in colnames if col in OHLCV]
         non_adj_colnames = [col for col in colnames if col not in OHLCV]
@@ -101,12 +107,6 @@ class EquityPricingLoader(implements(PipelineLoader)):
             shifted_dates[-1],
             sids,
         )        
-        # raw_arrays = self.raw_price_reader.load_raw_arrays(
-        #     colnames,
-        #     shifted_dates[0],
-        #     shifted_dates[-1],
-        #     sids,
-        # )
         # Currency convert raw_arrays in place if necessary. We use shifted
         # dates to load currency conversion rates to make them line up with
         # dates used to fetch prices.
@@ -116,18 +116,20 @@ class EquityPricingLoader(implements(PipelineLoader)):
         #     shifted_dates,
         #     sids,
         # )
-        self._inplace_currency_convert(
-            columns,
-            adj_raw_arrays,
-            shifted_dates,
-            sids,
-        )
-        self._inplace_currency_convert(
-            columns,
-            non_adj_raw_arrays,
-            shifted_dates,
-            sids,
-        )
+        if len(adj_colnames):
+            self._inplace_currency_convert(
+                adj_columns,
+                adj_raw_arrays,
+                shifted_dates,
+                sids,
+            )
+        if len(non_adj_colnames):
+            self._inplace_currency_convert(
+                non_adj_columns,
+                non_adj_raw_arrays,
+                shifted_dates,
+                sids,
+            )
 
         adjustments = self.adjustments_reader.load_pricing_adjustments(
             adj_colnames,

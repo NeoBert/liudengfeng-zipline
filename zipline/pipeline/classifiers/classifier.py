@@ -50,7 +50,7 @@ string_classifiers_only = restrict_to_dtype(
     )
 )
 
-
+# TODO：为空及计数修改?
 class Classifier(RestrictedDTypeMixin, ComputableTerm):
     """
     A Pipeline expression computing a categorical output.

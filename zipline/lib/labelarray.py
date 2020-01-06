@@ -172,12 +172,11 @@ class LabelArray(ndarray):
                     missing_value=missing_value,
                     sort=sort,
                 ))
-        # 将None转换为字符类
-        missing_value = 'None'
+        # 将None转换为字符
+        missing_value = 'None' if missing_value is None else missing_value
         categories[categories == None] = 'None'
         reverse_categories['None'] = reverse_categories.pop(None)
         categories.setflags(write=False)
-
 
         return cls.from_codes_and_metadata(
             codes=codes.reshape(values.shape),
@@ -433,15 +432,13 @@ class LabelArray(ndarray):
         """
         Like isnan, but checks for locations where we store missing values.
         """
-        return (
-            self.as_int_array() == self.reverse_categories[self.missing_value])
+        return (self.as_int_array() == self.reverse_categories[self.missing_value])
 
     def not_missing(self):
         """
         Like ~isnan, but checks for locations where we store missing values.
         """
-        return (self.as_int_array() !=
-                self.reverse_categories[self.missing_value])
+        return (self.as_int_array() != self.reverse_categories[self.missing_value])
 
     def _equality_check(op):
         """
