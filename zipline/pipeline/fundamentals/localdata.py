@@ -478,7 +478,7 @@ def get_quarterly_financial_indicator_data(only_A=True):
 
 # region 业绩预告
 
-
+# TODO:需要结合公告日期与报告年度进行处理，否则只会提取此前的数据，不能真实反映当前期间的预告
 def get_performance_forecaste_data(only_A=True):
     """上市公司业绩预告"""
     level = '4.1'
@@ -489,13 +489,12 @@ def get_performance_forecaste_data(only_A=True):
     for col in to_drop:
         if col in df.columns:
             del df[col]
+    # 业绩预告只提供`asof_date`
     df.rename(columns={
         "股票代码": "sid",
-        "报告年度": "asof_date",
-        "公告日期": "timestamp"
+        "公告日期": "asof_date",
     },
               inplace=True)
-    df['sid'] = df['sid'].map(lambda x: int(x))
     return df
 
 
@@ -536,14 +535,12 @@ def get_investment_rating_data(only_A=True):
             del df[col]
     df.rename(columns={
         "股票代码": "sid",
-        "发布日期": "timestamp",
+        "发布日期": "asof_date",
         "投资评级（经调整）": "投资评级",
         "目标价格（下限）": "价格下限",
         "目标价格（上限）": "价格上限",
     },
               inplace=True)
-    df['asof_date'] = df['timestamp']
-    df['sid'] = df['sid'].map(lambda x: int(x))
     df.dropna(subset=['投资评级'], inplace=True)
     return df
 

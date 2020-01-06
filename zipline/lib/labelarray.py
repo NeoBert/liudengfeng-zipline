@@ -37,17 +37,15 @@ from ._factorize import (
 
 def compare_arrays(left, right):
     "Eq check with a short-circuit for identical objects."
-    return (
-        left is right
-        or ((left.shape == right.shape) and (left == right).all())
-    )
+    return (left is right
+            or ((left.shape == right.shape) and (left == right).all()))
 
 
 def _make_unsupported_method(name):
     def method(*args, **kwargs):
         raise NotImplementedError(
-            "Method %s is not supported on LabelArrays." % name
-        )
+            "Method %s is not supported on LabelArrays." % name)
+
     method.__name__ = name
     method.__doc__ = "Unsupported LabelArray Method: %s" % name
     return method
@@ -59,10 +57,9 @@ class MissingValueMismatch(ValueError):
     mismatched missing_values.
     """
     def __init__(self, left, right):
-        super(MissingValueMismatch, self).__init__(
-            "LabelArray missing_values don't match:"
-            " left={}, right={}".format(left, right)
-        )
+        super(MissingValueMismatch,
+              self).__init__("LabelArray missing_values don't match:"
+                             " left={}, right={}".format(left, right))
 
 
 class CategoryMismatch(ValueError):
@@ -71,18 +68,17 @@ class CategoryMismatch(ValueError):
     mismatched category arrays.
     """
     def __init__(self, left, right):
-        (mismatches,) = np.where(left != right)
+        (mismatches, ) = np.where(left != right)
         assert len(mismatches), "Not actually a mismatch!"
-        super(CategoryMismatch, self).__init__(
-            "LabelArray categories don't match:\n"
-            "Mismatched Indices: {mismatches}\n"
-            "Left: {left}\n"
-            "Right: {right}".format(
-                mismatches=mismatches,
-                left=left[mismatches],
-                right=right[mismatches],
-            )
-        )
+        super(CategoryMismatch,
+              self).__init__("LabelArray categories don't match:\n"
+                             "Mismatched Indices: {mismatches}\n"
+                             "Left: {left}\n"
+                             "Right: {right}".format(
+                                 mismatches=mismatches,
+                                 left=left[mismatches],
+                                 right=right[mismatches],
+                             ))
 
 
 _NotPassed = sentinel('_NotPassed')
@@ -154,11 +150,7 @@ class LabelArray(ndarray):
         categories=optional(list),
     )
     @expect_kinds(values=("O", "S", "U"))
-    def __new__(cls,
-                values,
-                missing_value,
-                categories=None,
-                sort=True):
+    def __new__(cls, values, missing_value, categories=None, sort=True):
 
         # Numpy's fixed-width string types aren't very efficient. Working with
         # object arrays is faster than bytes or unicode arrays in almost all
@@ -179,9 +171,13 @@ class LabelArray(ndarray):
                     categories=categories,
                     missing_value=missing_value,
                     sort=sort,
-                )
-            )
+                ))
+        # 将None转换为字符类
+        missing_value = 'None'
+        categories[categories == None] = 'None'
+        reverse_categories['None'] = reverse_categories.pop(None)
         categories.setflags(write=False)
+
 
         return cls.from_codes_and_metadata(
             codes=codes.reshape(values.shape),
@@ -191,10 +187,7 @@ class LabelArray(ndarray):
         )
 
     @classmethod
-    def from_codes_and_metadata(cls,
-                                codes,
-                                categories,
-                                reverse_categories,
+    def from_codes_and_metadata(cls, codes, categories, reverse_categories,
                                 missing_value):
         """
         Rehydrate a LabelArray from the codes and metadata.
@@ -291,8 +284,7 @@ class LabelArray(ndarray):
         """
         if obj is None:
             raise TypeError(
-                "Direct construction of LabelArrays is not supported."
-            )
+                "Direct construction of LabelArrays is not supported.")
 
         # See docstring for an explanation of when these will or will not be
         # set.
@@ -343,8 +335,7 @@ class LabelArray(ndarray):
         """
         if len(self.shape) != 2:
             raise ValueError(
-                "Can't convert a non-2D LabelArray into a DataFrame."
-            )
+                "Can't convert a non-2D LabelArray into a DataFrame.")
 
         expected_shape = (len(index), len(columns))
         if expected_shape != self.shape:
@@ -354,8 +345,7 @@ class LabelArray(ndarray):
                 "that shape should be {expected}.".format(
                     actual=self.shape,
                     expected=expected_shape,
-                )
-            )
+                ))
 
         return pd.Series(
             index=pd.MultiIndex.from_product([index, columns]),
@@ -375,8 +365,8 @@ class LabelArray(ndarray):
             value_categories = value.categories
             if compare_arrays(self_categories, value_categories):
                 return super(LabelArray, self).__setitem__(indexer, value)
-            elif (self.missing_value == value.missing_value and
-                  set(value.categories) <= set(self.categories)):
+            elif (self.missing_value == value.missing_value
+                  and set(value.categories) <= set(self.categories)):
                 rhs = LabelArray.from_codes_and_metadata(
                     *factorize_strings_known_categories(
                         value.as_string_array().ravel(),
@@ -384,8 +374,7 @@ class LabelArray(ndarray):
                         self.missing_value,
                         False,
                     ),
-                    missing_value=self.missing_value
-                ).reshape(value.shape)
+                    missing_value=self.missing_value).reshape(value.shape)
                 super(LabelArray, self).__setitem__(indexer, rhs)
             else:
                 raise CategoryMismatch(self_categories, value_categories)
@@ -393,9 +382,7 @@ class LabelArray(ndarray):
             raise NotImplementedError(
                 "Setting into a LabelArray with a value of "
                 "type {type} is not yet supported.".format(
-                    type=type(value).__name__,
-                ),
-            )
+                    type=type(value).__name__, ), )
 
     def set_scalar(self, indexer, value):
         """
@@ -439,8 +426,7 @@ class LabelArray(ndarray):
         # Result is a scalar value, which will be an instance of np.void.
         # Map it back to one of our category entries.
         index = result.view(
-            unsigned_int_dtype_with_size_in_bytes(self.itemsize),
-        )
+            unsigned_int_dtype_with_size_in_bytes(self.itemsize), )
         return self.categories[index]
 
     def is_missing(self):
@@ -448,16 +434,14 @@ class LabelArray(ndarray):
         Like isnan, but checks for locations where we store missing values.
         """
         return (
-            self.as_int_array() == self.reverse_categories[self.missing_value]
-        )
+            self.as_int_array() == self.reverse_categories[self.missing_value])
 
     def not_missing(self):
         """
         Like ~isnan, but checks for locations where we store missing values.
         """
-        return (
-            self.as_int_array() != self.reverse_categories[self.missing_value]
-        )
+        return (self.as_int_array() !=
+                self.reverse_categories[self.missing_value])
 
     def _equality_check(op):
         """
@@ -477,11 +461,9 @@ class LabelArray(ndarray):
                 if not compare_arrays(self_categories, other_categories):
                     raise CategoryMismatch(self_categories, other_categories)
 
-                return (
-                    op(self.as_int_array(), other.as_int_array())
-                    & self.not_missing()
-                    & other.not_missing()
-                )
+                return (op(self.as_int_array(), other.as_int_array())
+                        & self.not_missing()
+                        & other.not_missing())
 
             elif isinstance(other, ndarray):
                 # Compare to ndarrays as though we were an array of strings.
@@ -493,6 +475,7 @@ class LabelArray(ndarray):
                 return op(self.as_int_array(), i) & self.not_missing()
 
             return op(super(LabelArray, self), other)
+
         return method
 
     __eq__ = _equality_check(eq)
@@ -547,52 +530,24 @@ class LabelArray(ndarray):
             ' got: %r' % (
                 type(self).__name__,
                 dtype,
-            ),
-        )
+            ), )
 
     # In general, we support resizing, slicing, and reshaping methods, but not
     # numeric methods.
     SUPPORTED_NDARRAY_METHODS = frozenset([
-        'astype',
-        'base',
-        'compress',
-        'copy',
-        'data',
-        'diagonal',
-        'dtype',
-        'flat',
-        'flatten',
-        'item',
-        'itemset',
-        'itemsize',
-        'nbytes',
-        'ndim',
-        'ravel',
-        'repeat',
-        'reshape',
-        'resize',
-        'setflags',
-        'shape',
-        'size',
-        'squeeze',
-        'strides',
-        'swapaxes',
-        'take',
-        'trace',
-        'transpose',
-        'view'
+        'astype', 'base', 'compress', 'copy', 'data', 'diagonal', 'dtype',
+        'flat', 'flatten', 'item', 'itemset', 'itemsize', 'nbytes', 'ndim',
+        'ravel', 'repeat', 'reshape', 'resize', 'setflags', 'shape', 'size',
+        'squeeze', 'strides', 'swapaxes', 'take', 'trace', 'transpose', 'view'
     ])
-    PUBLIC_NDARRAY_METHODS = frozenset([
-        s for s in dir(ndarray) if not s.startswith('_')
-    ])
+    PUBLIC_NDARRAY_METHODS = frozenset(
+        [s for s in dir(ndarray) if not s.startswith('_')])
 
     # Generate failing wrappers for all unsupported methods.
-    locals().update(
-        {
-            method: _make_unsupported_method(method)
-            for method in PUBLIC_NDARRAY_METHODS - SUPPORTED_NDARRAY_METHODS
-        }
-    )
+    locals().update({
+        method: _make_unsupported_method(method)
+        for method in PUBLIC_NDARRAY_METHODS - SUPPORTED_NDARRAY_METHODS
+    })
 
     def __repr__(self):
         repr_lines = repr(self.as_string_array()).splitlines()
@@ -629,6 +584,7 @@ class LabelArray(ndarray):
         # them on None, which is the only non-str value we ever store in
         # categories.
         if self.missing_value is None:
+
             def f_to_use(x):
                 return False if x is None else f(x)
         else:
@@ -679,26 +635,23 @@ class LabelArray(ndarray):
                         f=f.__name__,
                         type=type(ret).__name__,
                         value=ret,
-                    )
-                )
+                    ))
 
             if ret == missing_value:
                 return _sortable_sentinel
 
             return ret
 
-        new_categories_with_duplicates = (
-            np.vectorize(f_to_use, otypes=[object])(self.categories)
-        )
+        new_categories_with_duplicates = (np.vectorize(f_to_use,
+                                                       otypes=[object])(
+                                                           self.categories))
 
         # If f() maps multiple inputs to the same output, then we can end up
         # with the same code duplicated multiple times. Compress the categories
         # by running them through np.unique, and then use the reverse lookup
         # table to compress codes as well.
         new_categories, bloated_inverse_index = np.unique(
-            new_categories_with_duplicates,
-            return_inverse=True
-        )
+            new_categories_with_duplicates, return_inverse=True)
 
         if new_categories[0] is _sortable_sentinel:
             # f_to_use return _sortable_sentinel for locations that should be
@@ -710,8 +663,7 @@ class LabelArray(ndarray):
         # `reverse_index` will always be a 64 bit integer even if we can hold a
         # smaller array.
         reverse_index = bloated_inverse_index.astype(
-            smallest_uint_that_can_hold(len(new_categories))
-        )
+            smallest_uint_that_can_hold(len(new_categories)))
         new_codes = np.take(reverse_index, self.as_int_array())
 
         return self.from_codes_and_metadata(

@@ -202,6 +202,7 @@ def get_investment_rating():
     """
     maps = {}
     df = get_investment_rating_data()
+    df = _normalize_ad_ts_sid(df)
     cate_cols_pat = ['研究机构简称', '研究员名称', '评级变化', '前一次投资评级']
     for col_pat in cate_cols_pat:
         df, maps = _handle_cate(df, col_pat, maps)

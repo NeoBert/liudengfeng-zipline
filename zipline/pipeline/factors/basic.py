@@ -410,7 +410,7 @@ class ExponentialWeightedMovingAverage(_ExponentialWeightedFactor):
     --------
     :meth:`pandas.DataFrame.ewm`
     """
-
+    
     def compute(self, today, assets, out, data, decay_rate):
         out[:] = average(
             data,

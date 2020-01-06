@@ -9,7 +9,8 @@ from six import PY2
 if PY2:
     from abc import ABCMeta
     from types import DictProxyType
-    import contextlib2
+    from cgi import escape as escape_html
+    import contextlib
     from ctypes import py_object, pythonapi
 
     _new_mappingproxy = pythonapi.PyDictProxy_New
@@ -86,15 +87,16 @@ if PY2:
 
     # Updated version of contextlib.contextmanager that uses our updated
     # `wraps` to preserve function signatures.
-    @wraps(contextlib2.contextmanager)
+    @wraps(contextlib.contextmanager)
     def contextmanager(f):
         @wraps(f)
         def helper(*args, **kwargs):
-            return contextlib2.GeneratorContextManager(f(*args, **kwargs))
+            return contextlib.GeneratorContextManager(f(*args, **kwargs))
         return helper
 
 else:
     from contextlib import contextmanager
+    from html import escape as escape_html
     from types import MappingProxyType as mappingproxy
     from math import ceil
 
@@ -132,12 +134,13 @@ unicode = type(u'')
 
 __all__ = [
     'PY2',
+    'consistent_round',
+    'contextmanager',
+    'escape_html',
     'exc_clear',
     'mappingproxy',
     'unicode',
     'update_wrapper',
     'values_as_list',
     'wraps',
-    'consistent_round',
-    'contextmanager',
 ]

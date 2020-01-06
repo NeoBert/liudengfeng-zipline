@@ -58,7 +58,7 @@ def gen_data_set(table_name):
         # loader=global_loader,
         no_deltas_rule='ignore',
         no_checkpoints_rule='ignore',
-        # odo_kwargs=gen_odo_kwargs(expr),
+        odo_kwargs=gen_odo_kwargs(expr),
         missing_values=fillvalue_for_expr(expr),
         domain=CN_EQUITIES,
     )
