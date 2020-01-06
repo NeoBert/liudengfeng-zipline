@@ -1690,7 +1690,7 @@ class WithUSEquityPricingPipelineEngine(WithAdjustmentReader,
         cls.findata_dir = cls.data_root_dir.makedir('findata')
         super(WithUSEquityPricingPipelineEngine, cls).init_class_fixtures()
 
-        loader = USEquityPricingLoader(
+        loader = USEquityPricingLoader.without_fx(
             cls.bcolz_equity_daily_bar_reader,
             SQLiteAdjustmentReader(cls.adjustments_db_path),
         )

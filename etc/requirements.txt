@@ -106,3 +106,4 @@ cnswd>=3.0.0
 
 # first install zipline then install pyfolio
 # pyfolio>=0.9.0
+iso4217==1.6.20180829

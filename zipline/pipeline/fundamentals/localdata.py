@@ -57,7 +57,7 @@ def _select_only_a(df, only_A, code_col='股票代码'):
     if only_A:
         cond1 = df[code_col].str.startswith('2')
         cond2 = df[code_col].str.startswith('9')
-        df = df.loc[~(cond1 & cond2), :]
+        df = df.loc[~(cond1 | cond2), :]
     return df
 
 
@@ -69,6 +69,13 @@ def _select_only_a(df, only_A, code_col='股票代码'):
 def get_stock_info(only_A=True):
     """股票基础信息"""
     df = stock_list()
+    # 舍弃原行业分类信息
+    to_drops = [
+        '机构名称', '摘牌日期', 'ISIN代码', '英文名称', '英文简称', '经营范围', '公司简介', '公司传真',
+        '公司电子邮件地址', '公司电话', '公司网站', '办公地址', '总经理', '法定代表人', '注册地址', '董秘传真',
+        '董秘电话', '董事会秘书', '董事长', '董秘邮箱', '证券事务代表', '邮编'
+    ]
+    df.drop(columns=to_drops, inplace=True, errors='ignore')
     # 剔除没有上市日期的股票
     cond = df['上市日期'].isnull()
     df = df[~cond]
@@ -76,7 +83,7 @@ def get_stock_info(only_A=True):
     if 'index' in df.columns:
         df.drop(columns='index', inplace=True)
     df['asof_date'] = df['上市日期'] - pd.Timedelta(days=1)
-    df.drop(columns=['上市日期', '摘牌日期'], inplace=True)
+    df.drop(columns=['上市日期'], inplace=True)
     # 注册资本转换 -> 十分位数
     df['注册资本十分位数'] = pd.qcut(np.log(df['注册资本'].values), 10, labels=False)
     df = df.sort_values('股票代码')
@@ -310,10 +317,6 @@ def _periodly_report(only_A, level):
     df = asr_data(level, None, None, None)
     df = _select_only_a(df, only_A, '股票代码')
     df.drop(to_drop, axis=1, inplace=True, errors='ignore')
-    # 名称太长不符合规定?
-    # for col in df.columns:
-    #     if '20190322弃用' in col:
-    #         del df[col]
     df.rename(columns={
         "股票代码": "sid",
         "截止日期": "asof_date",

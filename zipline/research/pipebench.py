@@ -78,7 +78,7 @@ def _pipeline_engine_and_calendar_for_bundle(bundle):
     """
     bundle_data = bundles.load(bundle)
 
-    pipeline_loader = EquityPricingLoader(
+    pipeline_loader = EquityPricingLoader.without_fx(
         bundle_data.equity_daily_bar_reader,
         bundle_data.adjustment_reader,
     )

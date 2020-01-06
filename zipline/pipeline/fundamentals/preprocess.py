@@ -82,9 +82,9 @@ def _normalize_ad_ts_sid(df, ndays=0, nhours=8, target_tz='utc'):
     return df
 
 
-def _handle_int_and_bool(df, col_dtypes):
+def _fillna(df, col_dtypes):
     """规范列类型及缺失值"""
-    default_miss = {'int64': -1, 'bool': False}
+    default_miss = {'int64': -1, 'bool': False, 'str': '未知'}
     for col, dtype in col_dtypes.items():
         if df[col].hasnans:
             values = {}
@@ -98,10 +98,11 @@ def _handle_cate(df, col_pat, maps):
     """指定列更改为编码，输出更改后的表对象及类别映射"""
     cols = df.columns[df.columns.str.startswith(col_pat)]
     for col in cols:
+        values = {col: '未知'}
+        df.fillna(values, inplace=True)
         c = df[col].astype('category')
         df[col] = c.cat.codes.astype('int64')
         maps[col] = {k: v for k, v in enumerate(c.cat.categories)}
-        maps[col].update({-1: '未知'})
     return df, maps
 
 
@@ -151,8 +152,6 @@ def supper_sector_code_map(sector_code):
 def get_static_info_table():
     """
     股票静态信息合并表
-
-    注：总行数约4000行，无需将str转换为类别。
     """
     stocks = get_stock_info()
     sw_industry = get_sw_industry()
@@ -184,10 +183,14 @@ def get_static_info_table():
     col_dtypes.update({
         'sector_code': 'int64',
         'super_sector_code': 'int64',
-        'sw_sector': 'int64'
+        'sw_sector': 'int64',
+        '上市地点': 'str',
+        '会计师事务所': 'str',
+        '律师事务所': 'str',
     })
-    df = _handle_int_and_bool(df, col_dtypes)
-
+    industry_cols = {col: 'str' for col in df.columns if '级行业' in col}
+    col_dtypes.update(industry_cols)
+    df = _fillna(df, col_dtypes)
     return df, maps
 
 

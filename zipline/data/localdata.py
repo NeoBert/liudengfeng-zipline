@@ -3,6 +3,8 @@
 本地数据查询及预处理，适用于zipline ingest写入
 
 读取本地数据
+
+注：只选A股股票。注意股票总体在`ingest`及`fundamental`必须保持一致。
 """
 import re
 from functools import lru_cache
@@ -13,7 +15,6 @@ import pandas as pd
 from cnswd.query_utils import query, query_stmt, Ops
 from cnswd.reader import asr_data, calendar, daily_history, stock_list
 from cnswd.utils import data_root, sanitize_dates
-
 
 WY_DAILY_COL_MAPS = {
     '日期': 'date',
@@ -59,6 +60,13 @@ def get_exchange(code):
         return "深交所主板"
     else:
         raise ValueError(f'股票代码：{code}错误')
+
+
+def _select_only_a(df, code_col):
+    cond1 = df[code_col].str.startswith('2')
+    cond2 = df[code_col].str.startswith('9')
+    df = df.loc[~(cond1 | cond2), :]
+    return df
 
 
 def _stock_basic_info():
@@ -117,9 +125,7 @@ def _stock_first_and_last():
         code = re.findall(code_pattern, str(fp))[0]
         # 原始数据中，股票代码中有前缀`'`
         code = f"'{code}"
-        stmt = query_stmt(*[
-            ('股票代码', Ops.eq, code)
-        ])
+        stmt = query_stmt(*[('股票代码', Ops.eq, code)])
         try:
             df = query(fp, stmt)
         except KeyError:
@@ -128,7 +134,7 @@ def _stock_first_and_last():
         df.sort_values('日期', inplace=True)
         return {
             'symbol': df['股票代码'].values[0][1:],
-            'asset_name': df['名称'].values[-1],   # 最新简称
+            'asset_name': df['名称'].values[-1],  # 最新简称
             'first_traded': pd.Timestamp(df['日期'].values[0]),
             'last_traded': pd.Timestamp(df['日期'].values[-1])
         }
@@ -168,8 +174,7 @@ def gen_asset_metadata(only_in=True, only_A=True):
         df = df[df.status != '已经退市']
     del df['status']
     # 剔除非A股部分
-    if only_A:
-        df = df[df.stock_type == 'A股']
+    df = _select_only_a(df, 'symbol')
     del df['stock_type']
     # 对于未退市的结束日期，以最后交易日期代替
     df.loc[df.end_date.isna(), 'end_date'] = df.loc[df.end_date.isna(),
