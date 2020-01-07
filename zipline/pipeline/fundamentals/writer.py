@@ -140,7 +140,7 @@ def write_yahoo():
         write_dataframe(df, item)
 
 
-def write_sql_data_to_bcolz():
+def write_data_to_bcolz():
     """写入Fundamentals数据"""
     print('准备写入Fundamentals数据......')
     s = time.time()

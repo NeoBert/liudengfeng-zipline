@@ -24,9 +24,8 @@ NUM_MAPS = {
 }
 
 TO_DORP_PAT_0 = re.compile(r'^[（]?[一二三四五六七八九][）]?([(（]\d[)）])?[、]?')
-TO_DORP_PAT_1 = re.compile(r'^[1-9][、]?')
-TO_REPL_PAT = re.compile(r'[、：（）()-]')  # 不符合列名称命名规则，替换为`_`
-TO_DORP_PAT = re.compile(r'^_{1,}|[^_]_{2,}\w|_{1,}$')
+TO_DORP_PAT_1 = re.compile(r'^[1-9]、|[（()][1-9][)）]')
+TO_DORP_PAT_2 = re.compile(r'[、：（）-]|\_|\(|\)')
 
 
 # region 辅助函数
@@ -34,27 +33,13 @@ TO_DORP_PAT = re.compile(r'^_{1,}|[^_]_{2,}\w|_{1,}$')
 
 def _normalized_col_name(x):
     """规范列财务报告项目在`pipeline`中的列名称
-    注：
-        去除以大写数字开头的部分
-    更改示例：
-        四2_其他原因对现金的影响      ->  其他原因对现金的影响
-        五_现金及现金等价物净增加额    ->  现金及现金等价物净增加额
-    不变示例
-        现金及现金等价物净增加额2           ->  现金及现金等价物净增加额2
-        加_公允价值变动净收益               ->  加_公允价值变动净收益
-        其中_对联营企业和合营企业的投资收益  ->  其中_对联营企业和合营企业的投资收益
+    
+    去除列名称中的前导数字，中间符号，保留文字及尾部数字
     """
     # 去除前导序号
     x = re.sub(TO_DORP_PAT_0, '', x)
     x = re.sub(TO_DORP_PAT_1, '', x)
-    # 替代
-    x = re.sub(TO_REPL_PAT, '_', x)
-    # 然后除去前缀及尾缀`_`
-    x = re.sub(TO_DORP_PAT, '', x)
-    if x.startswith('_'):
-        x = x[1:]
-    if x.endswith('_'):
-        x = x[:-1]
+    x = re.sub(TO_DORP_PAT_2, '', x)
     return x
 
 
@@ -77,9 +62,28 @@ def get_stock_info(only_A=True):
     df = stock_list()
     # 舍弃原行业分类信息
     to_drops = [
-        '机构名称', '摘牌日期', 'ISIN代码', '英文名称', '英文简称', '经营范围', '公司简介', '公司传真',
-        '公司电子邮件地址', '公司电话', '公司网站', '办公地址', '总经理', '法定代表人', '注册地址', '董秘传真',
-        '董秘电话', '董事会秘书', '董事长', '董秘邮箱', '证券事务代表', '邮编',
+        '机构名称',
+        '摘牌日期',
+        'ISIN代码',
+        '英文名称',
+        '英文简称',
+        '经营范围',
+        '公司简介',
+        '公司传真',
+        '公司电子邮件地址',
+        '公司电话',
+        '公司网站',
+        '办公地址',
+        '总经理',
+        '法定代表人',
+        '注册地址',
+        '董秘传真',
+        '董秘电话',
+        '董事会秘书',
+        '董事长',
+        '董秘邮箱',
+        '证券事务代表',
+        '邮编',
     ]
     df.drop(columns=to_drops, inplace=True, errors='ignore')
     # 剔除没有上市日期的股票
@@ -323,6 +327,8 @@ def _periodly_report(only_A, level):
     df = asr_data(level, None, None, None)
     df = _select_only_a(df, only_A, '股票代码')
     df.drop(to_drop, axis=1, inplace=True, errors='ignore')
+    # 规范列名称
+    df.columns = df.columns.map(_normalized_col_name)
     df.rename(columns={
         "股票代码": "sid",
         "截止日期": "asof_date",
@@ -331,8 +337,6 @@ def _periodly_report(only_A, level):
               inplace=True)
     # 修复截止日期
     _fix_sid_ad_ts(df)
-    # 规范列名称
-    df.columns = df.columns.map(_normalized_col_name)
     df.sort_values(['sid', 'asof_date'], inplace=True)
     return df
 
@@ -389,6 +393,8 @@ def _get_report(only_A, level, to_drop, col='截止日期'):
         df.rename(columns={col: '截止日期'}, inplace=True)
     # 合并使用 公告日期
     df = df.join(asof_dates.set_index(keys), on=keys)
+    # 规范列名称
+    df.columns = df.columns.map(_normalized_col_name)
     df.rename(columns={
         "股票代码": "sid",
         "截止日期": "asof_date",
@@ -397,8 +403,6 @@ def _get_report(only_A, level, to_drop, col='截止日期'):
               inplace=True)
     # 修复截止日期
     _fix_sid_ad_ts(df)
-    # 规范列名称
-    df.columns = df.columns.map(_normalized_col_name)
     df.sort_values(['sid', 'asof_date'], inplace=True)
     return df
 
@@ -484,6 +488,7 @@ def get_quarterly_financial_indicator_data(only_A=True):
 
 # region 业绩预告
 
+
 # TODO:需要结合公告日期与报告年度进行处理，否则只会提取此前的数据，不能真实反映当前期间的预告
 def get_performance_forecaste_data(only_A=True):
     """上市公司业绩预告"""
@@ -499,8 +504,7 @@ def get_performance_forecaste_data(only_A=True):
     df.rename(columns={
         "股票代码": "sid",
         "公告日期": "asof_date",
-    },
-              inplace=True)
+    }, inplace=True)
     return df
 
 

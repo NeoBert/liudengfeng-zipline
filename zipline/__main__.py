@@ -404,8 +404,8 @@ def fundamental():
     """写入基础数据(Fundamental)
     """
     # 提高`import zipline`速度
-    from zipline.pipeline.fundamentals.writer import write_sql_data_to_bcolz  # 新增
-    write_sql_data_to_bcolz()
+    from zipline.pipeline.fundamentals.writer import write_data_to_bcolz  # 新增
+    write_data_to_bcolz()
 
 
 if __name__ == '__main__':

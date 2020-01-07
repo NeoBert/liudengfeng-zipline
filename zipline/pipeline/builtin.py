@@ -142,7 +142,7 @@ class PB(CustomFactor):
     window_length = 1
     window_safe = True
 
-    inputs = (CNEquityPricing.close, Fundamentals.equity.总股本,
+    inputs = (CNEquityPricing.close, CNEquityPricing.total_shares,
               Fundamentals.balance_sheet.所有者权益或股东权益合计)
 
     def compute(self, today, assets, out, c, n, d):
@@ -153,7 +153,7 @@ class PS(CustomFactor):
     """市值与销售总额比率(市销率)"""
     window_length = 1
     window_safe = True
-    inputs = (CNEquityPricing.close, Fundamentals.equity.总股本,
+    inputs = (CNEquityPricing.close, CNEquityPricing.total_shares,
               Fundamentals.profit_statement.其中_营业收入)
 
     def compute(self, today, assets, out, c, n, d):
@@ -327,7 +327,8 @@ def shares_outstanding():
     and the total aggregated shares outstanding figure. This field is updated quarterly and
     it is not adjusted for corporate action events including splits.
     """
-    return Fundamentals.equity.总股本.latest * 10000.0
+    return CNEquityPricing.total_shares.latest
+
 # endregion
 
 # region 辅助类
@@ -392,7 +393,7 @@ def cfo_per_share():
                     Fundamentals.quarterly_free_cash_flow.asof_date],
             is_cum=True)
     d = SimpleMovingAverage(
-        inputs=[Fundamentals.equity.总股本],
+        inputs=[CNEquityPricing.total_shares],
         window_length=244) * 10000.0
     return n / d
 

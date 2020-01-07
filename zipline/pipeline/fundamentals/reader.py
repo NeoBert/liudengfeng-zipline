@@ -263,10 +263,10 @@ class Fundamentals(object):
         """股票静态信息数据集"""
         return gen_data_set(table_name='infoes')
 
-    @classlazyval
-    def equity(self):
-        """股份数据集，总股本、流通股本变动信息"""
-        return gen_data_set(table_name='equity')
+    # @classlazyval
+    # def equity(self):
+    #     """股份数据集，总股本、流通股本变动信息"""
+    #     return gen_data_set(table_name='equity')
 
     @classlazyval
     def margin(self):
