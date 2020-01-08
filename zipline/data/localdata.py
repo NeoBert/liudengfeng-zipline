@@ -105,6 +105,10 @@ def _stock_basic_info():
     }
     df = stock_list()
     df.drop_duplicates('股票代码', inplace=True)
+    # 剔除未上市、未交易的无效股票
+    cond1 = ~ df['上市日期'].isnull()
+    cond2 = df['上市日期'] <= pd.Timestamp('today')
+    df = df.loc[cond1 & cond2, :]
     df = df[col_names.keys()]
     df.rename(columns=col_names, inplace=True)
     # 原始数据无效。确保类型正确
