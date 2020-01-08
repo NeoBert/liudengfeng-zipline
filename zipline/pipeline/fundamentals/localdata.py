@@ -27,7 +27,6 @@ TO_DORP_PAT_0 = re.compile(r'^[（]?[一二三四五六七八九][）]?([(（]\d
 TO_DORP_PAT_1 = re.compile(r'^[1-9]、|[（()][1-9][)）]')
 TO_DORP_PAT_2 = re.compile(r'[、：（）-]|\_|\(|\)')
 
-
 # region 辅助函数
 
 
@@ -375,7 +374,7 @@ def _financial_report_announcement_date():
     return df
 
 
-def _get_report(only_A, level, to_drop, col='截止日期'):
+def _get_report(only_A, level, to_drop, col='截止日期', keys=['股票代码', '截止日期']):
     """
     获取财务报告数据
 
@@ -385,7 +384,6 @@ def _get_report(only_A, level, to_drop, col='截止日期'):
     df = _select_only_a(df, only_A, '股票代码')
     df.drop(to_drop, axis=1, inplace=True, errors='ignore')
     asof_dates = _financial_report_announcement_date()
-    keys = ['股票代码', '截止日期']
     if col != '截止日期':
         # 处理行业排名
         df['报告年度'] = df[col]
@@ -489,7 +487,6 @@ def get_quarterly_financial_indicator_data(only_A=True):
 # region 业绩预告
 
 
-# TODO:需要结合公告日期与报告年度进行处理，否则只会提取此前的数据，不能真实反映当前期间的预告
 def get_performance_forecaste_data(only_A=True):
     """上市公司业绩预告"""
     level = '4.1'
@@ -500,10 +497,19 @@ def get_performance_forecaste_data(only_A=True):
     for col in to_drop:
         if col in df.columns:
             del df[col]
-    # 业绩预告只提供`asof_date`
+    df.rename(columns={"报告年度": "截止日期"}, inplace=True)
+    # 借用财务报告的截至日期
+    asof_dates = _financial_report_announcement_date()
+    asof_dates.pop('公告日期')
+    keys = ['股票代码','截止日期']
+    df = asof_dates.join(df.set_index(keys), on=keys)
+    # 将缺少的公告日期+45天
+    cond = df['公告日期'].isnull()
+    df.loc[cond, '公告日期'] = df.loc[cond, '截止日期'] + pd.Timedelta(days=45)
     df.rename(columns={
         "股票代码": "sid",
-        "公告日期": "asof_date",
+        "截止日期": "asof_date",
+        "公告日期": "timestamp",
     }, inplace=True)
     return df
 
