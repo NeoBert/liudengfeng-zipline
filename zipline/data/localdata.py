@@ -14,7 +14,7 @@ import pandas as pd
 
 from cnswd.query_utils import query, query_stmt, Ops
 from cnswd.reader import asr_data, calendar, daily_history, stock_list, minutely_history
-from cnswd.utils import data_root, sanitize_dates
+from cnswd.utils import sanitize_dates
 
 WY_DAILY_COL_MAPS = {
     '日期': 'date',
@@ -71,7 +71,7 @@ def _select_only_a(df, code_col):
     
     Returns:
         DataFrame -- 筛选出来的a股数据
-    """    
+    """
     cond1 = df[code_col].str.startswith('2')
     cond2 = df[code_col].str.startswith('9')
     df = df.loc[~(cond1 | cond2), :]
@@ -104,11 +104,12 @@ def _stock_basic_info():
         '上市地点': 'exchange'
     }
     df = stock_list()
+    df.drop_duplicates('股票代码', inplace=True)
     df = df[col_names.keys()]
     df.rename(columns=col_names, inplace=True)
     # 原始数据无效。确保类型正确
     df['end_date'] = pd.NaT
-    return df #.iloc[:2, :]  # TT
+    return df  #.iloc[:2, :]  # TT
 
 
 def _stock_first_and_last(code):
@@ -126,20 +127,23 @@ def _stock_first_and_last(code):
     3     000004   1991-01-02  2018-12-21
     4     000005   1991-01-02  2018-12-21   
     """
-    fp = data_root(f'wy_stock/{code}.h5')
-    code = f"'{code}"
-    stmt = query_stmt(*[('股票代码', Ops.eq, code)])
     try:
-        df = query(fp, stmt)
+        df = daily_history(code, None, None)
         return pd.DataFrame(
             {
-                'symbol': df['股票代码'].values[0][1:],
-                'asset_name': df['名称'].values[-1],  # 最新简称
-                'first_traded': pd.Timestamp(df['日期'].values[0], tz='UTC'),
-                'last_traded': pd.Timestamp(df['日期'].values[-1], tz='UTC'),
+                'symbol':
+                df['股票代码'].values[0],
+                'asset_name':
+                df['名称'].values[-1],  # 最新简称
+                'first_traded':
+                pd.Timestamp(df['日期'].values[0], tz='UTC'),
+                # 适应于分钟级别的数据
+                'last_traded':
+                pd.Timestamp(df['日期'].values[-1], tz='UTC') +
+                pd.Timedelta(days=1),
             },
             index=[0])
-    except KeyError:
+    except Exception:
         # 新股无数据
         return pd.DataFrame()
 
@@ -385,11 +389,11 @@ def fetch_single_minutely_equity(stock_code, start, end):
     try:
         ret = df[cond][cols]
         # 可能存在重复
-        ret.drop_duplicates('datetime', keep='last',inplace=True)
+        ret.drop_duplicates('datetime', keep='last', inplace=True)
         ret.set_index('datetime', inplace=True)
         # # 将11：31、15：01 -> 11:30 15:00
-        am = ret.between_time('09:31','11:31')
-        pm = ret.between_time('13:00','15:01')
+        am = ret.between_time('09:31', '11:31')
+        pm = ret.between_time('13:00', '15:01')
         return pd.concat([am, pm]).sort_index()
     except Exception:
         return pd.DataFrame()

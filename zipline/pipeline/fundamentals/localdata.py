@@ -59,6 +59,7 @@ def _select_only_a(df, only_A, code_col='股票代码'):
 def get_stock_info(only_A=True):
     """股票基础信息"""
     df = stock_list()
+    df.drop_duplicates('股票代码', inplace=True)
     # 舍弃原行业分类信息
     to_drops = [
         '机构名称',
