@@ -154,14 +154,14 @@ class PS(CustomFactor):
     window_length = 1
     window_safe = True
     inputs = (CNEquityPricing.close, CNEquityPricing.total_shares,
-              Fundamentals.profit_statement.其中_营业收入)
+              Fundamentals.profit_statement.其中营业收入)
 
     def compute(self, today, assets, out, c, n, d):
         out[:] = c[-1] * n[-1] / d[-1] * 10000.0
 
 
 def ttm_sales():
-    return TTM(inputs=[Fundamentals.profit_statement.其中_营业收入,
+    return TTM(inputs=[Fundamentals.profit_statement.其中营业收入,
                        Fundamentals.profit_statement.asof_date],
                is_cum=True)
 
@@ -447,7 +447,7 @@ def trailing_pb_ratio():
 
 
 def trailing_ps_ratio():
-    ttm_sales = TTM(inputs=[Fundamentals.profit_statement.其中_营业收入,
+    ttm_sales = TTM(inputs=[Fundamentals.profit_statement.其中营业收入,
                             Fundamentals.profit_statement.asof_date],
                     is_cum=True)
 

@@ -14,12 +14,12 @@ import pandas as pd
 from logbook import Logger
 
 from ..localdata import (fetch_single_equity, fetch_single_quity_adjustments,
-                         gen_asset_metadata)
+                         fetch_single_minutely_equity, gen_asset_metadata)
 from . import core as bundles
 from .adjusts import ADJUST_FACTOR
 
 TODAY = pd.Timestamp('today').normalize()
-log = Logger('数据集')
+log = Logger('cnquandl')
 
 OHLCV_COLS = ['open', 'high', 'low', 'close', 'volume']
 
@@ -140,8 +140,7 @@ def gen_symbol_data(symbol_map, sessions, splits, dividends, is_minutely):
 @bundles.register(
     'cndaily',
     calendar_name='XSHG',
-    #   end_session=pd.Timestamp('now', tz='Asia/Shanghai'),
-    minutes_per_day=241)
+    minutes_per_day=242)
 def cndaily_bundle(environ, asset_db_writer, minute_bar_writer,
                    daily_bar_writer, adjustment_writer, calendar,
                    start_session, end_session, cache, show_progress,
@@ -181,14 +180,10 @@ def cndaily_bundle(environ, asset_db_writer, minute_bar_writer,
     )
 
 
-# 不可包含退市或者暂停上市的股票代码
 @bundles.register(
     'cnminutely',
     calendar_name='XSHG',
-    start_session=pd.Timestamp('now', tz='Asia/Shanghai') -
-    pd.Timedelta(days=30),
-    #   end_session=pd.Timestamp('now', tz='Asia/Shanghai'),
-    minutes_per_day=241)
+    minutes_per_day=242)
 def cnminutely_bundle(environ, asset_db_writer, minute_bar_writer,
                       daily_bar_writer, adjustment_writer, calendar,
                       start_session, end_session, cache, show_progress,
@@ -199,7 +194,10 @@ def cnminutely_bundle(environ, asset_db_writer, minute_bar_writer,
     metadata = gen_asset_metadata()
     metadata['sid'] = metadata.symbol.map(_to_sid)
     symbol_map = metadata.symbol
-    sessions = calendar.sessions_in_range(start_session, end_session)
+    # 限定为最近一周的数据
+    end = calendar.actual_last_session
+    start = end - 5 * calendar.day
+    sessions = calendar.sessions_in_range(start, end)
 
     log.info('分钟级别数据集（股票数量：{}）'.format(len(symbol_map)))
 
@@ -210,99 +208,6 @@ def cnminutely_bundle(environ, asset_db_writer, minute_bar_writer,
 
     splits = []
     dividends = []
-    minute_bar_writer.write(
-        gen_symbol_data(symbol_map,
-                        sessions,
-                        splits,
-                        dividends,
-                        is_minutely=True),
-        show_progress=show_progress,
-    )
-
-    adjustment_writer.write(
-        splits=None if len(splits) == 0 else pd.concat(splits,
-                                                       ignore_index=True),
-        dividends=None
-        if len(dividends) == 0 else pd.concat(dividends, ignore_index=True),
-    )
-
-
-# # 测试数据集
-
-# 不可包含退市或者暂停上市的股票代码
-
-
-@bundles.register(
-    'cdtest',
-    calendar_name='XSHG',
-    #   end_session=pd.Timestamp('now', tz='Asia/Shanghai'),
-    minutes_per_day=241)
-def cntdaily_bundle(environ, asset_db_writer, minute_bar_writer,
-                    daily_bar_writer, adjustment_writer, calendar,
-                    start_session, end_session, cache, show_progress,
-                    output_dir):
-    """Build a zipline test data bundle from the cnstock dataset.
-    """
-    log.info('读取股票元数据(测试集)......')
-    # 测试集
-    metadata = gen_asset_metadata(False)
-    metadata = metadata[metadata.symbol.isin(TEST_SYMBOLS)]
-    metadata.reset_index(inplace=True, drop=True)
-    metadata['sid'] = metadata.symbol.map(_to_sid)
-    sessions = calendar.sessions_in_range(start_session, end_session)
-
-    symbol_map = metadata.symbol
-    log.info('生成测试数据集（共{}只）'.format(len(symbol_map)))
-    splits = []
-    dividends = []
-
-    asset_db_writer.write(metadata, exchanges=_exchanges())
-
-    daily_bar_writer.write(
-        gen_symbol_data(
-            symbol_map,
-            sessions,
-            splits,
-            dividends,
-            is_minutely=False,
-        ),
-        show_progress=show_progress,
-    )
-    adjustment_writer.write(
-        splits=pd.concat(splits, ignore_index=True) if len(splits) else None,
-        dividends=pd.concat(dividends, ignore_index=True)
-        if len(dividends) else None,
-    )
-
-
-@bundles.register(
-    'cmtest',
-    calendar_name='XSHG',
-    start_session=pd.Timestamp('now', tz='Asia/Shanghai') -
-    pd.Timedelta(days=30),
-    #   end_session=pd.Timestamp('now', tz='Asia/Shanghai'),
-    minutes_per_day=241)
-def cntminutely_bundle(environ, asset_db_writer, minute_bar_writer,
-                       daily_bar_writer, adjustment_writer, calendar,
-                       start_session, end_session, cache, show_progress,
-                       output_dir):
-    """Build a zipline test data bundle from the cnstock dataset.
-    """
-    log.info('读取股票元数据(测试集)......')
-    # 测试集
-    metadata = gen_asset_metadata()
-    metadata = metadata[metadata.symbol.isin(TEST_SYMBOLS)]
-    metadata.reset_index(inplace=True, drop=True)
-    metadata['sid'] = metadata.symbol.map(_to_sid)
-    sessions = calendar.sessions_in_range(start_session, end_session)
-
-    symbol_map = metadata.symbol
-    log.info('生成测试数据集（共{}只）'.format(len(symbol_map)))
-    splits = []
-    dividends = []
-
-    asset_db_writer.write(metadata, exchanges=_exchanges())
-
     minute_bar_writer.write(
         gen_symbol_data(symbol_map,
                         sessions,

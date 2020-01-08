@@ -13,7 +13,7 @@ import numpy as np
 import pandas as pd
 
 from cnswd.query_utils import query, query_stmt, Ops
-from cnswd.reader import asr_data, calendar, daily_history, stock_list
+from cnswd.reader import asr_data, calendar, daily_history, stock_list, minutely_history
 from cnswd.utils import data_root, sanitize_dates
 
 WY_DAILY_COL_MAPS = {
@@ -63,6 +63,15 @@ def get_exchange(code):
 
 
 def _select_only_a(df, code_col):
+    """选择A股数据
+    
+    Arguments:
+        df {DataFrame} -- 数据框
+        code_col {str} -- 代表股票代码的列名称
+    
+    Returns:
+        DataFrame -- 筛选出来的a股数据
+    """    
     cond1 = df[code_col].str.startswith('2')
     cond2 = df[code_col].str.startswith('9')
     df = df.loc[~(cond1 | cond2), :]
@@ -99,10 +108,10 @@ def _stock_basic_info():
     df.rename(columns=col_names, inplace=True)
     # 原始数据无效。确保类型正确
     df['end_date'] = pd.NaT
-    return df
+    return df #.iloc[:2, :]  # TT
 
 
-def _stock_first_and_last():
+def _stock_first_and_last(code):
     """
     自股票日线交易数据查询开始交易及结束交易日期
 
@@ -117,31 +126,22 @@ def _stock_first_and_last():
     3     000004   1991-01-02  2018-12-21
     4     000005   1991-01-02  2018-12-21   
     """
-    p = data_root('wy_stock')
-    fs = p.glob('*.h5')
-    code_pattern = re.compile(r'\d{6}')
-
-    def f(fp):
-        code = re.findall(code_pattern, str(fp))[0]
-        # 原始数据中，股票代码中有前缀`'`
-        code = f"'{code}"
-        stmt = query_stmt(*[('股票代码', Ops.eq, code)])
-        try:
-            df = query(fp, stmt)
-        except KeyError:
-            # 新股无数据
-            return {}
-        df.sort_values('日期', inplace=True)
-        return {
-            'symbol': df['股票代码'].values[0][1:],
-            'asset_name': df['名称'].values[-1],  # 最新简称
-            'first_traded': pd.Timestamp(df['日期'].values[0]),
-            'last_traded': pd.Timestamp(df['日期'].values[-1])
-        }
-
-    res = map(f, fs)
-    df = pd.DataFrame.from_records(res)
-    return df.dropna(how='all')
+    fp = data_root(f'wy_stock/{code}.h5')
+    code = f"'{code}"
+    stmt = query_stmt(*[('股票代码', Ops.eq, code)])
+    try:
+        df = query(fp, stmt)
+        return pd.DataFrame(
+            {
+                'symbol': df['股票代码'].values[0][1:],
+                'asset_name': df['名称'].values[-1],  # 最新简称
+                'first_traded': pd.Timestamp(df['日期'].values[0], tz='UTC'),
+                'last_traded': pd.Timestamp(df['日期'].values[-1], tz='UTC'),
+            },
+            index=[0])
+    except KeyError:
+        # 新股无数据
+        return pd.DataFrame()
 
 
 def gen_asset_metadata(only_in=True, only_A=True):
@@ -166,15 +166,16 @@ def gen_asset_metadata(only_in=True, only_A=True):
     3     000005 1990-12-10 2018-12-21    深交所主板       世纪星源   1991-01-02  2018-12-21      2018-12-22
     4     000006 1992-04-27 2018-12-21    深交所主板       深振业Ａ   1992-04-27  2018-12-21      2018-12-22
     """
-    f_and_l = _stock_first_and_last()
     s_and_e = _stock_basic_info()
+    # 剔除非A股部分
+    s_and_e = _select_only_a(s_and_e, 'symbol')
+    f_and_ls = [_stock_first_and_last(code) for code in s_and_e.symbol.values]
+    f_and_l = pd.concat(f_and_ls)
     df = s_and_e.merge(f_and_l, 'left', on='symbol')
     # 剔除已经退市
     if only_in:
         df = df[df.status != '已经退市']
     del df['status']
-    # 剔除非A股部分
-    df = _select_only_a(df, 'symbol')
     del df['stock_type']
     # 对于未退市的结束日期，以最后交易日期代替
     df.loc[df.end_date.isna(), 'end_date'] = df.loc[df.end_date.isna(),
@@ -324,103 +325,74 @@ def fetch_single_equity(stock_code, start, end):
     return df
 
 
-def _handle_minutely_data(df, exclude_lunch):
+# 注意定期整理分钟级别的数据
+@lru_cache(None)
+def _all_data(start, end):
+    df = minutely_history(None, start, end)
+    df.rename(columns={
+        '时间': 'datetime',
+        '代码': 'symbol',
+        '今开': 'open',
+        '最高': 'high',
+        '最低': 'low',
+        '最新价': 'close',
+        '成交量': 'volume',
+    },
+              inplace=True)
+    df.sort_values('symbol', inplace=True)
+
+    return df
+
+
+def fetch_single_minutely_equity(stock_code, start, end):
     """
-    完成单个日期股票分钟级别数据处理
+    从本地数据库读取单个股票期间分钟级别交易明细数据
+
+    **注意** 
+    1. 性能原因，超过一定周期的数据，转移至备份数据库。只能查询到近期数据。
+    2. 交易日历分钟自9：31~11：31 13：01~15：01
+    
+    Parameters
+    ----------
+    stock_code : str
+        要获取数据的股票代码
+    start_date : datetime-like
+        自开始日期(包含该日)
+    end_date : datetime-like
+        至结束日期
+
+    return
+    ----------
+    DataFrame: OHLCV列的DataFrame对象。
+
+    Examples
+    --------
+    >>> symbol = '000333'
+    >>> start_date = '2018-4-1'
+    >>> end_date = pd.Timestamp('2018-4-19')
+    >>> df = fetch_single_minutely_equity(symbol, start_date, end_date)
+    >>> df.tail()
+                        close   high    low   open  volume
+    2018-04-19 14:56:00  51.55  51.56  51.50  51.55  376400
+    2018-04-19 14:57:00  51.55  51.55  51.55  51.55   20000
+    2018-04-19 14:58:00  51.55  51.55  51.55  51.55       0
+    2018-04-19 14:59:00  51.55  51.55  51.55  51.55       0
+    2018-04-19 15:00:00  51.57  51.57  51.57  51.57  353900
     """
-    ohlcv = pd.Series(data=df['price'].values,
-                      index=df.datetime).resample('T').ohlc()
-    ohlcv.fillna(method='ffill', inplace=True)
-    # 成交量原始数据单位为手，换为股
-    volumes = pd.Series(data=df['volume'].values,
-                        index=df.datetime).resample('T').sum() * 100
-    ohlcv.insert(4, 'volume', volumes)
-    if exclude_lunch:
-        # 默认包含上下界
-        # 与交易日历保持一致，自31分开始
-        pre = ohlcv.between_time('9:25', '9:31')
-
-        def key(x):
-            return x.date()
-
-        grouped = pre.groupby(key)
-        opens = grouped['open'].first()
-        highs = grouped['high'].max()
-        lows = grouped['low'].min()  # 考虑是否存在零值？
-        closes = grouped['close'].last()
-        volumes = grouped['volume'].sum()
-        index = pd.to_datetime([str(x) + ' 9:31' for x in opens.index])
-        add = pd.DataFrame(
-            {
-                'open': opens.values,
-                'high': highs.values,
-                'low': lows.values,
-                'close': closes.values,
-                'volume': volumes.values
-            },
-            index=index)
-        am = ohlcv.between_time('9:32', '11:30')
-        pm = ohlcv.between_time('13:00', '15:00')
-        return pd.concat([add, am, pm])
-    else:
-        return ohlcv
-
-
-# def fetch_single_minutely_equity(stock_code, start, end, exclude_lunch=True):
-#     """
-#     从本地数据库读取单个股票期间分钟级别交易明细数据
-
-#     **注意** 性能原因，超过一定周期的数据，转移至备份数据库。只能查询到近期数据。
-
-#     注
-#     --
-#     1. 仅包含OHLCV列
-#     2. 原始数据按分钟进行汇总，first(open),last(close),max(high),min(low),sum(volume)
-
-#     Parameters
-#     ----------
-#     stock_code : str
-#         要获取数据的股票代码
-#     start_date : datetime-like
-#         自开始日期(包含该日)
-#     end_date : datetime-like
-#         至结束日期
-#     exclude_lunch ： bool
-#         是否排除午休时间，默认”是“
-
-#     return
-#     ----------
-#     DataFrame: OHLCV列的DataFrame对象。
-
-#     Examples
-#     --------
-#     >>> symbol = '000333'
-#     >>> start_date = '2018-4-1'
-#     >>> end_date = pd.Timestamp('2018-4-19')
-#     >>> df = fetch_single_minutely_equity(symbol, start_date, end_date)
-#     >>> df.tail()
-#                         close   high    low   open  volume
-#     2018-04-19 14:56:00  51.55  51.56  51.50  51.55  376400
-#     2018-04-19 14:57:00  51.55  51.55  51.55  51.55   20000
-#     2018-04-19 14:58:00  51.55  51.55  51.55  51.55       0
-#     2018-04-19 14:59:00  51.55  51.55  51.55  51.55       0
-#     2018-04-19 15:00:00  51.57  51.57  51.57  51.57  353900
-#     """
-#     col_names = ['symbol', 'datetime', 'price', 'volume']
-#     start = pd.Timestamp(start).date()
-#     end = pd.Timestamp(end).date()
-#     with session_scope('szsh') as sess:
-#         query = sess.query(
-#             CJMX.股票代码,
-#             CJMX.成交时间,
-#             CJMX.成交价,
-#             CJMX.成交量,
-#         ).filter(CJMX.股票代码 == stock_code, CJMX.成交时间.between(start, end))
-#         df = pd.DataFrame.from_records(query.all())
-#         if df.empty:
-#             return pd.DataFrame(columns=OHLCV_COLS)
-#         df.columns = col_names
-#         return _handle_minutely_data(df, exclude_lunch)
+    cols = ['datetime', 'open', 'high', 'low', 'close', 'volume']
+    df = _all_data(start, end)
+    cond = df['symbol'] == stock_code
+    try:
+        ret = df[cond][cols]
+        # 可能存在重复
+        ret.drop_duplicates('datetime', keep='last',inplace=True)
+        ret.set_index('datetime', inplace=True)
+        # # 将11：31、15：01 -> 11:30 15:00
+        am = ret.between_time('09:31','11:31')
+        pm = ret.between_time('13:00','15:01')
+        return pd.concat([am, pm]).sort_index()
+    except Exception:
+        return pd.DataFrame()
 
 
 def fetch_single_quity_adjustments(stock_code, start, end):

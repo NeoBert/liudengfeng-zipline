@@ -32,10 +32,7 @@ from toolz import keymap, valmap
 from trading_calendars import get_calendar
 
 from zipline.data._minute_bar_internal import (
-    minute_value,
-    find_position_of_minute,
-    find_last_traded_position_internal
-)
+    minute_value, find_position_of_minute, find_last_traded_position_internal)
 
 from zipline.gens.sim_engine import NANOS_IN_MINUTE
 from zipline.data.bar_reader import BarReader, NoDataForSid, NoDataOnDate
@@ -43,7 +40,6 @@ from zipline.data.bcolz_daily_bars import check_uint32_safe
 from zipline.utils.cli import maybe_show_progress
 from zipline.utils.compat import mappingproxy
 from zipline.utils.memoize import lazyval
-
 
 logger = logbook.Logger('MinuteBars')
 
@@ -69,17 +65,24 @@ class MinuteBarReader(BarReader):
         return "minute"
 
 
-def _calc_minute_index(market_opens, minutes_per_day):
+def _calc_minute_index(schedule, minutes_per_day):
+    # # 不考虑延迟开盘及提前收盘问题
+    # # 固定分钟级别的时点 09：31 ~ 11：31 13：01 ~ 15：01
+    market_opens = schedule.market_open
+    pm_starts = schedule.pm_start
     minutes = np.zeros(len(market_opens) * minutes_per_day,
                        dtype='datetime64[ns]')
-    deltas = np.arange(0, minutes_per_day, dtype='timedelta64[m]')
-    for i, market_open in enumerate(market_opens):
+    deltas = np.arange(0, int(minutes_per_day / 2), dtype='timedelta64[m]')
+    for i, (market_open, pm_start) in enumerate(zip(market_opens, pm_starts)):
         start = market_open.asm8
+        pm_start = pm_start.asm8
         minute_values = start + deltas
+        pm_minute_values = pm_start + deltas
         start_ix = minutes_per_day * i
         end_ix = start_ix + minutes_per_day
-        minutes[start_ix:end_ix] = minute_values
-    return pd.to_datetime(minutes, utc=True, box=True)
+        minutes[start_ix:end_ix] = np.append(minute_values, pm_minute_values)
+    return pd.to_datetime(minutes,
+                          utc=True)  # # the 'box' keyword is deprecated
 
 
 def _sid_subdir_path(sid):
@@ -109,8 +112,7 @@ def _sid_subdir_path(sid):
         padded_sid[0:2],
         # subdir 2 XX/00
         padded_sid[2:4],
-        "{0}.bcolz".format(str(padded_sid))
-    )
+        "{0}.bcolz".format(str(padded_sid)))
 
 
 def convert_cols(cols, scale_factor, sid, invalid_data_behavior):
@@ -156,7 +158,9 @@ def convert_cols(cols, scale_factor, sid, invalid_data_behavior):
                 logger.warn(
                     'Values for sid={}, col={} contain some too large for '
                     'uint32 (max={}), filtering them out',
-                    sid, col_name, max_val,
+                    sid,
+                    col_name,
+                    max_val,
                 )
 
             # We want to exclude all rows that have an unsafe value in
@@ -227,20 +231,20 @@ class BcolzMinuteBarMetadata(object):
 
             if version >= 2:
                 calendar = get_calendar(raw_data['calendar_name'])
-                start_session = pd.Timestamp(
-                    raw_data['start_session'], tz='UTC')
+                start_session = pd.Timestamp(raw_data['start_session'],
+                                             tz='UTC')
                 end_session = pd.Timestamp(raw_data['end_session'], tz='UTC')
             else:
                 # No calendar info included in older versions, so
                 # default to NYSE.
                 calendar = get_calendar('XSHG')
 
-                start_session = pd.Timestamp(
-                    raw_data['first_trading_day'], tz='UTC')
+                start_session = pd.Timestamp(raw_data['first_trading_day'],
+                                             tz='UTC')
                 end_session = calendar.minute_to_session_label(
-                    pd.Timestamp(
-                        raw_data['market_closes'][-1], unit='m', tz='UTC')
-                )
+                    pd.Timestamp(raw_data['market_closes'][-1],
+                                 unit='m',
+                                 tz='UTC'))
 
             if version >= 3:
                 ohlc_ratios_per_sid = raw_data['ohlc_ratios_per_sid']
@@ -329,21 +333,29 @@ class BcolzMinuteBarMetadata(object):
         market_closes = schedule.market_close
 
         metadata = {
-            'version': self.version,
-            'ohlc_ratio': self.default_ohlc_ratio,
-            'ohlc_ratios_per_sid': self.ohlc_ratios_per_sid,
-            'minutes_per_day': self.minutes_per_day,
-            'calendar_name': self.calendar.name,
-            'start_session': str(self.start_session.date()),
-            'end_session': str(self.end_session.date()),
+            'version':
+            self.version,
+            'ohlc_ratio':
+            self.default_ohlc_ratio,
+            'ohlc_ratios_per_sid':
+            self.ohlc_ratios_per_sid,
+            'minutes_per_day':
+            self.minutes_per_day,
+            'calendar_name':
+            self.calendar.name,
+            'start_session':
+            str(self.start_session.date()),
+            'end_session':
+            str(self.end_session.date()),
             # Write these values for backwards compatibility
-            'first_trading_day': str(self.start_session.date()),
-            'market_opens': (
-                market_opens.values.astype('datetime64[m]').
-                astype(np.int64).tolist()),
-            'market_closes': (
-                market_closes.values.astype('datetime64[m]').
-                astype(np.int64).tolist()),
+            'first_trading_day':
+            str(self.start_session.date()),
+            'market_opens':
+            (market_opens.values.astype('datetime64[m]').astype(
+                np.int64).tolist()),
+            'market_closes':
+            (market_closes.values.astype('datetime64[m]').astype(
+                np.int64).tolist()),
         }
         with open(self.metadata_path(rootdir), 'w+') as fp:
             json.dump(metadata, fp)
@@ -455,8 +467,8 @@ class BcolzMinuteBarWriter(object):
         self._start_session = start_session
         self._end_session = end_session
         self._calendar = calendar
-        slicer = (
-            calendar.schedule.index.slice_indexer(start_session, end_session))
+        slicer = (calendar.schedule.index.slice_indexer(
+            start_session, end_session))
         self._schedule = calendar.schedule[slicer]
         self._session_labels = self._schedule.index
         self._minutes_per_day = minutes_per_day
@@ -464,8 +476,8 @@ class BcolzMinuteBarWriter(object):
         self._default_ohlc_ratio = default_ohlc_ratio
         self._ohlc_ratios_per_sid = ohlc_ratios_per_sid
 
-        self._minute_index = _calc_minute_index(
-            self._schedule.market_open, self._minutes_per_day)
+        self._minute_index = _calc_minute_index(self._schedule,
+                                                self._minutes_per_day)
 
         if write_metadata:
             metadata = BcolzMinuteBarMetadata(
@@ -497,8 +509,7 @@ class BcolzMinuteBarWriter(object):
             metadata.minutes_per_day,
             metadata.default_ohlc_ratio,
             metadata.ohlc_ratios_per_sid,
-            write_metadata=end_session is not None
-        )
+            write_metadata=end_session is not None)
 
     @property
     def first_trading_day(self):
@@ -583,13 +594,7 @@ class BcolzMinuteBarWriter(object):
                 initial_array,
                 initial_array,
             ],
-            names=[
-                'open',
-                'high',
-                'low',
-                'close',
-                'volume'
-            ],
+            names=['open', 'high', 'low', 'close', 'volume'],
             expectedlen=self._expectedlen,
             mode='w',
         )
@@ -643,14 +648,14 @@ class BcolzMinuteBarWriter(object):
             # No need to pad.
             return
 
-        if last_date == pd.NaT:
+        if last_date is pd.NaT:  # # 对象判断使用`is`
             # If there is no data, determine how many days to add so that
             # desired days are written to the correct slots.
             days_to_zerofill = tds[tds.slice_indexer(end=date)]
         else:
-            days_to_zerofill = tds[tds.slice_indexer(
-                start=last_date + tds.freq,
-                end=date)]
+            days_to_zerofill = tds[tds.slice_indexer(start=last_date +
+                                                     tds.freq,
+                                                     end=date)]
 
         self._zerofill(table, len(days_to_zerofill))
 
@@ -754,9 +759,8 @@ class BcolzMinuteBarWriter(object):
         if not all(len(dts) == len(cols[name]) for name in self.COL_NAMES):
             raise BcolzMinuteWriterColumnMismatch(
                 "Length of dts={0} should match cols: {1}".format(
-                    len(dts),
-                    " ".join("{0}={1}".format(name, len(cols[name]))
-                             for name in self.COL_NAMES)))
+                    len(dts), " ".join("{0}={1}".format(name, len(cols[name]))
+                                       for name in self.COL_NAMES)))
         self._write_cols(sid, dts, cols, invalid_data_behavior)
 
     def _write_cols(self, sid, dts, cols, invalid_data_behavior):
@@ -803,7 +807,8 @@ class BcolzMinuteBarWriter(object):
         if num_rec_mins > 0:
             last_recorded_minute = all_minutes[num_rec_mins - 1]
             if last_minute_to_write <= last_recorded_minute:
-                raise BcolzMinuteOverlappingData(dedent("""
+                raise BcolzMinuteOverlappingData(
+                    dedent("""
                 Data with last_date={0} already includes input start={1} for
                 sid={2}""".strip()).format(last_date, input_first_day, sid))
 
@@ -834,13 +839,7 @@ class BcolzMinuteBarWriter(object):
             vol_col[dt_ixs],
         ) = convert_cols(cols, ohlc_ratio, sid, invalid_data_behavior)
 
-        table.append([
-            open_col,
-            high_col,
-            low_col,
-            close_col,
-            vol_col
-        ])
+        table.append([open_col, high_col, low_col, close_col, vol_col])
         table.flush()
 
     def data_len_for_day(self, day):
@@ -871,9 +870,8 @@ class BcolzMinuteBarWriter(object):
                 logger.info("{0} not past truncate date={1}.", file_name, date)
                 continue
 
-            logger.info(
-                "Truncating {0} at end_date={1}", file_name, date.date()
-            )
+            logger.info("Truncating {0} at end_date={1}", file_name,
+                        date.date())
 
             table.resize(truncate_slice_end)
 
@@ -938,8 +936,8 @@ class BcolzMinuteBarReader(MinuteBarReader):
         self._default_ohlc_inverse = 1.0 / metadata.default_ohlc_ratio
         ohlc_ratios = metadata.ohlc_ratios_per_sid
         if ohlc_ratios:
-            self._ohlc_inverses_per_sid = (
-                valmap(lambda x: 1.0 / x, ohlc_ratios))
+            self._ohlc_inverses_per_sid = (valmap(lambda x: 1.0 / x,
+                                                  ohlc_ratios))
         else:
             self._ohlc_inverses_per_sid = None
 
@@ -1007,9 +1005,10 @@ class BcolzMinuteBarReader(MinuteBarReader):
             minutes_per_day != self._minutes_per_day - 1)[0]
         early_opens = self._market_opens[early_indices]
         early_closes = self._market_closes[early_indices]
-        minutes = [(market_open, early_close)
-                   for market_open, early_close
-                   in zip(early_opens, early_closes)]
+        minutes = [
+            (market_open, early_close)
+            for market_open, early_close in zip(early_opens, early_closes)
+        ]
         return minutes
 
     @lazyval
@@ -1033,13 +1032,8 @@ class BcolzMinuteBarReader(MinuteBarReader):
         itree = IntervalTree()
         for market_open, early_close in self._minutes_to_exclude():
             start_pos = self._find_position_of_minute(early_close) + 1
-            end_pos = (
-                self._find_position_of_minute(market_open)
-                +
-                self._minutes_per_day
-                -
-                1
-            )
+            end_pos = (self._find_position_of_minute(market_open) +
+                       self._minutes_per_day - 1)
             data = (start_pos, end_pos)
             itree[start_pos:end_pos + 1] = data
         return itree
@@ -1183,20 +1177,15 @@ class BcolzMinuteBarReader(MinuteBarReader):
             # work in the future.
             try:
                 self._known_zero_volume_dict[asset.sid] = max(
-                    dt_minute,
-                    self._known_zero_volume_dict[asset.sid]
-                )
+                    dt_minute, self._known_zero_volume_dict[asset.sid])
             except KeyError:
                 self._known_zero_volume_dict[asset.sid] = dt_minute
 
         return pos
 
     def _pos_to_minute(self, pos):
-        minute_epoch = minute_value(
-            self._market_open_values,
-            pos,
-            self._minutes_per_day
-        )
+        minute_epoch = minute_value(self._market_open_values, pos,
+                                    self._minutes_per_day)
 
         return pd.Timestamp(minute_epoch, tz='UTC', unit="m")
 
@@ -1274,16 +1263,17 @@ class BcolzMinuteBarReader(MinuteBarReader):
                 values = carray[start_idx:end_idx + 1]
                 if indices_to_exclude is not None:
                     for excl_start, excl_stop in indices_to_exclude[::-1]:
-                        excl_slice = np.s_[
-                            excl_start - start_idx:excl_stop - start_idx + 1]
+                        excl_slice = np.s_[excl_start - start_idx:excl_stop -
+                                           start_idx + 1]
                         values = np.delete(values, excl_slice)
 
                 where = values != 0
                 # first slice down to len(where) because we might not have
                 # written data for all the minutes requested
                 if field != 'volume':
-                    out[:len(where), i][where] = (
-                        values[where] * self._ohlc_ratio_inverse_for_sid(sid))
+                    out[:len(where),
+                        i][where] = (values[where] *
+                                     self._ohlc_ratio_inverse_for_sid(sid))
                 else:
                     out[:len(where), i][where] = values[where]
 
@@ -1295,7 +1285,6 @@ class MinuteBarUpdateReader(with_metaclass(ABCMeta, object)):
     """
     Abstract base class for minute update readers.
     """
-
     @abstractmethod
     def read(self, dts, sids):
         """
