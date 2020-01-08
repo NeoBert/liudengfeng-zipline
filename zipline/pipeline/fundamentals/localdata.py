@@ -60,6 +60,10 @@ def get_stock_info(only_A=True):
     """股票基础信息"""
     df = stock_list()
     df.drop_duplicates('股票代码', inplace=True)
+    # 剔除未上市、未交易的无效股票
+    cond1 = ~ df['上市日期'].isnull()
+    cond2 = df['上市日期'] <= pd.Timestamp('today')
+    df = df.loc[cond1 & cond2, :]
     # 舍弃原行业分类信息
     to_drops = [
         '机构名称',
