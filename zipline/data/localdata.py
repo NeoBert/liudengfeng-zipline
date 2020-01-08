@@ -113,7 +113,7 @@ def _stock_basic_info():
     df.rename(columns=col_names, inplace=True)
     # 原始数据无效。确保类型正确
     df['end_date'] = pd.NaT
-    return df  #.iloc[:2, :]  # TT
+    return df
 
 
 def _stock_first_and_last(code):
