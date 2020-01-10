@@ -77,6 +77,6 @@ def analyze(context, perf):
     plt.show()
 
 # %%
-1
+
 
 # %%
