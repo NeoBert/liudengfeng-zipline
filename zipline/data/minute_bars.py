@@ -76,13 +76,13 @@ def _calc_minute_index(schedule, minutes_per_day):
     for i, (market_open, pm_start) in enumerate(zip(market_opens, pm_starts)):
         start = market_open.asm8
         pm_start = pm_start.asm8
-        minute_values = start + deltas
+        am_minute_values = start + deltas
         pm_minute_values = pm_start + deltas
         start_ix = minutes_per_day * i
         end_ix = start_ix + minutes_per_day
-        minutes[start_ix:end_ix] = np.append(minute_values, pm_minute_values)
-    return pd.to_datetime(minutes,
-                          utc=True)  # # the 'box' keyword is deprecated
+        minutes[start_ix:end_ix] = np.append(am_minute_values, pm_minute_values)
+
+    return pd.to_datetime(minutes, utc=True)  # # the 'box' keyword is deprecated
 
 
 def _sid_subdir_path(sid):
@@ -926,9 +926,16 @@ class BcolzMinuteBarReader(MinuteBarReader):
             self._end_session,
         )
         self._schedule = self.calendar.schedule[slicer]
+        # # 添加 上午结束、下午开始区间
         self._market_opens = self._schedule.market_open
         self._market_open_values = self._market_opens.values.\
             astype('datetime64[m]').astype(np.int64)
+        self._am_end = self._schedule.am_end
+        self._am_end_values = self._am_end.values.astype(
+            'datetime64[ns]').astype(np.int64)
+        self._pm_start = self._schedule.pm_start
+        self._pm_start_values = self._pm_start.values.astype(
+            'datetime64[ns]').astype(np.int64)
         self._market_closes = self._schedule.market_close
         self._market_close_values = self._market_closes.values.\
             astype('datetime64[m]').astype(np.int64)
@@ -1000,9 +1007,11 @@ class BcolzMinuteBarReader(MinuteBarReader):
         """
         market_opens = self._market_opens.values.astype('datetime64[m]')
         market_closes = self._market_closes.values.astype('datetime64[m]')
-        minutes_per_day = (market_closes - market_opens).astype(np.int64)
+        # # 90 - 2 上午、下午各一
+        minutes_per_day = (market_closes - market_opens).astype(np.int64) - 88
+        # # 更改为实际每天分钟数量，而不是减1
         early_indices = np.where(
-            minutes_per_day != self._minutes_per_day - 1)[0]
+            minutes_per_day != self._minutes_per_day)[0]
         early_opens = self._market_opens[early_indices]
         early_closes = self._market_closes[early_indices]
         minutes = [
@@ -1149,6 +1158,7 @@ class BcolzMinuteBarReader(MinuteBarReader):
         return self._pos_to_minute(minute_pos)
 
     def _find_last_traded_position(self, asset, dt):
+        """查找最近交易时点所对应的位置"""
         volumes = self._open_minute_file('volume', asset)
         start_date_minute = asset.start_date.value / NANOS_IN_MINUTE
         dt_minute = dt.value / NANOS_IN_MINUTE

@@ -13,7 +13,12 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+"""运行方法
 
+激活环境
+转移至文件所在的目录
+zipline run -f ../../zipline/examples/buyapple.py --start 2016-1-1 --end 2018-1-1 -o buyapple_out.pickle
+"""
 from zipline.api import order, record, symbol
 from zipline.finance import commission, slippage
 

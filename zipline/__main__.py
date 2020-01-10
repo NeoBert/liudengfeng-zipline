@@ -116,35 +116,34 @@ def ipython_only(option):
     '--algofile',
     default=None,
     type=click.File('r', encoding='utf-8'),
-    help='The file that contains the algorithm to run.',
+    help='算法文件',
 )
 @click.option(
     '-t',
     '--algotext',
-    help='The algorithm script to run.',
+    help='算法脚本文本',
 )
 @click.option(
     '-D',
     '--define',
     multiple=True,
-    help="Define a name to be bound in the namespace before executing"
-    " the algotext. For example '-Dname=value'. The value may be any python"
-    " expression. These are evaluated in order so they may refer to previously"
-    " defined names.",
+    help="定义名称绑定在在执行算法文本前的名称空间。"
+    " 例如'-Dname=value'，值可为python表达式。"
+    " 这些是按顺序评估的，因此它们可以引用以前定义的名称。",
 )
 @click.option(
     '--data-frequency',
     type=click.Choice({'daily', 'minute'}),
     default='daily',
     show_default=True,
-    help='The data frequency of the simulation.',
+    help='模拟的数据频率',
 )
 @click.option(
     '--capital-base',
     type=float,
     default=10e6,
     show_default=True,
-    help='The starting capital for the simulation.',
+    help='模拟启动资金',
 )
 @click.option(
     '-b',
@@ -152,25 +151,25 @@ def ipython_only(option):
     default='cndaily',
     metavar='BUNDLE-NAME',
     show_default=True,
-    help='The data bundle to use for the simulation.',
+    help='模拟所用数据包。',
 )
 @click.option('--bundle-timestamp',
               type=Timestamp(),
               default=pd.Timestamp.utcnow(),
               show_default=False,
-              help='The date to lookup data on or before.\n'
+              help='查找数据日期或之前的日期。\n'
               '[default: <current-time>]')
 @click.option(
     '-s',
     '--start',
     type=Date(tz='utc', as_timestamp=True),
-    help='The start date of the simulation.',
+    help='模拟的开始日期。',
 )
 @click.option(
     '-e',
     '--end',
     type=Date(tz='utc', as_timestamp=True),
-    help='The end date of the simulation.',
+    help='模拟的结束日期',
 )
 @click.option(
     '-o',
@@ -178,30 +177,28 @@ def ipython_only(option):
     default='-',
     metavar='FILENAME',
     show_default=True,
-    help="The location to write the perf data. If this is '-' the perf will"
-    " be written to stdout.",
+    help="写入结果数据的位置。 如果这是'-'，结果将被写入标准输出。",
 )
 @click.option(
     '--trading-calendar',
     metavar='TRADING-CALENDAR',
     default='XSHG',  # # 默认交易日历
-    help="The calendar you want to use e.g. XLON. XSHG is the default.")
+    help="您要使用的日历，例如 XSHG。 XSHG是默认设置。")
 @click.option(
     '--print-algo/--no-print-algo',
     is_flag=True,
     default=False,
-    help='Print the algorithm to stdout.',
+    help='打印算法到标准输出。',
 )
 @click.option(
     '--metrics-set',
     default='default',
-    help='The metrics set to use. New metrics sets may be registered in your'
-    ' extension.py.',
+    help='要使用的指标集。 新的指标集可在您的extension.py中注册。',
 )
 @click.option(
     '--blotter',
     default='default',
-    help="The blotter to use.",
+    help="使用的账册。",
     show_default=True,
 )
 @ipython_only(
@@ -209,13 +206,13 @@ def ipython_only(option):
         '--local-namespace/--no-local-namespace',
         is_flag=True,
         default=None,
-        help='Should the algorithm methods be resolved in the local namespace.'
+        help='是否应在本地名称空间中解析算法方法。'
     ))
 @click.pass_context
 def run(ctx, algofile, algotext, define, data_frequency, capital_base, bundle,
         bundle_timestamp, start, end, output, trading_calendar, print_algo,
         metrics_set, local_namespace, blotter):
-    """运行策略回测
+    """运行算法回测
     """
     # check that the start and end dates are passed correctly
     if start is None and end is None:

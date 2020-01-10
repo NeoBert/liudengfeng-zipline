@@ -68,6 +68,7 @@ cdef class MinuteSimulationClock:
             #     self.market_closes_nanos[session_idx] + _nanos_in_minute,
             #     _nanos_in_minute
             # )
+            # # 固定上午结束、下午开始时间，且忽略延迟开盘及提早收盘
             am_minutes_nanos = np.arange(
                 self.market_opens_nanos[session_idx],
                 self.am_end_nanos[session_idx] + _nanos_in_minute,

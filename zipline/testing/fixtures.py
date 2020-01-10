@@ -1,3 +1,6 @@
+"""
+不涉及到期货
+"""
 import os
 import sqlite3
 from unittest import TestCase
@@ -51,6 +54,7 @@ from ..data.data_portal import (
     DEFAULT_MINUTE_HISTORY_PREFETCH,
     DEFAULT_DAILY_HISTORY_PREFETCH,
 )
+from ..data.fx import InMemoryFXRateReader
 from ..data.hdf5_daily_bars import (
     HDF5DailyBarReader,
     HDF5DailyBarWriter,
@@ -494,7 +498,7 @@ class WithTradingCalendars(object):
     class-level fixture.
 
     After ``init_class_fixtures`` has been called:
-    - `cls.trading_calendar` is populated with a default of the nyse trading
+    - `cls.trading_calendar` is populated with a default of the XSHG trading
     calendar for compatibility with existing tests
     - `cls.all_trading_calendars` is populated with the trading calendars
     keyed by name,
@@ -509,12 +513,12 @@ class WithTradingCalendars(object):
         A dictionary which maps asset type names to the calendar associated
         with that asset type.
     """
-    TRADING_CALENDAR_STRS = ('NYSE',)
-    TRADING_CALENDAR_FOR_ASSET_TYPE = {Equity: 'NYSE', Future: 'us_futures'}
+    TRADING_CALENDAR_STRS = ('XSHG',)
+    TRADING_CALENDAR_FOR_ASSET_TYPE = {Equity: 'XSHG', Future: 'XSHG'}
     # For backwards compatibility, exisitng tests and fixtures refer to
-    # `trading_calendar` with the assumption that the value is the NYSE
+    # `trading_calendar` with the assumption that the value is the XSHG
     # calendar.
-    TRADING_CALENDAR_PRIMARY_CAL = 'NYSE'
+    TRADING_CALENDAR_PRIMARY_CAL = 'XSHG'
 
     @classmethod
     def init_class_fixtures(cls):
@@ -667,7 +671,7 @@ class WithTradingSessions(WithDefaultDateBounds, WithTradingCalendars):
     (DATA_MAX_DAY - (cls.TRADING_DAY_COUNT) -> DATA_MAX_DAY)
 
     `cls.trading_days`, for compatibility with existing tests which make the
-    assumption that trading days are equity only, defaults to the nyse trading
+    assumption that trading days are equity only, defaults to the XSHG trading
     sessions.
 
     Attributes
@@ -683,7 +687,7 @@ class WithTradingSessions(WithDefaultDateBounds, WithTradingCalendars):
     DATA_MAX_DAY = alias('END_DATE')
 
     # For backwards compatibility, exisitng tests and fixtures refer to
-    # `trading_days` with the assumption that the value is days of the NYSE
+    # `trading_days` with the assumption that the value is days of the XSHG
     # calendar.
     trading_days = alias('nyse_sessions')
 
@@ -770,18 +774,14 @@ class WithEquityDailyBarData(WithAssetFinder, WithTradingCalendars):
 
     Methods
     -------
-    make_equity_daily_bar_data() -> iterable[(int, pd.DataFrame)]
-        A class method that returns an iterator of (sid, dataframe) pairs
-        which will be written to the bcolz files that the class's
-        ``BcolzDailyBarReader`` will read from. By default this creates
-        some simple synthetic data with
-        :func:`~zipline.testing.create_daily_bar_data`
+    make_equity_daily_bar_data(country_code, sids)
+    make_equity_daily_bar_currency_codes(country_code, sids)
 
     See Also
     --------
     WithEquityMinuteBarData
     zipline.testing.create_daily_bar_data
-    """
+    """  # noqa
     EQUITY_DAILY_BAR_START_DATE = alias('START_DATE')
     EQUITY_DAILY_BAR_END_DATE = alias('END_DATE')
     EQUITY_DAILY_BAR_SOURCE_FROM_MINUTE = None
@@ -814,6 +814,8 @@ class WithEquityDailyBarData(WithAssetFinder, WithTradingCalendars):
     @classmethod
     def make_equity_daily_bar_data(cls, country_code, sids):
         """
+        Create daily pricing data.
+
         Parameters
         ----------
         country_code : str
@@ -836,6 +838,27 @@ class WithEquityDailyBarData(WithAssetFinder, WithTradingCalendars):
             return cls._make_equity_daily_bar_from_minute()
         else:
             return create_daily_bar_data(cls.equity_daily_bar_days, sids)
+
+    @classmethod
+    def make_equity_daily_bar_currency_codes(cls, country_code, sids):
+        """Create listing currencies.
+
+        Default is to list all assets in USD.
+
+        Parameters
+        ----------
+        country_code : str
+            An ISO 3166 alpha-2 country code. Data should be created for
+            this country.
+        sids : tuple[int]
+            The sids to include in the data.
+
+        Returns
+        -------
+        currency_codes : pd.Series[int, str]
+            Map from sids to currency for that sid's prices.
+        """
+        return pd.Series(index=list(sids), data='USD')
 
     @classmethod
     def init_class_fixtures(cls):
@@ -1217,6 +1240,7 @@ class WithWriteHDF5DailyBars(WithEquityDailyBarData,
             cls.asset_finder,
             country_codes,
             cls.make_equity_daily_bar_data,
+            cls.make_equity_daily_bar_currency_codes,
         )
 
         # Open the file and mark it for closure during teardown.
@@ -1383,7 +1407,7 @@ class WithFutureMinuteBarData(WithAssetFinder, WithTradingCalendars):
 
     @classmethod
     def make_future_minute_bar_data(cls):
-        trading_calendar = get_calendar('us_futures')
+        trading_calendar = get_calendar('XSHG')
         return create_minute_bar_data(
             trading_calendar.minutes_for_sessions_in_range(
                 cls.future_minute_bar_days[0],
@@ -1395,7 +1419,7 @@ class WithFutureMinuteBarData(WithAssetFinder, WithTradingCalendars):
     @classmethod
     def init_class_fixtures(cls):
         super(WithFutureMinuteBarData, cls).init_class_fixtures()
-        trading_calendar = get_calendar('us_futures')
+        trading_calendar = get_calendar('XSHG')
         cls.future_minute_bar_days = _trading_days_for_minute_bars(
             trading_calendar,
             pd.Timestamp(cls.FUTURE_MINUTE_BAR_START_DATE),
@@ -1506,7 +1530,7 @@ class WithBcolzFutureMinuteBarReader(WithFutureMinuteBarData, WithTmpDir):
     @classmethod
     def init_class_fixtures(cls):
         super(WithBcolzFutureMinuteBarReader, cls).init_class_fixtures()
-        trading_calendar = get_calendar('us_futures')
+        trading_calendar = get_calendar('XSHG')
         cls.bcolz_future_minute_bar_path = p = \
             cls.make_bcolz_future_minute_bar_rootdir_path()
         days = cls.future_minute_bar_days
@@ -2040,7 +2064,7 @@ class WithWerror(object):
         super(WithWerror, cls).init_class_fixtures()
 
 
-register_calendar_alias("TEST", "NYSE")
+register_calendar_alias("TEST", "XSHG")
 
 
 class WithSeededRandomState(object):
@@ -2049,3 +2073,93 @@ class WithSeededRandomState(object):
     def init_instance_fixtures(self):
         super(WithSeededRandomState, self).init_instance_fixtures()
         self.rand = np.random.RandomState(self.RANDOM_SEED)
+
+
+class WithFXRates(object):
+    """Fixture providing a factory for in-memory exchange rate data.
+    """
+    # Start date for exchange rates data.
+    FX_RATES_START_DATE = alias('START_DATE')
+
+    # End date for exchange rates data.
+    FX_RATES_END_DATE = alias('END_DATE')
+
+    # Calendar to which exchange rates data is aligned.
+    FX_RATES_CALENDAR = '24/5'
+
+    # Currencies between which exchange rates can be calculated.
+    FX_RATES_CURRENCIES = ["USD", "CAD", "GBP", "EUR"]
+
+    # Kinds of rates for which exchange rate data is present.
+    FX_RATES_RATE_NAMES = ["mid"]
+
+    # Rate used by default for Pipeline API queries that don't specify a rate
+    # explicitly.
+    @classproperty
+    def FX_RATES_DEFAULT_RATE(cls):
+        return cls.FX_RATES_RATE_NAMES[0]
+
+    @classmethod
+    def init_class_fixtures(cls):
+        super(WithFXRates, cls).init_class_fixtures()
+
+        cal = get_calendar(cls.FX_RATES_CALENDAR)
+        cls.fx_rates_sessions = cal.sessions_in_range(
+            cls.FX_RATES_START_DATE,
+            cls.FX_RATES_END_DATE,
+        )
+
+        cls.fx_rates = cls.make_fx_rates(
+            cls.FX_RATES_RATE_NAMES,
+            cls.FX_RATES_CURRENCIES,
+            cls.fx_rates_sessions,
+        )
+
+        cls.in_memory_fx_rate_reader = InMemoryFXRateReader(
+            cls.fx_rates,
+            cls.FX_RATES_DEFAULT_RATE,
+        )
+
+    @classmethod
+    def make_fx_rates_from_reference(cls, reference):
+        """
+        Helper method for implementing make_fx_rates.
+
+        Takes a (dates x currencies) DataFrame of "reference" values, which are
+        assumed to be the "true" value of each currency in some unknown
+        external currency. Computes fx rates from A -> B as by dividing the
+        reference value for A by the reference value for B.
+
+        Parameters
+        ----------
+        reference : pd.DataFrame
+            DataFrame of "true" values for currencies.
+
+        Returns
+        -------
+        rates : dict[str, pd.DataFrame]
+            Map from quote currency to FX rates for that currency.
+        """
+        out = {}
+        for quote in reference.columns:
+            out[quote] = reference.divide(reference[quote], axis=0)
+
+        return out
+
+    @classmethod
+    def make_fx_rates(cls, rate_names, currencies, sessions):
+        rng = np.random.RandomState(42)
+
+        currencies = sorted(currencies)
+
+        out = {}
+        for rate_name in rate_names:
+            cols = {}
+            for currency in currencies:
+                start, end = sorted(rng.uniform(0.5, 1.5, (2,)))
+                cols[currency] = np.linspace(start, end, len(sessions))
+
+            reference = pd.DataFrame(cols, index=sessions, columns=currencies)
+            out[rate_name] = cls.make_fx_rates_from_reference(reference)
+
+        return out
