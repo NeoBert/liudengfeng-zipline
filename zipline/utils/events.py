@@ -29,6 +29,7 @@ from zipline.utils.sentinel import sentinel
 
 from .context_tricks import nop_context
 
+TWO_HOURS = 2 * 60 * 60
 
 __all__ = [
     'EventManager',
@@ -367,7 +368,14 @@ class AfterOpen(StatelessRule):
             kwargs,
             datetime.timedelta(minutes=1),  # Defaults to the first minute.
         )
-
+        if self.offset.seconds > TWO_HOURS:
+            msg = """
+            由于午休关系，使用开盘后2小时，会导致事件无法触发。
+            请考虑使用`time_rules.market_close`。
+            如计划在开盘后2h5m执行任务，改用：
+            `time_rules.market_close(hours=1, minutes=55)`
+            """
+            raise ValueError(msg) 
         self._period_start = None
         self._period_end = None
         self._period_close = None
@@ -423,7 +431,14 @@ class BeforeClose(StatelessRule):
             kwargs,
             datetime.timedelta(minutes=1),  # Defaults to the last minute.
         )
-
+        if self.offset.seconds > TWO_HOURS:
+            msg = """
+            由于午休关系，使用收盘前2小时，会导致事件无法触发。
+            请考虑使用`time_rules.market_open`。
+            如计划在收盘前2h5m执行任务，改用：
+            `time_rules.market_open(hours=1, minutes=55)`
+            """
+            raise ValueError(msg) 
         self._period_start = None
         self._period_close = None
         self._period_end = None
@@ -803,8 +818,10 @@ def make_eventrule(date_rule, time_rule, cal, half_days=True):
     """
     Constructs an event rule from the factory api.
     """
-    _check_if_not_called(date_rule)
-    _check_if_not_called(time_rule)
+    # # TODO:暂时取消检查
+    # if use `v` rather than `type(v)` raise TypeError: issubclass() arg 1 must be a class
+    # _check_if_not_called(date_rule)
+    # _check_if_not_called(time_rule)
 
     if half_days:
         inner_rule = date_rule & time_rule
