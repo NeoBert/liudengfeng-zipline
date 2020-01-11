@@ -9,7 +9,6 @@ import numpy as np
 import pandas as pd
 import cvxpy as cvx
 
-# from collections.abc import Iterable
 from collections.abc import Iterable
 from .utils import get_ix, ensure_series
 
