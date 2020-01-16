@@ -122,7 +122,7 @@ def _get_cn_industry(only_A, level, bom):
     df = classify_tree()
     cond = df['平台类别'] == '137003'
     df = df[cond]
-    df = _select_only_a(df, only_A, '证券代码')
+    df = _select_only_a(df, only_A, '股票代码')
     if df.empty:
         msg = '在本地数据库中无法获取国证行业{}分类数据。\n'.format(u_num)
         msg += '这将导致股票分类数据缺失。\n'
@@ -134,7 +134,7 @@ def _get_cn_industry(only_A, level, bom):
     col_name = '国证{}行业编码'.format(u_num)
     df[col_name] = df['分类编码'].map(lambda x: x[:digit])
     df['国证{}行业'.format(u_num)] = df[col_name].map(lambda x: bom.at[x, '分类名称'])
-    return df[['证券代码', col_name, '国证{}行业'.format(u_num)]]
+    return df[['股票代码', col_name, '国证{}行业'.format(u_num)]]
 
 
 def get_cn_industry(only_A=True):
@@ -145,11 +145,11 @@ def get_cn_industry(only_A=True):
     df2 = _get_cn_industry(only_A, 2, bom)
     df3 = _get_cn_industry(only_A, 3, bom)
     df4 = _get_cn_industry(only_A, 4, bom)
-    df = df1.join(df2.set_index('证券代码'),
-                  on='证券代码').join(df3.set_index('证券代码'),
-                                  on='证券代码').join(df4.set_index('证券代码'),
-                                                  on='证券代码')
-    df.rename(columns={'证券代码': 'sid'}, inplace=True)
+    df = df1.join(df2.set_index('股票代码'),
+                  on='股票代码').join(df3.set_index('股票代码'),
+                                  on='股票代码').join(df4.set_index('股票代码'),
+                                                  on='股票代码')
+    df.rename(columns={'股票代码': 'sid'}, inplace=True)
     df['sid'] = df['sid'].map(lambda x: int(x))
     return df
 
@@ -160,11 +160,11 @@ def get_sw_industry(only_A=True):
     df = classify_tree()
     cond = df['平台类别'] == '137004'
     df = df[cond]
-    df = _select_only_a(df, only_A, '证券代码')
+    df = _select_only_a(df, only_A, '股票代码')
     df['sw_sector'] = df['分类编码'].map(lambda x: code_maps[x[:3]]).astype(
         'int64')
-    df = df[['证券代码', 'sw_sector']]
-    df.rename(columns={'证券代码': 'sid'}, inplace=True)
+    df = df[['股票代码', 'sw_sector']]
+    df.rename(columns={'股票代码': 'sid'}, inplace=True)
     df['sid'] = df['sid'].map(lambda x: int(x))
     return df
 
