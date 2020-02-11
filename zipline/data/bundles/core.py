@@ -178,6 +178,7 @@ class BadClean(click.ClickException, ValueError):
     --------
     clean
     """
+
     def __init__(self, before, after, keep_last):
         super(BadClean, self).__init__(
             'Cannot pass a combination of `before` and `after` with'

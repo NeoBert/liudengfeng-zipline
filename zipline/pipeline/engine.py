@@ -176,6 +176,7 @@ class ExplodingPipelineEngine(PipelineEngine):
     """
     A PipelineEngine that doesn't do anything.
     """
+
     def run_pipeline(self, pipeline, start_date, end_date, hooks=None):
         raise NoEngineRegistered(
             "Attempted to run a pipeline but no pipeline "
@@ -931,8 +932,11 @@ def _pipeline_output_index(dates, assets, mask):
     asset_labels = repeat_first_axis(arange(len(assets)), len(dates))[mask]
     return MultiIndex(
         levels=[dates, assets],
-        labels=[date_labels, asset_labels],
+        # labels=[date_labels, asset_labels],
+        # # 签名更改
+        codes=[date_labels, asset_labels],
         # TODO: We should probably add names for these.
-        names=[None, None],
+        # names=[None, None],
+        names=['date', 'asset'],
         verify_integrity=False,
     )

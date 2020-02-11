@@ -23,7 +23,10 @@ def to_tdates(start, end):
     return dates, start_date, end_date
 
 
-def symbols(symbols_, symbol_reference_date=None, country=None, handle_missing='log'):
+def symbols(symbols_,
+            symbol_reference_date=None,
+            country=None,
+            handle_missing='log'):
     """
     Convert a or a list of str and int into a list of Asset objects.
 
@@ -56,9 +59,7 @@ def symbols(symbols_, symbol_reference_date=None, country=None, handle_missing='
     ret = []
     for symbol in symbols_:
         if isinstance(symbol, str):
-            res = finder.lookup_symbol(
-                symbol, asof_date, country_code=country
-            )
+            res = finder.lookup_symbol(symbol, asof_date, country_code=country)
             ret.append(res)
         elif isinstance(symbol, int):
             res = finder.retrieve_asset(symbol)
@@ -68,7 +69,10 @@ def symbols(symbols_, symbol_reference_date=None, country=None, handle_missing='
     return ret
 
 
-def symbol(symbol_, symbol_reference_date=None, country=None, handle_missing='log'):
+def symbol(symbol_,
+           symbol_reference_date=None,
+           country=None,
+           handle_missing='log'):
     """单只股票"""
     return symbols(symbol_, symbol_reference_date, country, handle_missing)[0]
 
@@ -103,16 +107,16 @@ def prices(assets,
     """
     msg = "Only support frequency == 'daily'"
     assert frequency == 'daily', msg
-    valid_fields = ('open', 'high', 'low', 'close', 'price', 'volume')
-    # TODO:?
-    if adjust:
-        raise ValueError('')
+    valid_fields = ('open', 'high', 'low', 'close', 'price', 'volume',
+                    'amount', 'market_cap', 'total_cap', 'shares_outstanding',
+                    'total_shares', 'turnover')
     adj_fields = ('b_open', 'b_high', 'b_low', 'b_close')
     msg = '只接受单一字段，有效字段为{}'.format(valid_fields)
     assert isinstance(price_field, str), msg
     if adjust:
         msg = '当查询调整股价时，有效字段为{}'.format(adj_fields)
-        assert isinstance(price_field, str) and (price_field in adj_fields), msg
+        assert isinstance(price_field,
+                          str) and (price_field in adj_fields), msg
     data_portal, calendar = _data_portal()
 
     start = pd.Timestamp(start, tz='utc')
@@ -141,16 +145,11 @@ def prices(assets,
 
     assets = symbols(assets, symbol_reference_date=symbol_reference_date)
 
-    return data_portal.get_history_window(
-        assets, end, bar_count, '1d', price_field, 'daily'
-    )
+    return data_portal.get_history_window(assets, end, bar_count, '1d',
+                                          price_field, 'daily')
 
 
-def volumes(assets,
-            start,
-            end,
-            frequency='daily',
-            symbol_reference_date=None):
+def volumes(assets, start, end, frequency='daily', symbol_reference_date=None):
     """
     获取股票期间成交量
 
@@ -216,13 +215,8 @@ def returns(assets,
 
     Data is returned as a pd.DataFrame if multiple assets are passed.
     """
-    df = prices(assets,
-                start,
-                end,
-                frequency,
-                price_field,
-                symbol_reference_date,
-                periods)
+    df = prices(assets, start, end, frequency, price_field,
+                symbol_reference_date, periods)
     return df.pct_change(periods).iloc[periods:]
 
 
@@ -358,16 +352,17 @@ def get_pricing(assets,
         ret = prices(assets, start_date, end_date, 'daily', fields,
                      symbol_reference_date, start_offset, is_adj)
         if single_asset:
-            ret = pd.Series(
-                ret.values[:, 0], index=ret.index.get_level_values(0), name=assets[0])
+            ret = pd.Series(ret.values[:, 0],
+                            index=ret.index.get_level_values(0),
+                            name=assets[0])
         else:
             ret.index.name = fields
     else:
         dfs = []
         for field in fields:
             is_adj = field.startswith('b_')
-            df = prices(assets, start_date, end_date, 'daily',
-                        field, symbol_reference_date, start_offset, is_adj)
+            df = prices(assets, start_date, end_date, 'daily', field,
+                        symbol_reference_date, start_offset, is_adj)
             if single_asset:
                 dfs.append(df)
             else:

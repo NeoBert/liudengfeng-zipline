@@ -7,6 +7,7 @@ from zipline.pipeline.engine import SimplePipelineEngine
 from zipline.pipeline.loaders import EquityPricingLoader
 from zipline.pipeline.loaders.blaze import global_loader
 from zipline.utils.memoize import remember_last
+from zipline.utils.ts_utils import ensure_utc
 
 
 def run_pipeline(pipeline, start_date, end_date):
@@ -48,8 +49,8 @@ def run_pipeline_against_bundle(pipeline, start_date, end_date, bundle):
     """
     engine, calendar = _pipeline_engine_and_calendar_for_bundle(bundle)
 
-    start_date = pd.Timestamp(start_date, tz='utc')
-    end_date = pd.Timestamp(end_date, tz='utc')
+    start_date = ensure_utc(start_date)  # pd.Timestamp(start_date, tz='utc')
+    end_date = ensure_utc(end_date)  # pd.Timestamp(end_date, tz='utc')
     if start_date == end_date:
         d1 = d2 = _tdate(calendar, end_date, 'previous')
     else:

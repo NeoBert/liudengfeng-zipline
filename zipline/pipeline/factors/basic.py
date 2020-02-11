@@ -61,7 +61,7 @@ class OpenReturns(CustomFactor):
     Calculate the opening change rate based on the previous closing price
     **Default Inputs**: [CNEquityPricing.close, CNEquityPricing.open]
     """
-    inputs = [EquityPricing.close, EquityPricing.open]
+    inputs = [EquityPricing.b_close, EquityPricing.b_open]
     window_safe = True
     window_length = 2
 

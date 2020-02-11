@@ -187,7 +187,7 @@ def gen_asset_metadata(only_in=True, only_A=True):
     del df['stock_type']
     # 对于未退市的结束日期，以最后交易日期代替
     df.loc[df.end_date.isna(), 'end_date'] = df.loc[df.end_date.isna(),
-                                                    'last_traded']
+                                                    'last_traded'].values
     df.sort_values('symbol', inplace=True)
     df.reset_index(inplace=True, drop=True)
     df['exchange'] = df['symbol'].map(get_exchange)

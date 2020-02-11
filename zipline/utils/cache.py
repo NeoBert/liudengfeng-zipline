@@ -1,16 +1,17 @@
 """
 Caching utilities for zipline
 """
-from collections import MutableMapping
 import errno
-from functools import partial
 import os
 import pickle
+from collections.abc import MutableMapping
 from distutils import dir_util
-from shutil import rmtree, move
-from tempfile import mkdtemp, NamedTemporaryFile
+from functools import partial
+from shutil import move, rmtree
+from tempfile import NamedTemporaryFile, mkdtemp
 
 import pandas as pd
+import pyarrow as pa
 
 from .compat import PY2
 from .context_tricks import nop_context
@@ -54,6 +55,7 @@ class CachedObject(object):
         ...
     Expired: 2014-01-01 00:00:00+00:00
     """
+
     def __init__(self, value, expires):
         self._value = value
         self._expires = expires
@@ -203,6 +205,7 @@ class dataframe_cache(MutableMapping):
     The cache uses a temporary file format that is subject to change between
     versions of zipline.
     """
+
     def __init__(self,
                  path=None,
                  lock=None,
@@ -213,8 +216,10 @@ class dataframe_cache(MutableMapping):
         self.clean_on_failure = clean_on_failure
 
         if serialization == 'msgpack':
-            self.serialize = pd.DataFrame.to_msgpack
-            self.deserialize = pd.read_msgpack
+            # self.serialize = pd.DataFrame.to_msgpack
+            self.serialize = self._serialize_msgpack
+            # self.deserialize = pd.read_msgpack
+            self.deserialize = self._deserialize_msgpack
             self._protocol = None
         else:
             s = serialization.split(':', 1)
@@ -231,6 +236,17 @@ class dataframe_cache(MutableMapping):
             )
 
         ensure_directory(self.path)
+
+    def _serialize_msgpack(self, df, path):
+        context = pa.default_serialization_context()
+        df_bytestring = context.serialize(df).to_buffer().to_pybytes()
+        with open(path, 'wb') as f:
+            f.write(df_bytestring)
+
+    def _deserialize_msgpack(self, f):
+        context = pa.default_serialization_context()
+        data = f.read()
+        return context.deserialize(data)
 
     def _serialize_pickle(self, df, path):
         with open(path, 'wb') as f:
@@ -308,6 +324,7 @@ class working_file(object):
     ``working_file`` uses :func:`shutil.move` to move the actual files,
     meaning it has as strong of guarantees as :func:`shutil.move`.
     """
+
     def __init__(self, final_path, *args, **kwargs):
         self._tmpfile = NamedTemporaryFile(delete=False, *args, **kwargs)
         self._final_path = final_path
@@ -351,6 +368,7 @@ class working_dir(object):
     ``working_dir`` uses :func:`dir_util.copy_tree` to move the actual files,
     meaning it has as strong of guarantees as :func:`dir_util.copy_tree`.
     """
+
     def __init__(self, final_path, *args, **kwargs):
         self.path = mkdtemp()
         self._final_path = final_path
