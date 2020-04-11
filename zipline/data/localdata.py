@@ -7,14 +7,17 @@
 注：只选A股股票。注意股票总体在`ingest`及`fundamental`必须保持一致。
 """
 import re
+import warnings
 from functools import lru_cache
 
 import numpy as np
 import pandas as pd
 
-from cnswd.query_utils import query, query_stmt, Ops
-from cnswd.reader import asr_data, calendar, daily_history, stock_list, minutely_history
+from cnswd.store import (DataBrowseStore, TctMinutelyStore, TradingDateStore,
+                         WyStockDailyStore)
 from cnswd.utils import sanitize_dates
+
+warnings.filterwarnings('ignore')
 
 WY_DAILY_COL_MAPS = {
     '日期': 'date',
@@ -45,6 +48,34 @@ SZX_ADJUSTMENT_COLS = {
 }
 
 
+classes = (
+    DataBrowseStore,
+    TctMinutelyStore,
+    TradingDateStore,
+    WyStockDailyStore
+)
+
+
+def check_data():
+    failed = []
+    for c in classes:
+        with c() as store:
+            fp = store.file_path
+            if fp.stem.lower().startswith('data_'):
+                key = '1/df'
+            else:
+                key = 'df'
+            try:
+                df = pd.read_hdf(fp, key, start=0, stop=1)
+                if len(df) != 1:
+                    failed.append(c.__name__)
+            except Exception:
+                failed.append(c.__name__)
+    if len(failed):
+        print(f"数据库无数据或已损坏\n{failed}")
+    return failed
+
+
 def get_exchange(code):
     """股票所在交易所编码"""
     # https://www.iso20022.org/10383/iso-10383-market-identifier-codes
@@ -64,11 +95,11 @@ def get_exchange(code):
 
 def _select_only_a(df, code_col):
     """选择A股数据
-    
+
     Arguments:
         df {DataFrame} -- 数据框
         code_col {str} -- 代表股票代码的列名称
-    
+
     Returns:
         DataFrame -- 筛选出来的a股数据
     """
@@ -103,7 +134,8 @@ def _stock_basic_info():
         '证券类别': 'stock_type',
         '上市地点': 'exchange'
     }
-    df = stock_list()
+    with DataBrowseStore() as store:
+        df = store.query('1').reset_index()
     df.drop_duplicates('股票代码', inplace=True)
     # 剔除未上市、未交易的无效股票
     cond1 = ~ df['上市日期'].isnull()
@@ -122,17 +154,13 @@ def _stock_first_and_last(code):
 
     Examples
     --------
-    >>> df = _stock_first_and_last()
-    >>> df.head()
-        symbol first_traded last_traded
-    0     000001   1991-04-03  2018-12-21
-    1     000002   1991-01-29  2018-12-21
-    2     000003   1991-01-02  2002-04-26
-    3     000004   1991-01-02  2018-12-21
-    4     000005   1991-01-02  2018-12-21   
+    >>> _stock_first_and_last('000333')
+    symbol	asset_name	first_traded	last_traded
+    0	000333	美的集团	2020-04-02 00:00:00+00:00	2020-04-04 00:00:00+00:00
     """
     try:
-        df = daily_history(code, None, None)
+        with WyStockDailyStore() as store:
+            df = store.query(codes=[code]).reset_index()
         return pd.DataFrame(
             {
                 'symbol':
@@ -198,7 +226,8 @@ def gen_asset_metadata(only_in=True, only_A=True):
 
 @lru_cache(None)
 def _tdates():
-    return calendar()
+    with TradingDateStore() as store:
+        return store.query()['trading_date'].values
 
 
 def _fill_zero(df, first_col='close'):
@@ -261,7 +290,9 @@ def _reindex(df, dts):
 
 def _fetch_single_equity(stock_code, start, end):
     """读取本地原始数据"""
-    df = daily_history(stock_code, start, end)
+    with WyStockDailyStore() as store:
+        df = store.query(codes=[stock_code], start=start, end=end)
+    df = df.reset_index()
     if df.empty:
         return df
     # 截取所需列
@@ -333,33 +364,13 @@ def fetch_single_equity(stock_code, start, end):
     return df
 
 
-# 注意定期整理分钟级别的数据
-@lru_cache(None)
-def _all_data(start, end):
-    df = minutely_history(None, start, end)
-    df.rename(columns={
-        '时间': 'datetime',
-        '代码': 'symbol',
-        '今开': 'open',
-        '最高': 'high',
-        '最低': 'low',
-        '最新价': 'close',
-        '成交量': 'volume',
-    },
-              inplace=True)
-    df.sort_values('symbol', inplace=True)
-
-    return df
-
-
 def fetch_single_minutely_equity(stock_code, start, end):
     """
     从本地数据库读取单个股票期间分钟级别交易明细数据
 
     **注意** 
-    1. 性能原因，超过一定周期的数据，转移至备份数据库。只能查询到近期数据。
-    2. 交易日历分钟自9：31~11：31 13：01~15：01
-    
+        交易日历分钟自9：31~11：31 13：01~15：01
+
     Parameters
     ----------
     stock_code : str
@@ -375,10 +386,10 @@ def fetch_single_minutely_equity(stock_code, start, end):
 
     Examples
     --------
-    >>> symbol = '000333'
-    >>> start_date = '2018-4-1'
-    >>> end_date = pd.Timestamp('2018-4-19')
-    >>> df = fetch_single_minutely_equity(symbol, start_date, end_date)
+    >>> stock_code = '000333'
+    >>> start = '2020-01-07'
+    >>> end = pd.Timestamp('2020-01-07')
+    >>> df = fetch_single_minutely_equity(stock_code, start, end)
     >>> df.tail()
                         close   high    low   open  volume
     2018-04-19 14:56:00  51.55  51.56  51.50  51.55  376400
@@ -388,10 +399,22 @@ def fetch_single_minutely_equity(stock_code, start, end):
     2018-04-19 15:00:00  51.57  51.57  51.57  51.57  353900
     """
     cols = ['datetime', 'open', 'high', 'low', 'close', 'volume']
-    df = _all_data(start, end)
-    cond = df['symbol'] == stock_code
+    with TctMinutelyStore() as store:
+        df = store.query(
+            codes=[stock_code], start=start, end=end).reset_index()
+    df.rename(columns={
+        '时间': 'datetime',
+        '代码': 'symbol',
+        '今开': 'open',
+        '最高': 'high',
+        '最低': 'low',
+        '最新价': 'close',
+        '成交量': 'volume',
+    },
+        inplace=True)
+
     try:
-        ret = df[cond][cols]
+        ret = df[cols]
         # 可能存在重复
         ret.drop_duplicates('datetime', keep='last', inplace=True)
         ret.set_index('datetime', inplace=True)
@@ -433,10 +456,12 @@ def fetch_single_quity_adjustments(stock_code, start, end):
     5  000333 2017-12-31      0.0      0.0     1.2    2018-04-24  2018-05-03 2018-05-04 2018-05-04
     """
     start, end = sanitize_dates(start, end)
-    df = asr_data('5', stock_code, start, end)
+    with DataBrowseStore() as store:
+        df = store.query('5', [stock_code], start=start, end=end)
     if df.empty:
         # 返回一个空表
         return pd.DataFrame(columns=SZX_ADJUSTMENT_COLS)
+    df.reset_index(inplace=True)
     df.rename(columns=SZX_ADJUSTMENT_COLS, inplace=True)
     df = df[SZX_ADJUSTMENT_COLS.values()]
     # nan以0代替

@@ -1,5 +1,6 @@
 import pandas as pd
-from cnswd.reader import daily_history
+
+from cnswd.store import WyIndexDailyStore
 
 
 def get_cn_benchmark_returns(symbol='000300'):
@@ -9,11 +10,12 @@ def get_cn_benchmark_returns(symbol='000300'):
     ----------
     symbol : str
         Benchmark symbol for which we're getting the returns.
-    
+
     Returns:
         Series -- 基准收益率
     """
-    data = daily_history(symbol, None, None, True)
+    with WyIndexDailyStore() as store:
+        data = store.query(codes=symbol)
     s = pd.Series(data['涨跌幅'].values / 100.0,
-                  index=pd.DatetimeIndex(data['日期'].values))
+                  index=data.index.get_level_values(0))
     return s.sort_index().tz_localize('UTC').dropna()

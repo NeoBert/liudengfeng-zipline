@@ -8,13 +8,13 @@ import warnings
 
 import numpy as np
 import pandas as pd
-
-from cnswd.query_utils import Ops, query, query_stmt
-from cnswd.reader import (asr_data, classify_bom, classify_tree, margin,
-                          stock_list, ths_gn)
+from cnswd.store import (ClassifyTreeStore, DataBrowseStore, MarginStore,
+                         TctGnStore, WyStockDailyStore)
 from cnswd.utils import data_root
 
 from .constants import SW_SECTOR_MAPS
+
+warnings.filterwarnings('ignore')
 
 NUM_MAPS = {
     1: '一级',
@@ -28,11 +28,38 @@ TO_DORP_PAT_1 = re.compile(r'^[1-9]、|[（()][1-9][)）]')
 TO_DORP_PAT_2 = re.compile(r'[、：（）-]|\_|\(|\)')
 
 # region 辅助函数
+classes = (
+    ClassifyTreeStore,
+    DataBrowseStore,
+    MarginStore,
+    TctGnStore,
+    WyStockDailyStore
+)
+
+
+def check_data():
+    failed = []
+    for c in classes:
+        with c() as store:
+            fp = store.file_path
+            if fp.stem.lower().startswith('data_'):
+                key = '1/df'
+            else:
+                key = 'df'
+            try:
+                df = pd.read_hdf(fp, key, start=0, stop=1)
+                if len(df) != 1:
+                    failed.append(c.__name__)
+            except Exception:
+                failed.append(c.__name__)
+    if len(failed):
+        print(f"数据库无数据或已损坏\n{failed}")
+    return failed
 
 
 def _normalized_col_name(x):
     """规范列财务报告项目在`pipeline`中的列名称
-    
+
     去除列名称中的前导数字，中间符号，保留文字及尾部数字
     """
     # 去除前导序号
@@ -58,7 +85,8 @@ def _select_only_a(df, only_A, code_col='股票代码'):
 
 def get_stock_info(only_A=True):
     """股票基础信息"""
-    df = stock_list()
+    with DataBrowseStore() as store:
+        df = store.query('1').reset_index()
     df.drop_duplicates('股票代码', inplace=True)
     # 剔除未上市、未交易的无效股票
     cond1 = ~ df['上市日期'].isnull()
@@ -108,7 +136,8 @@ def get_stock_info(only_A=True):
 
 def get_cn_bom():
     """国证行业分类编码表"""
-    df = classify_bom()
+    with ClassifyTreeStore() as store:
+        df = store.get_bom()
     cond = df['分类编码'].str.startswith('Z')
     df = df[cond][['分类编码', '分类名称']]
     return df.sort_values('分类编码')
@@ -119,7 +148,8 @@ def _get_cn_industry(only_A, level, bom):
     assert level in (1, 2, 3, 4), '国证行业只有四级分类'
     u_num = NUM_MAPS[level]
     col_names = ['sid', '国证{}行业'.format(u_num), '国证{}行业编码'.format(u_num)]
-    df = classify_tree()
+    with ClassifyTreeStore() as store:
+        df = store.query()
     cond = df['平台类别'] == '137003'
     df = df[cond]
     df = _select_only_a(df, only_A, '股票代码')
@@ -157,7 +187,8 @@ def get_cn_industry(only_A=True):
 def get_sw_industry(only_A=True):
     """获取申万一级行业分类编码"""
     code_maps = {v: k for k, v in SW_SECTOR_MAPS.items()}
-    df = classify_tree()
+    with ClassifyTreeStore() as store:
+        df = store.query()
     cond = df['平台类别'] == '137004'
     df = df[cond]
     df = _select_only_a(df, only_A, '股票代码')
@@ -171,8 +202,9 @@ def get_sw_industry(only_A=True):
 
 def concept_categories():
     """概念类别映射{代码:名称}"""
-    df = ths_gn()
-    df = df.drop_duplicates(subset='概念编码')[['概念编码', '概念']]
+    with TctGnStore() as store:
+        df = store.query()
+    df = df.drop_duplicates(subset='概念id')[['概念id', '概念简称']]
     try:
         df.columns = ['code', 'name']
     except ValueError:
@@ -221,7 +253,8 @@ def get_concept_info(only_A=True):
       4  False  False  False   True  False  ...  False
     """
     id_maps, _ = field_code_concept_maps()
-    df = ths_gn()[['股票代码', '概念编码']]
+    with TctGnStore() as store:
+        df = store.query()[['股票代码', '概念id']]
     # 暂无成份股数据
     df = df[~df['股票代码'].str.startswith('暂无')]
     df = _select_only_a(df, only_A, '股票代码')
@@ -246,37 +279,28 @@ def get_concept_info(only_A=True):
 
 def get_short_name_changes(only_A=True):
     """股票简称变动历史"""
-    p = data_root('wy_stock')
-    fs = p.glob('*.h5')
-    code_pattern = re.compile(r'\d{6}')
-
-    def f(fp):
-        code = re.findall(code_pattern, str(fp))[0]
-        # 原始数据中，股票代码中有前缀`'`
-        code = f"'{code}"
-        if only_A and code[0] in ('2', '9'):
-            return pd.DataFrame()
-        stmt = query_stmt(*[('股票代码', Ops.eq, code)])
-        try:
-            df = query(fp, stmt)[['名称', '股票代码', '日期']]
-            df.columns = ['股票简称', 'sid', 'asof_date']
-            df['sid'] = df['sid'].map(lambda x: x[1:])
-            df['sid'] = df['sid'].map(lambda x: int(x))
-            df.sort_values(['sid', 'asof_date'], inplace=True)
-            df.drop_duplicates(subset=['股票简称', 'sid'], inplace=True)
-        except KeyError:
-            # 新股无数据
-            df = pd.DataFrame()
-        return df
-
-    res = map(f, fs)
-    df = pd.concat(res)
+    dfs = []
+    subset = ['股票简称', 'sid']
+    with WyStockDailyStore() as store:
+        for df in store.query(iterator=True):
+            data = df.reset_index()[['名称', '股票代码', '日期']]
+            if only_A:
+                cond = data['股票代码'].map(lambda x: x[0] in ('2', '9'))
+                data = data[~cond]
+            data.columns = ['股票简称', 'sid', 'asof_date']
+            data['sid'] = data['sid'].map(lambda x: int(x))
+            data.sort_values(['sid', 'asof_date'], inplace=True)
+            data.drop_duplicates(subset=subset, inplace=True)
+            dfs.append(data)
+    df = pd.concat(dfs)
+    df.drop_duplicates(subset=subset, inplace=True)
     return df
 
 
 def get_margin_data(only_A=True):
     """融资融券数据"""
-    df = margin(None, None, None)
+    with MarginStore() as store:
+        df = store.query().reset_index()
     df.rename(columns={'交易日期': 'asof_date'}, inplace=True)
     df = _select_only_a(df, only_A, '股票代码')
     return df
@@ -285,7 +309,8 @@ def get_margin_data(only_A=True):
 def get_dividend_data(only_A=True):
     """现金股利"""
     cols = ['股票代码', '分红年度', '董事会预案公告日期', '派息比例(人民币)']
-    df = asr_data('5', None, None, None)[cols]
+    with DataBrowseStore() as store:
+        df = store.query('5').reset_index()[cols]
     cond = df['派息比例(人民币)'] > 0
     df = df[cond]
     df = df[~df['董事会预案公告日期'].isnull()]
@@ -328,7 +353,8 @@ def _periodly_report(only_A, level):
         '股票简称', '机构名称', '合并类型编码', '合并类型', '报表来源编码', '报表来源',
         'last_refresh_time', '备注'
     ]
-    df = asr_data(level, None, None, None)
+    with DataBrowseStore() as store:
+        df = store.query(level).reset_index()
     df = _select_only_a(df, only_A, '股票代码')
     df.drop(to_drop, axis=1, inplace=True, errors='ignore')
     # 规范列名称
@@ -338,7 +364,7 @@ def _periodly_report(only_A, level):
         "截止日期": "asof_date",
         "公告日期": "timestamp"
     },
-              inplace=True)
+        inplace=True)
     # 修复截止日期
     _fix_sid_ad_ts(df)
     df.sort_values(['sid', 'asof_date'], inplace=True)
@@ -375,7 +401,8 @@ def _financial_report_announcement_date():
         以其利润表定期报告的公告日期作为`asof_date`
     """
     col_names = ['股票代码', '公告日期', '截止日期']
-    df = asr_data('7.1.1', None, None, None)[col_names]
+    with DataBrowseStore() as store:
+        df = store.query('7.1.1').reset_index()[col_names]
     return df
 
 
@@ -385,7 +412,8 @@ def _get_report(only_A, level, to_drop, col='截止日期', keys=['股票代码'
 
     使用报告期资产负债表的公告日期
     """
-    df = asr_data(level, None, None, None)
+    with DataBrowseStore() as store:
+        df = store.query(level).reset_index()
     df = _select_only_a(df, only_A, '股票代码')
     df.drop(to_drop, axis=1, inplace=True, errors='ignore')
     asof_dates = _financial_report_announcement_date()
@@ -403,7 +431,7 @@ def _get_report(only_A, level, to_drop, col='截止日期', keys=['股票代码'
         "截止日期": "asof_date",
         "公告日期": "timestamp"
     },
-              inplace=True)
+        inplace=True)
     # 修复截止日期
     _fix_sid_ad_ts(df)
     df.sort_values(['sid', 'asof_date'], inplace=True)
@@ -497,7 +525,8 @@ def get_performance_forecaste_data(only_A=True):
     level = '4.1'
     # 简化写入量，保留`业绩类型`
     to_drop = ['股票简称', '业绩类型编码', '业绩预告内容', '业绩变化原因', '报告期最新记录标识', '备注']
-    df = asr_data(level, None, None, None)
+    with DataBrowseStore() as store:
+        df = store.query(level).reset_index()
     df = _select_only_a(df, only_A, '股票代码')
     for col in to_drop:
         if col in df.columns:
@@ -506,7 +535,7 @@ def get_performance_forecaste_data(only_A=True):
     # 借用财务报告的截至日期
     asof_dates = _financial_report_announcement_date()
     asof_dates.pop('公告日期')
-    keys = ['股票代码','截止日期']
+    keys = ['股票代码', '截止日期']
     df = asof_dates.join(df.set_index(keys), on=keys)
     # 将缺少的公告日期+45天
     cond = df['公告日期'].isnull()
@@ -516,6 +545,8 @@ def get_performance_forecaste_data(only_A=True):
         "截止日期": "asof_date",
         "公告日期": "timestamp",
     }, inplace=True)
+    # 确保为str
+    df['业绩类型'] = df['业绩类型'].map(lambda x: str(x))
     return df
 
 
@@ -533,7 +564,7 @@ def get_shareholding_concentration_data(only_A=True):
         "Ｂ股户数": "B股户数",
         "Ｈ股户数": "H股户数",
     },
-              inplace=True)
+        inplace=True)
     # 更改为逻辑类型
     df['前十大股东'] = df['前十大股东'] == '前十大股东'
     df.sort_values(['sid', 'asof_date'], inplace=True)
@@ -549,7 +580,8 @@ def get_investment_rating_data(only_A=True):
     """投资评级"""
     level = '3'
     to_drop = ['序号', '股票简称', '投资评级', '备注']
-    df = asr_data(level, None, None, None)
+    with DataBrowseStore() as store:
+        df = store.query(level).reset_index()
     df = _select_only_a(df, only_A, '股票代码')
     for col in to_drop:
         if col in df.columns:
@@ -561,7 +593,7 @@ def get_investment_rating_data(only_A=True):
         "目标价格（下限）": "价格下限",
         "目标价格（上限）": "价格上限",
     },
-              inplace=True)
+        inplace=True)
     df.dropna(subset=['投资评级'], inplace=True)
     return df
 

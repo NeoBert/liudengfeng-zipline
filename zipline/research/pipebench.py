@@ -21,10 +21,17 @@ def run_pipeline(pipeline, start_date, end_date):
 def _tdate(calendar, d, direction):
     if not calendar.is_session(d):
         # this is not a trading session, advance to the next session
-        return calendar.minute_to_session_label(
-            d,
-            direction=direction,
-        )
+        # return calendar.minute_to_session_label(
+        #     d,
+        #     direction=direction,
+        # )
+        # next为上一开盘分钟，previous为前收盘时间
+        if direction == 'next':
+            return calendar.next_open(d)
+        elif direction == 'previous':
+            return calendar.previous_close(d)
+        else:
+            raise ValueError(f'方向只能为`next或者previous`，输入：{direction}')
     return d
 
 

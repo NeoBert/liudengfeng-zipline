@@ -69,7 +69,6 @@ TAB_MAPS = {
 def write_dataframe(df, table_name, attr_dict=None):
     """以bcolz格式写入数据框"""
     log = Logger(table_name)
-    log.info('......')
     # 转换为bcolz格式并存储
     rootdir = bcolz_table_path(table_name)
     if os.path.exists(rootdir):
@@ -80,7 +79,7 @@ def write_dataframe(df, table_name, attr_dict=None):
             warnings.warn(f'{c}列含有空值，已移除')
             df = df.loc[~df[c].isnan(), :]
     ct = bcolz.ctable.fromdataframe(df, rootdir=rootdir)
-    log.info('write to: {}'.format(rootdir))
+    log.info(f'{len(df)} 行 写入：{rootdir}')
     if attr_dict:
         # 设置属性
         for k, v in attr_dict.items():
