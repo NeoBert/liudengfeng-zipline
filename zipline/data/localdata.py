@@ -150,7 +150,7 @@ def _stock_first_and_last(code):
             index=[0])
     except ForbidPparallel:
         raise
-    else:
+    except IndexError:
         # 新股无数据
         return pd.DataFrame()
 
