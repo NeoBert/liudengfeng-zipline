@@ -1,6 +1,3 @@
-"""
-不涉及到期货
-"""
 import os
 import sqlite3
 from unittest import TestCase
@@ -10,18 +7,21 @@ from contextlib import ExitStack
 from logbook import NullHandler, Logger
 import numpy as np
 import pandas as pd
-from six import with_metaclass, iteritems, itervalues
+from six import with_metaclass, iteritems, itervalues, PY2
 import responses
 from toolz import flip, groupby, merge
 from trading_calendars import (
     get_calendar,
     register_calendar_alias,
 )
+import h5py
 
 import zipline
 from zipline.algorithm import TradingAlgorithm
 from zipline.assets import Equity, Future
 from zipline.assets.continuous_futures import CHAIN_PREDICATES
+from zipline.data.benchmarks import get_benchmark_returns_from_file
+from zipline.data.fx import DEFAULT_FX_RATE
 from zipline.finance.asset_restrictions import NoRestrictions
 from zipline.utils.memoize import classlazyval
 from zipline.pipeline import SimplePipelineEngine
@@ -54,14 +54,15 @@ from ..data.data_portal import (
     DEFAULT_MINUTE_HISTORY_PREFETCH,
     DEFAULT_DAILY_HISTORY_PREFETCH,
 )
-from ..data.fx import InMemoryFXRateReader
+from ..data.fx import (
+    InMemoryFXRateReader,
+    HDF5FXRateReader,
+    HDF5FXRateWriter,
+)
 from ..data.hdf5_daily_bars import (
     HDF5DailyBarReader,
     HDF5DailyBarWriter,
     MultiCountryDailyBarReader,
-)
-from ..data.loader import (
-    get_benchmark_filename,
 )
 from ..data.minute_bars import (
     BcolzMinuteBarReader,
@@ -247,6 +248,10 @@ class ZiplineTestCase(with_metaclass(DebugMROMeta, TestCase)):
             The callback to invoke at the end of each test.
         """
         return self._instance_teardown_stack.callback(callback)
+
+    if PY2:
+        def assertRaisesRegex(self, *args, **kwargs):
+            return self.assertRaisesRegexp(*args, **kwargs)
 
 
 def alias(attr_name):
@@ -498,7 +503,7 @@ class WithTradingCalendars(object):
     class-level fixture.
 
     After ``init_class_fixtures`` has been called:
-    - `cls.trading_calendar` is populated with a default of the XSHG trading
+    - `cls.trading_calendar` is populated with a default of the nyse trading
     calendar for compatibility with existing tests
     - `cls.all_trading_calendars` is populated with the trading calendars
     keyed by name,
@@ -513,12 +518,12 @@ class WithTradingCalendars(object):
         A dictionary which maps asset type names to the calendar associated
         with that asset type.
     """
-    TRADING_CALENDAR_STRS = ('XSHG',)
-    TRADING_CALENDAR_FOR_ASSET_TYPE = {Equity: 'XSHG', Future: 'XSHG'}
+    TRADING_CALENDAR_STRS = ('NYSE',)
+    TRADING_CALENDAR_FOR_ASSET_TYPE = {Equity: 'NYSE', Future: 'us_futures'}
     # For backwards compatibility, exisitng tests and fixtures refer to
-    # `trading_calendar` with the assumption that the value is the XSHG
+    # `trading_calendar` with the assumption that the value is the NYSE
     # calendar.
-    TRADING_CALENDAR_PRIMARY_CAL = 'XSHG'
+    TRADING_CALENDAR_PRIMARY_CAL = 'NYSE'
 
     @classmethod
     def init_class_fixtures(cls):
@@ -546,21 +551,17 @@ class WithTradingCalendars(object):
         )
 
 
-_MARKET_DATA_DIR = os.path.join(zipline_dir, 'resources', 'market_data')
+STATIC_BENCHMARK_PATH = os.path.join(
+    zipline_dir,
+    'resources',
+    'market_data',
+    'SPY_benchmark.csv',
+)
 
 
 @remember_last
 def read_checked_in_benchmark_data():
-    symbol = 'SPY'
-    filename = get_benchmark_filename(symbol)
-    source_path = os.path.join(_MARKET_DATA_DIR, filename)
-    benchmark_returns = pd.read_csv(
-        source_path,
-        parse_dates=[0],
-        index_col=0,
-        header=None,
-    ).tz_localize('UTC')
-    return benchmark_returns.iloc[:, 0]
+    return get_benchmark_returns_from_file(STATIC_BENCHMARK_PATH)
 
 
 class WithBenchmarkReturns(WithDefaultDateBounds,
@@ -575,28 +576,27 @@ class WithBenchmarkReturns(WithDefaultDateBounds,
     def BENCHMARK_RETURNS(cls):
         benchmark_returns = read_checked_in_benchmark_data()
 
-        # Zipline ordinarily uses cached benchmark returns and treasury
-        # curves data, but when running the zipline tests this cache is not
-        # always updated to include the appropriate dates required by both
-        # the futures and equity calendars. In order to create more
-        # reliable and consistent data throughout the entirety of the
-        # tests, we read static benchmark returns and treasury curve csv
-        # files from source. If a test using this fixture attempts to run
-        # outside of the static date range of the csv files, raise an
-        # exception warning the user to either update the csv files in
-        # source or to use a date range within the current bounds.
+        # Zipline ordinarily uses cached benchmark returns data, but when
+        # running the zipline tests this cache is not always updated to include
+        # the appropriate dates required by both the futures and equity
+        # calendars. In order to create more reliable and consistent data
+        # throughout the entirety of the tests, we read static benchmark
+        # returns files from source. If a test using this fixture attempts to
+        # run outside of the static date range of the csv files, raise an
+        # exception warning the user to either update the csv files in source
+        # or to use a date range within the current bounds.
         static_start_date = benchmark_returns.index[0].date()
         static_end_date = benchmark_returns.index[-1].date()
         warning_message = (
             'The WithBenchmarkReturns fixture uses static data between '
             '{static_start} and {static_end}. To use a start and end date '
             'of {given_start} and {given_end} you will have to update the '
-            'files in {resource_dir} to include the missing dates.'.format(
+            'file in {benchmark_path} to include the missing dates.'.format(
                 static_start=static_start_date,
                 static_end=static_end_date,
                 given_start=cls.START_DATE.date(),
                 given_end=cls.END_DATE.date(),
-                resource_dir=_MARKET_DATA_DIR,
+                benchmark_path=STATIC_BENCHMARK_PATH,
             )
         )
         if cls.START_DATE.date() < static_start_date or \
@@ -671,7 +671,7 @@ class WithTradingSessions(WithDefaultDateBounds, WithTradingCalendars):
     (DATA_MAX_DAY - (cls.TRADING_DAY_COUNT) -> DATA_MAX_DAY)
 
     `cls.trading_days`, for compatibility with existing tests which make the
-    assumption that trading days are equity only, defaults to the XSHG trading
+    assumption that trading days are equity only, defaults to the nyse trading
     sessions.
 
     Attributes
@@ -687,7 +687,7 @@ class WithTradingSessions(WithDefaultDateBounds, WithTradingCalendars):
     DATA_MAX_DAY = alias('END_DATE')
 
     # For backwards compatibility, exisitng tests and fixtures refer to
-    # `trading_days` with the assumption that the value is days of the XSHG
+    # `trading_days` with the assumption that the value is days of the NYSE
     # calendar.
     trading_days = alias('nyse_sessions')
 
@@ -1407,7 +1407,7 @@ class WithFutureMinuteBarData(WithAssetFinder, WithTradingCalendars):
 
     @classmethod
     def make_future_minute_bar_data(cls):
-        trading_calendar = get_calendar('XSHG')
+        trading_calendar = get_calendar('us_futures')
         return create_minute_bar_data(
             trading_calendar.minutes_for_sessions_in_range(
                 cls.future_minute_bar_days[0],
@@ -1419,7 +1419,7 @@ class WithFutureMinuteBarData(WithAssetFinder, WithTradingCalendars):
     @classmethod
     def init_class_fixtures(cls):
         super(WithFutureMinuteBarData, cls).init_class_fixtures()
-        trading_calendar = get_calendar('XSHG')
+        trading_calendar = get_calendar('us_futures')
         cls.future_minute_bar_days = _trading_days_for_minute_bars(
             trading_calendar,
             pd.Timestamp(cls.FUTURE_MINUTE_BAR_START_DATE),
@@ -1530,7 +1530,7 @@ class WithBcolzFutureMinuteBarReader(WithFutureMinuteBarData, WithTmpDir):
     @classmethod
     def init_class_fixtures(cls):
         super(WithBcolzFutureMinuteBarReader, cls).init_class_fixtures()
-        trading_calendar = get_calendar('XSHG')
+        trading_calendar = get_calendar('us_futures')
         cls.bcolz_future_minute_bar_path = p = \
             cls.make_bcolz_future_minute_bar_rootdir_path()
         days = cls.future_minute_bar_days
@@ -2064,7 +2064,7 @@ class WithWerror(object):
         super(WithWerror, cls).init_class_fixtures()
 
 
-register_calendar_alias("TEST", "XSHG")
+register_calendar_alias("TEST", "NYSE")
 
 
 class WithSeededRandomState(object):
@@ -2092,6 +2092,9 @@ class WithFXRates(object):
 
     # Kinds of rates for which exchange rate data is present.
     FX_RATES_RATE_NAMES = ["mid"]
+
+    # Default chunk size used for fx artifact compression.
+    HDF5_FX_CHUNK_SIZE = 75
 
     # Rate used by default for Pipeline API queries that don't specify a rate
     # explicitly.
@@ -2150,8 +2153,6 @@ class WithFXRates(object):
     def make_fx_rates(cls, rate_names, currencies, sessions):
         rng = np.random.RandomState(42)
 
-        currencies = sorted(currencies)
-
         out = {}
         for rate_name in rate_names:
             cols = {}
@@ -2163,3 +2164,86 @@ class WithFXRates(object):
             out[rate_name] = cls.make_fx_rates_from_reference(reference)
 
         return out
+
+    @classmethod
+    def write_h5_fx_rates(cls, path):
+        """Write cls.fx_rates to disk with an HDF5FXRateWriter.
+
+        Returns an HDF5FXRateReader that reader from written data.
+        """
+        sessions = cls.fx_rates_sessions
+
+        # Write in-memory data to h5 file.
+        with h5py.File(path, 'w') as h5_file:
+            writer = HDF5FXRateWriter(h5_file, cls.HDF5_FX_CHUNK_SIZE)
+            fx_data = ((rate, quote, quote_frame.values)
+                       for rate, rate_dict in cls.fx_rates.items()
+                       for quote, quote_frame in rate_dict.items())
+
+            writer.write(
+                dts=sessions.values,
+                currencies=np.array(cls.FX_RATES_CURRENCIES, dtype=object),
+                data=fx_data,
+            )
+
+        h5_file = cls.enter_class_context(h5py.File(path, 'r'))
+
+        return HDF5FXRateReader(
+            h5_file,
+            default_rate=cls.FX_RATES_DEFAULT_RATE,
+        )
+
+    @classmethod
+    def get_expected_fx_rate_scalar(cls, rate, quote, base, dt):
+        """Get the expected FX rate for the given scalar coordinates.
+        """
+        if base is None:
+            return np.nan
+
+        if rate == DEFAULT_FX_RATE:
+            rate = cls.FX_RATES_DEFAULT_RATE
+
+        col = cls.fx_rates[rate][quote][base]
+        if dt < col.index[0]:
+            return np.nan
+
+        # PERF: We call this function a lot in some suites, and get_loc is
+        # surprisingly expensive, so optimizing it has a meaningful impact on
+        # overall suite performance. See test_fast_get_loc_ffilled_for
+        # assurance that this behaves the same as get_loc.
+        ix = fast_get_loc_ffilled(col.index.values, dt.asm8)
+        return col.values[ix]
+
+    @classmethod
+    def get_expected_fx_rates(cls, rate, quote, bases, dts):
+        """Get an array of expected FX rates for the given indices.
+        """
+        out = np.empty((len(dts), len(bases)), dtype='float64')
+
+        for i, dt in enumerate(dts):
+            for j, base in enumerate(bases):
+                out[i, j] = cls.get_expected_fx_rate_scalar(
+                    rate, quote, base, dt,
+                )
+
+        return out
+
+    @classmethod
+    def get_expected_fx_rates_columnar(cls, rate, quote, bases, dts):
+        assert len(bases) == len(dts)
+        rates = [
+            cls.get_expected_fx_rate_scalar(rate, quote, base, dt)
+            for base, dt in zip(bases, dts)
+        ]
+        return np.array(rates, dtype='float64')
+
+
+def fast_get_loc_ffilled(dts, dt):
+    """
+    Equivalent to dts.get_loc(dt, method='ffill'), but with reasonable
+    microperformance.
+    """
+    ix = dts.searchsorted(dt, side='right') - 1
+    if ix < 0:
+        raise KeyError(dt)
+    return ix
