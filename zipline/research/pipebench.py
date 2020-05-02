@@ -56,13 +56,13 @@ def run_pipeline_against_bundle(pipeline, start_date, end_date, bundle):
     """
     engine, calendar = _pipeline_engine_and_calendar_for_bundle(bundle)
 
-    start_date = ensure_utc(start_date)  # pd.Timestamp(start_date, tz='utc')
-    end_date = ensure_utc(end_date)  # pd.Timestamp(end_date, tz='utc')
+    start_date = ensure_utc(start_date)
+    end_date = ensure_utc(end_date)
     if start_date == end_date:
         d1 = d2 = _tdate(calendar, end_date, 'previous')
     else:
-        d1 = _tdate(calendar, start_date, 'next')
-        d2 = _tdate(calendar, end_date, 'previous')
+        d1 = _tdate(calendar, start_date, 'next').normalize()
+        d2 = _tdate(calendar, end_date, 'previous').normalize()
         if d1 > d2:
             d1 = d2
     return engine.run_pipeline(pipeline, d1, d2)

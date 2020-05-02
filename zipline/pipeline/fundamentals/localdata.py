@@ -37,26 +37,6 @@ classes = (
 )
 
 
-def check_data():
-    failed = []
-    for c in classes:
-        with c() as store:
-            fp = store.file_path
-            if fp.stem.lower().startswith('data_'):
-                key = '1/df'
-            else:
-                key = 'df'
-            try:
-                df = pd.read_hdf(fp, key, start=0, stop=1)
-                if len(df) != 1:
-                    failed.append(c.__name__)
-            except Exception:
-                failed.append(c.__name__)
-    if len(failed):
-        print(f"数据库无数据或已损坏\n{failed}")
-    return failed
-
-
 def _normalized_col_name(x):
     """规范列财务报告项目在`pipeline`中的列名称
 

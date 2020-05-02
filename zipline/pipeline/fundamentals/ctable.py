@@ -1,4 +1,4 @@
-from zipline.pipeline.fundamentals.base import bcolz_table_path
+from .base import bcolz_table_path
 import bcolz
 
 

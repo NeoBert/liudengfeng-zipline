@@ -322,9 +322,6 @@ def zipline_magic(line, cell=None):
 def ingest(bundle, assets_version, show_progress):
     """提取指定包的数据
     """
-    from zipline.data.localdata import check_data
-    if len(check_data()):
-        return
     bundles_module.ingest(
         bundle,
         os.environ,
@@ -404,10 +401,7 @@ def fm():
     """写入基础数据(Fundamental)
     """
     # 提高`import zipline`速度
-    from zipline.pipeline.fundamentals.localdata import check_data
     from zipline.pipeline.fundamentals.writer import write_data_to_bcolz
-    if len(check_data()):
-        return
     write_data_to_bcolz()
 
 

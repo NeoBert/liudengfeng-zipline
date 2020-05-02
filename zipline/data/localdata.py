@@ -12,7 +12,7 @@ from functools import lru_cache
 
 import numpy as np
 import pandas as pd
-
+from cnswd._exceptions import ForbidPparallel
 from cnswd.store import (DataBrowseStore, TctMinutelyStore, TradingDateStore,
                          WyStockDailyStore)
 from cnswd.utils import sanitize_dates
@@ -46,34 +46,6 @@ SZX_ADJUSTMENT_COLS = {
     'A股除权日': 'ex_date',
     '派息日(A)': 'pay_date'
 }
-
-
-classes = (
-    DataBrowseStore,
-    TctMinutelyStore,
-    TradingDateStore,
-    WyStockDailyStore
-)
-
-
-def check_data():
-    failed = []
-    for c in classes:
-        with c() as store:
-            fp = store.file_path
-            if fp.stem.lower().startswith('data_'):
-                key = '1/df'
-            else:
-                key = 'df'
-            try:
-                df = pd.read_hdf(fp, key, start=0, stop=1)
-                if len(df) != 1:
-                    failed.append(c.__name__)
-            except Exception:
-                failed.append(c.__name__)
-    if len(failed):
-        print(f"数据库无数据或已损坏\n{failed}")
-    return failed
 
 
 def get_exchange(code):
@@ -160,7 +132,8 @@ def _stock_first_and_last(code):
     """
     try:
         with WyStockDailyStore() as store:
-            df = store.query(codes=[code]).reset_index()
+            # 数据务必按照日期升序排列
+            df = store.query(codes=code).reset_index().sort_values('日期')
         return pd.DataFrame(
             {
                 'symbol':
@@ -175,7 +148,9 @@ def _stock_first_and_last(code):
                 pd.Timedelta(days=1),
             },
             index=[0])
-    except Exception:
+    except ForbidPparallel:
+        raise
+    else:
         # 新股无数据
         return pd.DataFrame()
 
@@ -202,11 +177,11 @@ def gen_asset_metadata(only_in=True, only_A=True):
     3     000005 1990-12-10 2018-12-21    深交所主板       世纪星源   1991-01-02  2018-12-21      2018-12-22
     4     000006 1992-04-27 2018-12-21    深交所主板       深振业Ａ   1992-04-27  2018-12-21      2018-12-22
     """
-    s_and_e = _stock_basic_info()
+    s_and_e = _stock_basic_info()  # .iloc[:10, :]
     # 剔除非A股部分
     s_and_e = _select_only_a(s_and_e, 'symbol')
-    f_and_ls = [_stock_first_and_last(code) for code in s_and_e.symbol.values]
-    f_and_l = pd.concat(f_and_ls)
+    f_and_l = pd.concat([_stock_first_and_last(code)
+                         for code in s_and_e.symbol.values])
     df = s_and_e.merge(f_and_l, 'left', on='symbol')
     # 剔除已经退市
     if only_in:
@@ -361,6 +336,9 @@ def fetch_single_equity(stock_code, start, end):
     assert len(df) == len(dts), f"股票：{stock_code}，期间{t_start} ~ {t_end} 数据不足"
     df.loc[:, 'shares_outstanding'] = df.market_cap / df.close
     df.loc[:, 'total_shares'] = df.total_cap / df.close
+    if not df.empty:
+        cond = df['close'] > 0.0
+        df = df[cond]
     return df
 
 
@@ -400,8 +378,7 @@ def fetch_single_minutely_equity(stock_code, start, end):
     """
     cols = ['datetime', 'open', 'high', 'low', 'close', 'volume']
     with TctMinutelyStore() as store:
-        df = store.query(
-            codes=[stock_code], start=start, end=end).reset_index()
+        df = store.query(codes=stock_code, start=start, end=end).reset_index()
     df.rename(columns={
         '时间': 'datetime',
         '代码': 'symbol',
@@ -422,8 +399,9 @@ def fetch_single_minutely_equity(stock_code, start, end):
         am = ret.between_time('09:31', '11:31')
         pm = ret.between_time('13:00', '15:01')
         return pd.concat([am, pm]).sort_index()
-    except Exception:
-        return pd.DataFrame()
+    except Exception as e:
+        raise ValueError(str(e))
+    return pd.DataFrame()
 
 
 def fetch_single_quity_adjustments(stock_code, start, end):

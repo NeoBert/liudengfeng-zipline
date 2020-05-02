@@ -133,7 +133,6 @@ def gen_symbol_data(symbol_map, sessions, splits, dividends, is_minutely):
             # 更新股利
             raw_dividends = raw_adjustment.loc[raw_adjustment.amount > 0.0, :]
             _update_dividends(dividends, asset_id, raw_dividends)
-
         yield asset_id, asset_data
 
 

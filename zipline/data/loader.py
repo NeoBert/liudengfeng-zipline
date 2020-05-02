@@ -19,7 +19,7 @@ import pandas as pd
 from six.moves.urllib_error import HTTPError
 from trading_calendars import get_calendar
 
-from .benchmarks import get_benchmark_returns
+# from .benchmarks import get_benchmark_returns
 from .benchmarks_cn import get_cn_benchmark_returns
 from . import treasuries, treasuries_can, treasuries_cn
 from ..utils.paths import (
