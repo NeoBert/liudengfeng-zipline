@@ -536,8 +536,6 @@ class TradingAlgorithm(object):
                 raise ValueError("Must specify either benchmark_sid "
                                  "or benchmark_returns.")
             benchmark_asset = None
-            # get benchmark info from trading environment, which defaults to
-            # downloading data from IEX Trading.
             benchmark_returns = self.benchmark_returns
         return BenchmarkSource(
             benchmark_asset=benchmark_asset,
@@ -665,9 +663,9 @@ class TradingAlgorithm(object):
                 daily_perfs.append(perf['daily_perf'])
             else:
                 self.risk_report = perf
-
+        #TODO: √ tz='UTC' 是否需要注释掉 tz
         daily_dts = pd.DatetimeIndex(
-            [p['period_close'] for p in daily_perfs] #√ tz='UTC'
+            [p['period_close'] for p in daily_perfs], tz='UTC'
         )
         daily_stats = pd.DataFrame(daily_perfs, index=daily_dts)
         return daily_stats
@@ -939,7 +937,7 @@ class TradingAlgorithm(object):
         if calendar is None:
             cal = self.trading_calendar
         elif calendar is calendars.US_EQUITIES:
-            cal = get_calendar('XSHG') # # √ 修改交易日历名称
+            cal = get_calendar('XSHG') # √ 修改交易日历名称
         elif calendar is calendars.US_FUTURES:
             cal = get_calendar('us_futures')
         else:
