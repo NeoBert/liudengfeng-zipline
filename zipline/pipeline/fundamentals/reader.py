@@ -45,7 +45,7 @@ def _gen_expr(table_name):
     rootdir = bcolz_table_path(table_name)
     ct = bcolz.ctable(rootdir=rootdir, mode='r')
     raw_dshape = discover(ct)
-    dshape_ = _normalized_dshape(raw_dshape, False)
+    dshape_ = _normalized_dshape(raw_dshape, True)
     expr = blaze.data(ct, name=table_name, dshape=dshape_)
     return expr
 
@@ -58,7 +58,7 @@ def gen_data_set(table_name):
         # loader=global_loader,
         no_deltas_rule='ignore',
         no_checkpoints_rule='ignore',
-        odo_kwargs=gen_odo_kwargs(expr),
+        odo_kwargs=gen_odo_kwargs(expr, utc=True),
         missing_values=fillvalue_for_expr(expr),
         domain=CN_EQUITIES,
     )

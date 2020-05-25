@@ -78,12 +78,14 @@ def write_dataframe(df, table_name, attr_dict=None):
         if df[c].hasnans:
             warnings.warn(f'{c}列含有空值，已移除')
             df = df.loc[~df[c].isnan(), :]
+    # 丢失tz信息
     ct = bcolz.ctable.fromdataframe(df, rootdir=rootdir)
-    log.info(f'{len(df)} 行 写入：{rootdir}')
     if attr_dict:
         # 设置属性
         for k, v in attr_dict.items():
             ct.attrs[k] = v
+    ct.flush()
+    log.info(f'{len(df)} 行 写入：{rootdir}')
 
 
 def write_static_info_to_bcolz():
@@ -144,7 +146,7 @@ def write_data_to_bcolz():
     print('准备写入Fundamentals数据......')
     s = time.time()
     write_static_info_to_bcolz()
-    write_dynamic_data_to_bcolz()
-    write_financial_data_to_bcolz()
-    write_yahoo()
+    # write_dynamic_data_to_bcolz()
+    # write_financial_data_to_bcolz()
+    # write_yahoo()
     print(f"用时{time.time() - s:.2f}秒")

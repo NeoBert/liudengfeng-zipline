@@ -78,7 +78,6 @@ def _normalize_ad_ts_sid(df, ndays=0, nhours=8, target_tz='utc'):
         if '股票代码' in df.columns:
             df.rename(columns={"股票代码": "sid"}, inplace=True)
     df[SID_FIELD_NAME] = df[SID_FIELD_NAME].map(lambda x: int(x))
-
     return df
 
 

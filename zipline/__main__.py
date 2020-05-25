@@ -31,9 +31,9 @@ except NameError:
     '--strict-extensions/--non-strict-extensions',
     is_flag=True,
     help='If --strict-extensions is passed then zipline will not '
-         'run if it cannot load all of the specified extensions. '
-         'If this is not passed or --non-strict-extensions is passed '
-         'then the failure will be logged but execution will continue.',
+    'run if it cannot load all of the specified extensions. '
+    'If this is not passed or --non-strict-extensions is passed '
+    'then the failure will be logged but execution will continue.',
 )
 @click.option(
     '--default-extension/--no-default-extension',
@@ -44,8 +44,7 @@ except NameError:
 @click.option(
     '-x',
     multiple=True,
-    help='Any custom command line arguments to define, in key=value form.'
-)
+    help='Any custom command line arguments to define, in key=value form.')
 @click.pass_context
 def main(ctx, extension, strict_extensions, default_extension, x):
     """Top level zipline entry point.
@@ -74,7 +73,6 @@ def extract_option_object(option):
     option_object : click.Option
         The option object that this decorator will create.
     """
-
     @option
     def opt():
         pass
@@ -130,8 +128,8 @@ def ipython_only(option):
     '--define',
     multiple=True,
     help="定义名称绑定在在执行算法文本前的名称空间。"
-         " 例如'-Dname=value'，值可为python表达式。"
-         "这些是按顺序评估的，因此它们可以引用以前定义的名称。",
+    " 例如'-Dname=value'，值可为python表达式。"
+    "这些是按顺序评估的，因此它们可以引用以前定义的名称。",
 )
 @click.option(
     '--data-frequency',
@@ -155,14 +153,12 @@ def ipython_only(option):
     show_default=True,
     help='模拟所用数据包。',
 )
-@click.option(
-    '--bundle-timestamp',
-    type=Timestamp(),
-    default=pd.Timestamp.utcnow(),
-    show_default=False,
-    help='查找数据日期或之前的日期。\n'
-         '[default: <current-time>]'
-)
+@click.option('--bundle-timestamp',
+              type=Timestamp(),
+              default=pd.Timestamp.utcnow(),
+              show_default=False,
+              help='查找数据日期或之前的日期。\n'
+              '[default: <current-time>]')
 @click.option(
     '-bf',
     '--benchmark-file',
@@ -175,14 +171,14 @@ def ipython_only(option):
     default=None,
     type=click.STRING,
     help="The symbol of the instrument to be used as a benchmark "
-         "(should exist in the ingested bundle)",
+    "(should exist in the ingested bundle)",
 )
 @click.option(
     '--benchmark-sid',
     default=None,
     type=int,
     help="The sid of the instrument to be used as a benchmark "
-         "(should exist in the ingested bundle)",
+    "(should exist in the ingested bundle)",
 )
 @click.option(
     '--no-benchmark',
@@ -214,8 +210,7 @@ def ipython_only(option):
     '--trading-calendar',
     metavar='TRADING-CALENDAR',
     default='XSHG',  # # 默认交易日历
-    help="您要使用的日历，例如 XSHG。 XSHG是默认设置。"
-)
+    help="您要使用的日历，例如 XSHG。 XSHG是默认设置。")
 @click.option(
     '--print-algo/--no-print-algo',
     is_flag=True,
@@ -233,33 +228,16 @@ def ipython_only(option):
     help="使用的账册。",
     show_default=True,
 )
-@ipython_only(click.option(
-    '--local-namespace/--no-local-namespace',
-    is_flag=True,
-    default=None,
-    help='是否应在本地名称空间中解析策略方法。'
-))
+@ipython_only(
+    click.option('--local-namespace/--no-local-namespace',
+                 is_flag=True,
+                 default=None,
+                 help='是否应在本地名称空间中解析策略方法。'))
 @click.pass_context
-def run(ctx,
-        algofile,
-        algotext,
-        define,
-        data_frequency,
-        capital_base,
-        bundle,
-        bundle_timestamp,
-        benchmark_file,
-        benchmark_symbol,
-        benchmark_sid,
-        no_benchmark,
-        start,
-        end,
-        output,
-        trading_calendar,
-        print_algo,
-        metrics_set,
-        local_namespace,
-        blotter):
+def run(ctx, algofile, algotext, define, data_frequency, capital_base, bundle,
+        bundle_timestamp, benchmark_file, benchmark_symbol, benchmark_sid,
+        no_benchmark, start, end, output, trading_calendar, print_algo,
+        metrics_set, local_namespace, blotter):
     """运行给定策略回测
     """
     # check that the start and end dates are passed correctly
@@ -268,8 +246,7 @@ def run(ctx,
         # does not pass either of these and then passes the first only
         # to be told they need to pass the second argument also
         ctx.fail(
-            "must specify dates with '-s' / '--start' and '-e' / '--end'",
-        )
+            "must specify dates with '-s' / '--start' and '-e' / '--end'", )
     if start is None:
         ctx.fail("must specify a start date with '-s' / '--start'")
     if end is None:
@@ -278,8 +255,7 @@ def run(ctx,
     if (algotext is not None) == (algofile is not None):
         ctx.fail(
             "must specify exactly one of '-f' / '--algofile' or"
-            " '-t' / '--algotext'",
-        )
+            " '-t' / '--algotext'", )
 
     trading_calendar = get_calendar(trading_calendar)
 
@@ -336,14 +312,17 @@ def zipline_magic(line, cell=None):
             # put our overrides at the start of the parameter list so that
             # users may pass values with higher precedence
             [
-                '--algotext', cell,
-                '--output', os.devnull,  # don't write the results by default
+                '--algotext',
+                cell,
+                '--output',
+                os.devnull,  # don't write the results by default
             ] + ([
-                     # these options are set when running in line magic mode
-                     # set a non None algo text to use the ipython user_ns
-                     '--algotext', '',
-                     '--local-namespace',
-                 ] if cell is None else []) + line.split(),
+                # these options are set when running in line magic mode
+                # set a non None algo text to use the ipython user_ns
+                '--algotext',
+                '',
+                '--local-namespace',
+            ] if cell is None else []) + line.split(),
             '%s%%zipline' % ((cell or '') and '%'),
             # don't use system exit and propogate errors to the caller
             standalone_mode=False,
@@ -370,11 +349,9 @@ def zipline_magic(line, cell=None):
     multiple=True,
     help='Version of the assets db to which to downgrade.',
 )
-@click.option(
-    '--show-progress/--no-show-progress',
-    default=True,
-    help='Print progress information to the terminal.'
-)
+@click.option('--show-progress/--no-show-progress',
+              default=True,
+              help='Print progress information to the terminal.')
 def ingest(bundle, assets_version, show_progress):
     """提取指定包的数据
     """
@@ -401,14 +378,14 @@ def ingest(bundle, assets_version, show_progress):
     '--before',
     type=Timestamp(),
     help='Clear all data before TIMESTAMP.'
-         ' This may not be passed with -k / --keep-last',
+    ' This may not be passed with -k / --keep-last',
 )
 @click.option(
     '-a',
     '--after',
     type=Timestamp(),
     help='Clear all data after TIMESTAMP'
-         ' This may not be passed with -k / --keep-last',
+    ' This may not be passed with -k / --keep-last',
 )
 @click.option(
     '-k',
@@ -416,7 +393,7 @@ def ingest(bundle, assets_version, show_progress):
     type=int,
     metavar='N',
     help='Clear all but the last N downloads.'
-         ' This may not be passed with -e / --before or -a / --after',
+    ' This may not be passed with -e / --before or -a / --after',
 )
 def clean(bundle, before, after, keep_last):
     """清理使用`ingest`的数据
@@ -439,8 +416,7 @@ def bundles():
             continue
         try:
             ingestions = list(
-                map(text_type, bundles_module.ingestions_for_bundle(bundle))
-            )
+                map(text_type, bundles_module.ingestions_for_bundle(bundle)))
         except OSError as e:
             if e.errno != errno.ENOENT:
                 raise
@@ -452,12 +428,14 @@ def bundles():
         for timestamp in ingestions or ["<no ingestions>"]:
             click.echo("%s %s" % (bundle, timestamp))
 
+
 @main.command()
 def fm():
-    """写入基础数据(Fundamental)
-    """
+    """写入基础数据(Fundamental)"""
     # 提高`import zipline`速度
     from zipline.pipeline.fundamentals.writer import write_data_to_bcolz
     write_data_to_bcolz()
+
+
 if __name__ == '__main__':
     main()

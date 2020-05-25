@@ -58,7 +58,6 @@ class MissingValueMismatch(ValueError):
     Error raised on attempt to perform operations between LabelArrays with
     mismatched missing_values.
     """
-
     def __init__(self, left, right):
         super(MissingValueMismatch, self).__init__(
             "LabelArray missing_values don't match:"
@@ -71,7 +70,6 @@ class CategoryMismatch(ValueError):
     Error raised on attempt to perform operations between LabelArrays with
     mismatched category arrays.
     """
-
     def __init__(self, left, right):
         (mismatches,) = np.where(left != right)
         assert len(mismatches), "Not actually a mismatch!"
@@ -188,6 +186,7 @@ class LabelArray(ndarray):
                     sort=sort,
                 )
             )
+            
         # TODO:检查是否有必要！将None转换为字符
         missing_value = 'None' if missing_value is None else missing_value
         categories[categories == None] = 'None'
@@ -475,7 +474,6 @@ class LabelArray(ndarray):
         Shared code for __eq__ and __ne__, parameterized on the actual
         comparison operator to use.
         """
-
         def method(self, other):
 
             if isinstance(other, LabelArray):
@@ -825,7 +823,6 @@ class LabelArray(ndarray):
 class _sortable_sentinel(object):
     """Dummy object that sorts before any other python object.
     """
-
     def __eq__(self, other):
         return self is other
 

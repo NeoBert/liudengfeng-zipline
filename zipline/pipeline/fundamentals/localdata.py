@@ -105,7 +105,7 @@ def get_stock_info(only_A=True):
     if 'index' in df.columns:
         df.drop(columns='index', inplace=True)
     df['asof_date'] = df['上市日期'] - pd.Timedelta(days=1)
-    df.drop(columns=['上市日期'], inplace=True)
+    # df.drop(columns=['上市日期'], inplace=True)
     # 注册资本转换 -> 十分位数
     df['注册资本十分位数'] = pd.qcut(np.log(df['注册资本'].values), 10, labels=False)
     df = df.sort_values('股票代码')

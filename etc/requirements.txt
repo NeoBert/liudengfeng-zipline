@@ -60,7 +60,8 @@ networkx>=2.2
 numexpr>=2.6.8
 
 # On disk storage format for pipeline data.
-bcolz>=1.2.1
+# Version: 1.2.2.dev9
+bcolz>=1.2.2
 
 # On disk storage format for pricing data.
 h5py>=2.8.0

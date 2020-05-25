@@ -1037,24 +1037,25 @@ class BlazeLoader(implements(PipelineLoader)):
                 )
             except ValueError:
                 raise NotImplementedError(f'列：{colnames}, 期间：{lower_dt} ~ {upper_dt} 无数据')
-            
+
         all_rows[TS_FIELD_NAME] = all_rows[TS_FIELD_NAME].astype(
             'datetime64[ns]',
         )
-        all_rows.sort_values([TS_FIELD_NAME, AD_FIELD_NAME], inplace=True)
 
+        all_rows.sort_values([TS_FIELD_NAME, AD_FIELD_NAME], inplace=True)
+        # # 以下将UTC更改为None
         if have_sids:
             return adjusted_arrays_from_rows_with_assets(
-                dates,
-                data_query_cutoff_times,
+                dates.tz_localize(None),
+                data_query_cutoff_times.tz_localize(None),
                 assets,
                 columns,
                 all_rows,
             )
         else:
             return adjusted_arrays_from_rows_without_assets(
-                dates,
-                data_query_cutoff_times,
+                dates.tz_localize(None),
+                data_query_cutoff_times.tz_localize(None),
                 columns,
                 all_rows,
             )
