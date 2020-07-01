@@ -61,7 +61,7 @@ numexpr>=2.6.8
 
 # On disk storage format for pipeline data.
 # Version: 1.2.2.dev9
-bcolz>=1.2.2
+# bcolz>=1.2.2
 
 # On disk storage format for pricing data.
 h5py>=2.8.0
