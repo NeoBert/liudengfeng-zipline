@@ -8,13 +8,13 @@
 """
 import re
 import warnings
+from concurrent.futures.thread import ThreadPoolExecutor
 from functools import lru_cache
-
+from cnswd.setting.constants import MAX_WORKER
 import numpy as np
 import pandas as pd
-from cnswd._exceptions import ForbidPparallel
-from cnswd.store import (DataBrowseStore, TctMinutelyStore, TradingDateStore,
-                         WyStockDailyStore)
+
+from cnswd.mongodb import get_db
 from cnswd.utils import sanitize_dates
 
 warnings.filterwarnings('ignore')
@@ -106,16 +106,19 @@ def _stock_basic_info():
         '证券类别': 'stock_type',
         '上市地点': 'exchange'
     }
-    with DataBrowseStore() as store:
-        df = store.query('1').reset_index()
+    db = get_db('cninfo')
+    collection = db['基本资料']
+    df = pd.DataFrame.from_records(collection.find(projection={'_id': 0}))
     df.drop_duplicates('股票代码', inplace=True)
     # 剔除未上市、未交易的无效股票
-    cond1 = ~ df['上市日期'].isnull()
+    cond1 = ~df['上市日期'].isnull()
     cond2 = df['上市日期'] <= pd.Timestamp('today')
     df = df.loc[cond1 & cond2, :]
-    df = df[col_names.keys()]
+    # 可能并不包含该字段
+    cols = [x for x in col_names.keys() if x in df.columns]
+    df = df[cols]
     df.rename(columns=col_names, inplace=True)
-    # 原始数据无效。确保类型正确
+    # 确保类型正确
     df['end_date'] = pd.NaT
     return df
 
@@ -130,29 +133,35 @@ def _stock_first_and_last(code):
     symbol	asset_name	first_traded	last_traded
     0	000333	美的集团	2020-04-02 00:00:00+00:00	2020-04-04 00:00:00+00:00
     """
-    try:
-        with WyStockDailyStore() as store:
-            # 数据务必按照日期升序排列
-            df = store.query(codes=code).reset_index().sort_values('日期')
-        return pd.DataFrame(
-            {
-                'symbol':
-                df['股票代码'].values[0],
-                'asset_name':
-                df['名称'].values[-1],  # 最新简称
-                'first_traded':
-                pd.Timestamp(df['日期'].values[0], tz='UTC'),
-                # 适应于分钟级别的数据
-                'last_traded':
-                pd.Timestamp(df['日期'].values[-1], tz='UTC') +
-                pd.Timedelta(days=1),
-            },
-            index=[0])
-    except ForbidPparallel:
-        raise
-    except IndexError:
-        # 新股无数据
+    db = get_db('wy_stock_daily')
+    if code not in db.list_collection_names():
         return pd.DataFrame()
+    collection = db[code]
+    first = collection.find_one(projection={
+        '_id': 0,
+        '日期': 1,
+        '名称': 1,
+    },
+                                sort=[('日期', 1)])
+    last = collection.find_one(projection={
+        '_id': 0,
+        '日期': 1,
+        '名称': 1,
+    },
+                               sort=[('日期', -1)])
+    return pd.DataFrame(
+        {
+            'symbol':
+            code,
+            'asset_name':
+            last['名称'],  # 最新简称
+            'first_traded':
+            pd.Timestamp(first['日期'], tz='UTC'),
+            # 适应于分钟级别的数据
+            'last_traded':
+            pd.Timestamp(last['日期'], tz='UTC') + pd.Timedelta(days=1),
+        },
+        index=[0])
 
 
 def gen_asset_metadata(only_in=True, only_A=True):
@@ -180,8 +189,10 @@ def gen_asset_metadata(only_in=True, only_A=True):
     s_and_e = _stock_basic_info()  # .iloc[:10, :]
     # 剔除非A股部分
     s_and_e = _select_only_a(s_and_e, 'symbol')
-    f_and_l = pd.concat([_stock_first_and_last(code)
-                         for code in s_and_e.symbol.values])
+    # 设置max_workers=4，股票数量 >3900 用时 54s
+    with ThreadPoolExecutor(4) as pool:
+        r = pool.map(_stock_first_and_last, s_and_e.symbol.values)
+    f_and_l = pd.concat(r)
     df = s_and_e.merge(f_and_l, 'left', on='symbol')
     # 剔除已经退市
     if only_in:
@@ -201,8 +212,10 @@ def gen_asset_metadata(only_in=True, only_A=True):
 
 @lru_cache(None)
 def _tdates():
-    with TradingDateStore() as store:
-        return store.query()['trading_date'].values
+    db = get_db()
+    collection = db['交易日历']
+    # 数据类型 datetime.datetime
+    return [pd.Timestamp(x) for x in collection.find_one()['tdates']]
 
 
 def _fill_zero(df, first_col='close'):
@@ -265,11 +278,17 @@ def _reindex(df, dts):
 
 def _fetch_single_equity(stock_code, start, end):
     """读取本地原始数据"""
-    with WyStockDailyStore() as store:
-        df = store.query(codes=[stock_code], start=start, end=end)
-    df = df.reset_index()
+    start, end = sanitize_dates(start, end)
+    db = get_db('wy_stock_daily')
+    collection = db[stock_code]
+    predicate = {'日期': {'$gte': start, '$lte': end}}
+    projection = {'_id': 0}
+    sort = [('日期', 1)]
+    cursor = collection.find(predicate, projection, sort=sort)
+    df = pd.DataFrame.from_records(cursor)
     if df.empty:
         return df
+    df['股票代码'] = stock_code
     # 截取所需列
     df = df[WY_DAILY_COL_MAPS.keys()]
     df.rename(columns=WY_DAILY_COL_MAPS, inplace=True)
@@ -304,9 +323,9 @@ def fetch_single_equity(stock_code, start, end):
     --------
     >>> # 600710 股票代码重用
     >>> stock_code = '600710'
-    >>> start_date = '2016-03-29'
-    >>> end_date = pd.Timestamp('2017-07-31')
-    >>> df = fetch_single_equity(stock_code, start_date, end_date)
+    >>> start = '2016-03-29'
+    >>> end = pd.Timestamp('2017-07-31')
+    >>> df = fetch_single_equity(stock_code, start, end)
     >>> df.iloc[-6:,:8]
               date	symbol	open	high	low	close	prev_close	change_pct
     322	2017-07-24	600710	9.36	9.36	9.36	9.36	9.36	NaN
@@ -317,7 +336,7 @@ def fetch_single_equity(stock_code, start, end):
     327	2017-07-31	600710	9.25	9.64	7.48	7.55	9.31	-18.9044
     """
     start, end = sanitize_dates(start, end)
-    # 首先提起全部数据，确保自IPO以来复权价一致
+    # 首先提取全部数据，确保自IPO以来复权价一致
     df = _fetch_single_equity(stock_code, None, None)
     if df.empty:
         return df
@@ -342,12 +361,68 @@ def fetch_single_equity(stock_code, start, end):
     return df
 
 
+def _fetch_single_minutely_equity(stock_code, one_day):
+    """
+    Examples
+    --------
+    >>> stock_code = '000333'
+    >>> one_day = pd.Timestamp('2020-06-29 00:00:00', freq='B')
+    >>> df = _fetch_single_minutely_equity(stock_code, one_day)
+    >>> df.tail()
+                        close   high    low   open  volume
+    2018-04-19 14:56:00  51.55  51.56  51.50  51.55  376400
+    2018-04-19 14:57:00  51.55  51.55  51.55  51.55   20000
+    2018-04-19 14:58:00  51.55  51.55  51.55  51.55       0
+    2018-04-19 14:59:00  51.55  51.55  51.55  51.55       0
+    2018-04-19 15:00:00  51.57  51.57  51.57  51.57  353900
+    """
+    db = get_db('minutely')
+    collection = db[one_day.strftime(r"%Y-%m-%d")]
+    predicate = {'股票代码': stock_code}
+    projection = {
+        '时间': 1,
+        '股票代码': 1,
+        '今开': 1,
+        '最高': 1,
+        '最低': 1,
+        '最新价': 1,
+        '成交量': 1,
+        '_id': 0
+    }
+    sort = [('时间', 1)]
+    cursor = collection.find(predicate, projection, sort=sort)
+    df = pd.DataFrame.from_records(cursor)
+    if df.empty:
+        return df
+    cols = ['datetime', 'open', 'high', 'low', 'close', 'volume']
+    df.rename(columns={
+        '时间': 'datetime',
+        '股票代码': 'symbol',
+        '今开': 'open',
+        '最高': 'high',
+        '最低': 'low',
+        '最新价': 'close',
+        '成交量': 'volume',
+    },
+              inplace=True)
+
+    ret = df[cols]
+    # 可能存在重复
+    data = ret.drop_duplicates('datetime', keep='last')
+    data.set_index('datetime', inplace=True)
+    # # 将11：31、15：01 -> 11:30 15:00
+    am = data.between_time('09:31', '11:31')
+    pm = data.between_time('13:00', '15:01')
+    return pd.concat([am, pm]).sort_index()
+
+
 def fetch_single_minutely_equity(stock_code, start, end):
     """
     从本地数据库读取单个股票期间分钟级别交易明细数据
 
     **注意** 
         交易日历分钟自9：31~11：31 13：01~15：01
+        在数据库中，分钟级别成交数据分日期存储
 
     Parameters
     ----------
@@ -365,8 +440,8 @@ def fetch_single_minutely_equity(stock_code, start, end):
     Examples
     --------
     >>> stock_code = '000333'
-    >>> start = '2020-01-07'
-    >>> end = pd.Timestamp('2020-01-07')
+    >>> start = '2020-06-29'
+    >>> end = pd.Timestamp('2020-06-30')
     >>> df = fetch_single_minutely_equity(stock_code, start, end)
     >>> df.tail()
                         close   high    low   open  volume
@@ -376,37 +451,16 @@ def fetch_single_minutely_equity(stock_code, start, end):
     2018-04-19 14:59:00  51.55  51.55  51.55  51.55       0
     2018-04-19 15:00:00  51.57  51.57  51.57  51.57  353900
     """
-    cols = ['datetime', 'open', 'high', 'low', 'close', 'volume']
-    with TctMinutelyStore() as store:
-        df = store.query(codes=stock_code, start=start, end=end).reset_index()
-    df.rename(columns={
-        '时间': 'datetime',
-        '代码': 'symbol',
-        '今开': 'open',
-        '最高': 'high',
-        '最低': 'low',
-        '最新价': 'close',
-        '成交量': 'volume',
-    },
-        inplace=True)
-
-    try:
-        ret = df[cols]
-        # 可能存在重复
-        ret.drop_duplicates('datetime', keep='last', inplace=True)
-        ret.set_index('datetime', inplace=True)
-        # # 将11：31、15：01 -> 11:30 15:00
-        am = ret.between_time('09:31', '11:31')
-        pm = ret.between_time('13:00', '15:01')
-        return pd.concat([am, pm]).sort_index()
-    except Exception as e:
-        raise ValueError(str(e))
-    return pd.DataFrame()
+    dates = pd.date_range(start, end, freq='B')
+    return pd.concat(
+        [_fetch_single_minutely_equity(stock_code, d) for d in dates])
 
 
 def fetch_single_quity_adjustments(stock_code, start, end):
     """
     从本地数据库读取股票期间分红派息数据
+
+    无需使用日期参数
 
     Parameters
     ----------
@@ -433,15 +487,48 @@ def fetch_single_quity_adjustments(stock_code, start, end):
     4  000333 2017-06-30      0.0      0.0     0.0           NaT         NaT        NaT        NaT
     5  000333 2017-12-31      0.0      0.0     1.2    2018-04-24  2018-05-03 2018-05-04 2018-05-04
     """
-    start, end = sanitize_dates(start, end)
-    with DataBrowseStore() as store:
-        df = store.query('5', [stock_code], start=start, end=end)
+    # start, end = sanitize_dates(start, end)
+    db = get_db('cninfo')
+    collection = db['分红指标']
+    predicate = {'股票代码': stock_code}
+    projection = {
+        '股票代码': 1,
+        '分红年度': 1,
+        '送股比例': 1,
+        '转增比例': 1,
+        '派息比例(人民币)': 1,
+        '股东大会预案公告日期': 1,
+        'A股股权登记日': 1,
+        'A股除权日': 1,
+        '派息日(A)': 1,
+        '_id': 0
+    }
+    cursor = collection.find(predicate, projection)
+    df = pd.DataFrame.from_records(cursor)
     if df.empty:
         # 返回一个空表
         return pd.DataFrame(columns=SZX_ADJUSTMENT_COLS)
-    df.reset_index(inplace=True)
+    if 'A股股权登记日' not in df.columns:
+        # 返回一个空表
+        return pd.DataFrame(columns=SZX_ADJUSTMENT_COLS)
+    else:
+        # 处理未来事件
+        today = pd.Timestamp.now().normalize()
+        # 尚未登记，将其日期默认为未来一个月
+        cond = df['A股股权登记日'] >= today
+        df.loc[cond, "A股除权日"] = df.loc[cond, "A股股权登记日"] + pd.Timedelta(days=30)
+        df.loc[cond, "派息日(A)"] = df.loc[cond, "A股股权登记日"] + pd.Timedelta(days=30)
+    # 当派息日为空，使用`A股除权日`
+    if '派息日(A)' not in df.columns:
+        df['派息日(A)'] = df['A股除权日']
+    else:
+        cond = df['派息日(A)'].isnull()
+        df.loc[cond, '派息日(A)'] = df.loc[cond, 'A股除权日']
     df.rename(columns=SZX_ADJUSTMENT_COLS, inplace=True)
-    df = df[SZX_ADJUSTMENT_COLS.values()]
+    for col in ['s_ratio', 'z_ratio', 'amount']:
+        if col not in df.columns:
+            df[col] = 0.0
+    # 无效值需要保留，反映定期分红派息行为
     # nan以0代替
     df['s_ratio'].fillna(value=0.0, inplace=True)
     df['z_ratio'].fillna(value=0.0, inplace=True)
