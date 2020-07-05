@@ -9,11 +9,11 @@ import numpy as np
 import pandas as pd
 
 from ..common import AD_FIELD_NAME, SID_FIELD_NAME, TS_FIELD_NAME
-from .constants import SECTOR_NAMES, SUPER_SECTOR_NAMES
+from .constants import CN_TO_SECTOR, SECTOR_NAMES, SUPER_SECTOR_NAMES
 from .localdata import (field_code_concept_maps, get_cn_industry,
                         get_concept_info, get_investment_rating_data,
                         get_short_name_changes, get_stock_info,
-                        get_sw_industry)
+                        get_sw_industry, get_zjh_industry)
 
 # ========================辅助函数========================= #
 
@@ -105,42 +105,6 @@ def _handle_cate(df, col_pat, maps):
     return df, maps
 
 
-def sector_code_map(industry_code):
-    """
-    国证行业分类映射为部门行业分类
-
-    国证一级行业分10类，转换为sector共11组，单列出房地产。
-
-    2019年拆分金融地产行业。
-    """
-    if industry_code[:3] == 'Z01':
-        return 309
-    if industry_code[:3] == 'Z02':
-        return 101
-    if industry_code[:3] == 'Z03':
-        return 310
-    if industry_code[:3] == 'Z04':
-        return 205
-    if industry_code[:3] == 'Z05':
-        return 102
-    if industry_code[:3] == 'Z06':
-        return 206
-    if industry_code.startswith('Z07'):
-        # if industry_code[:5] == 'Z0703':
-        #     return 104
-        # else:
-        return 103
-    if industry_code[:3] == 'Z08':
-        return 311
-    if industry_code[:3] == 'Z09':
-        return 308
-    if industry_code[:3] == 'Z10':
-        return 207
-    if industry_code[:3] == 'Z11':
-        return 104
-    return -1
-
-
 def supper_sector_code_map(sector_code):
     """行业分类映射超级行业分类"""
     if sector_code == -1:
@@ -155,22 +119,23 @@ def get_static_info_table():
     stocks = get_stock_info()
     sw_industry = get_sw_industry()
     cn_industry = get_cn_industry()
+    zjh_industry = get_zjh_industry()
 
     # Sector自定义因子，代码为整数
-    cn_industry['sector_code'] = cn_industry['国证四级行业编码'].map(
-        sector_code_map).astype('int64')
+    cn_industry['sector_code'] = cn_industry['国证一级行业编码'].map(
+        CN_TO_SECTOR, na_action='ignore').astype('int64')
     cn_industry['super_sector_code'] = cn_industry['sector_code'].map(
-        supper_sector_code_map).astype('int64')
+        supper_sector_code_map, na_action='ignore').astype('int64')
     concept = get_concept_info()
-    df = stocks.join(
+
+    df = stocks.set_index('sid').join(
         sw_industry.set_index('sid'),
-        on='sid',
     ).join(
         cn_industry.set_index('sid'),
-        on='sid',
+    ).join(
+        zjh_industry.set_index('sid'),
     ).join(
         concept.set_index('sid'),
-        on='sid',
     )
     maps = {}
     _, name_maps = field_code_concept_maps()
@@ -197,17 +162,15 @@ def get_investment_rating():
     """
     投资评级数据
 
-    注：行数超过50万行，需要将研究机构、研究员转换为类别。
+    注：将研究机构、研究员转换为类别，加快读取速度
     """
     maps = {}
     df = get_investment_rating_data()
     df = _normalize_ad_ts_sid(df)
-    cate_cols_pat = ['研究机构简称', '研究员名称', '评级变化', '前一次投资评级']
+    cate_cols_pat = ['研究机构简称', '研究员名称']
     for col_pat in cate_cols_pat:
         df, maps = _handle_cate(df, col_pat, maps)
     df['投资评级'] = df['投资评级'].map(_investment_score)  # 转换为整数值
-    df['是否首次评级'] = df['是否首次评级'].map(lambda x: True
-                                    if x == '是首次评级' else False)  # 转换为bool
     return df, maps
 
 

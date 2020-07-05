@@ -37,7 +37,7 @@ from .localdata import (get_dividend_data,
                         get_ttm_cash_flow_data, get_ttm_income_data)
 from .preprocess import (_normalize_ad_ts_sid, get_investment_rating,
                          get_short_name_history, get_static_info_table)
-from .yahoo import YAHOO_ITEMS, read_item_data
+# from .yahoo import YAHOO_ITEMS, read_item_data
 
 # 设置显示日志
 logbook.set_datetime_format('local')
@@ -73,9 +73,9 @@ def write_dataframe(df, table_name, attr_dict=None):
     rootdir = bcolz_table_path(table_name)
     if os.path.exists(rootdir):
         rmtree(rootdir)
-    df = _normalize_ad_ts_sid(df)
+    # df = _normalize_ad_ts_sid(df)
     for c in (AD_FIELD_NAME, TS_FIELD_NAME, SID_FIELD_NAME):
-        if df[c].hasnans:
+        if c in df.columns and df[c].hasnans:
             warnings.warn(f'{c}列含有空值，已移除')
             df = df.loc[~df[c].isnan(), :]
     # 丢失tz信息
@@ -135,10 +135,10 @@ def write_financial_data_to_bcolz():
         write_dataframe(func(), table)
 
 
-def write_yahoo():
-    for item in YAHOO_ITEMS:
-        df = read_item_data(item)
-        write_dataframe(df, item)
+# def write_yahoo():
+#     for item in YAHOO_ITEMS:
+#         df = read_item_data(item)
+#         write_dataframe(df, item)
 
 
 def write_data_to_bcolz():
@@ -146,7 +146,7 @@ def write_data_to_bcolz():
     print('准备写入Fundamentals数据......')
     s = time.time()
     write_static_info_to_bcolz()
-    write_dynamic_data_to_bcolz()
-    write_financial_data_to_bcolz()
+    # write_dynamic_data_to_bcolz()
+    # write_financial_data_to_bcolz()
     # write_yahoo()
     print(f"用时{time.time() - s:.2f}秒")

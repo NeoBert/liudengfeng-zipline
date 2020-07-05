@@ -189,7 +189,9 @@ def gen_asset_metadata(only_in=True, only_A=True):
     s_and_e = _stock_basic_info()  # .iloc[:10, :]
     # 剔除非A股部分
     s_and_e = _select_only_a(s_and_e, 'symbol')
-    # 设置max_workers=4，股票数量 >3900 用时 54s
+    # 股票数量 >3900
+    # 设置max_workers=8，用时 67s
+    # 设置max_workers=4，用时 54s
     with ThreadPoolExecutor(4) as pool:
         r = pool.map(_stock_first_and_last, s_and_e.symbol.values)
     f_and_l = pd.concat(r)

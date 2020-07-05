@@ -89,12 +89,14 @@ intervaltree>=3.0.0
 lru-dict>=1.1.6
 
 # For financial risk calculations
-empyrical>=0.5.0
+# Local installation
+# empyrical>=0.5.0
 
 tables>=3.4.4
 
 # For trading calendars
-trading-calendars>=1.6.1
+# Local installation
+# trading-calendars>=1.6.1
 
 # Interface definitions.
 python-interface>=1.5.1
@@ -102,8 +104,8 @@ python-interface>=1.5.1
 # Country Codes
 iso3166>=0.9
 
-# chinese stock data
-cnswd>=4.0.0
+# Local installation
+# cnswd>=4.0.0
 
 # first install zipline then install pyfolio
 # pyfolio>=0.9.0

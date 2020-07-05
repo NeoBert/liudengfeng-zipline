@@ -168,8 +168,9 @@ def _filter_requirements(lines_iter, filter_names=None,
 
 REQ_UPPER_BOUNDS = {
     'bcolz': '<=1.3',
-    'pandas': '<=0.25',
-    'networkx': '<=2.2',
+    # 'pandas': '<=0.25',
+    'pandas': '<=1.0.5',
+    'networkx': '<=2.4',
 }
 
 
