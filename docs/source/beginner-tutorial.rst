@@ -154,7 +154,7 @@ on OSX):
                                    is '-' the perf will be written to stdout.
                                    [default: -]
    --trading-calendar TRADING-CALENDAR
-                                   The calendar you want to use e.g. LSE. NYSE
+                                   The calendar you want to use e.g. LSE. XSHG
                                    is the default.
    --print-algo / --no-print-algo  Print the algorithm to stdout.
    --help                          Show this message and exit.

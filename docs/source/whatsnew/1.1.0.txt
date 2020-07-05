@@ -79,7 +79,7 @@ Bug Fixes
 Performance
 ~~~~~~~~~~~
 
-- Removes invocations of ``get_calendar('NYSE')`` which cuts down zipline import time
+- Removes invocations of ``get_calendar('XSHG')`` which cuts down zipline import time
   and makes the CLI more responsive and use less memory. (:issue:`1471`)
 
 - Refcounts and releases pipeline terms when they are no longer needed (:issue:`1484`)

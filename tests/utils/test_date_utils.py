@@ -1,5 +1,5 @@
 from pandas import Timestamp
-from parameterized import parameterized
+from nose_parameterized import parameterized
 from trading_calendars import get_calendar
 
 from zipline.testing import ZiplineTestCase
@@ -18,7 +18,7 @@ class TestDateUtils(ZiplineTestCase):
     @classmethod
     def init_class_fixtures(cls):
         super(TestDateUtils, cls).init_class_fixtures()
-        cls.calendar = get_calendar('XSHG')
+        cls.calendar = get_calendar('XNYS')
 
     @parameterized.expand([
         (None, [(T('2017-01-03'), T('2017-01-31'))]),

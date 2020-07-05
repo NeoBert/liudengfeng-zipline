@@ -1,6 +1,6 @@
 from textwrap import dedent
 
-from parameterized import parameterized
+from nose_parameterized import parameterized
 from pandas import DataFrame
 
 from zipline.assets import Equity, Future

@@ -156,8 +156,8 @@ def csvdir_bundle(environ,
                      show_progress=show_progress)
 
         # Hardcode the exchange to "CSVDIR" for all assets and (elsewhere)
-        # register "CSVDIR" to resolve to the NYSE calendar, because these
-        # are all equities and thus can use the NYSE calendar.
+        # register "CSVDIR" to resolve to the XSHG calendar, because these
+        # are all equities and thus can use the XSHG calendar.
         metadata['exchange'] = "CSVDIR"
 
         asset_db_writer.write(equities=metadata)
@@ -224,4 +224,4 @@ def _pricing_iter(csvdir, symbols, metadata, divs_splits, show_progress):
             yield sid, dfr
 
 
-register_calendar_alias("CSVDIR", "NYSE")
+register_calendar_alias("CSVDIR", "XSHG")

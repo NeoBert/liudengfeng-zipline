@@ -22,7 +22,7 @@ from copy import deepcopy
 import logbook
 import toolz
 from logbook import TestHandler, WARNING
-from parameterized import parameterized
+from nose_parameterized import parameterized
 from six import iteritems, itervalues, string_types
 from six.moves import range
 from testfixtures import TempDirectory
@@ -479,7 +479,7 @@ def log_nyse_close(context, data):
             from trading_calendars import get_calendar
 
             def initialize(context):
-                schedule_function(func=my_func, calendar=get_calendar('XSHG'))
+                schedule_function(func=my_func, calendar=get_calendar('XNYS'))
 
             def my_func(context, data):
                 pass

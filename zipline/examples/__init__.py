@@ -70,7 +70,7 @@ def run_example(example_modules, example_name, environ,
     """
     mod = example_modules[example_name]
 
-    register_calendar("YAHOO", get_calendar("NYSE"), force=True)
+    register_calendar("YAHOO", get_calendar("XSHG"), force=True)
 
     return run_algorithm(
         initialize=getattr(mod, 'initialize', None),

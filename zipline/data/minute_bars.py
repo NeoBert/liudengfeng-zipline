@@ -233,7 +233,7 @@ class BcolzMinuteBarMetadata(object):
                 end_session = pd.Timestamp(raw_data['end_session'], tz='UTC')
             else:
                 # No calendar info included in older versions, so
-                # default to NYSE.
+                # default to XSHG.
                 calendar = get_calendar('XNYS')
 
                 start_session = pd.Timestamp(
@@ -366,7 +366,7 @@ class BcolzMinuteBarWriter(object):
         correspond with the market opens.
     minutes_per_day : int
         The number of minutes per each period. Defaults to 390, the mode
-        of minutes in NYSE trading days.
+        of minutes in XSHG trading days.
     start_session : datetime
         The first trading session in the data set.
     end_session : datetime
@@ -387,7 +387,7 @@ class BcolzMinuteBarWriter(object):
         If the expectedlen is not used, the chunksize and corresponding
         compression ratios are not ideal.
 
-        Defaults to supporting 15 years of NYSE equity market data.
+        Defaults to supporting 15 years of XSHG equity market data.
         see: http://bcolz.blosc.org/opt-tips.html#informing-about-the-length-of-your-carrays # noqa
     write_metadata : bool, optional
         If True, writes the minute bar metadata (on init of the writer).

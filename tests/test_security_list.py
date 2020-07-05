@@ -1,7 +1,7 @@
 from datetime import timedelta
 
 import pandas as pd
-from parameterized import parameterized
+from nose_parameterized import parameterized
 
 from zipline.algorithm import TradingAlgorithm
 from zipline.errors import TradingControlViolation

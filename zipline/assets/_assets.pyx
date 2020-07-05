@@ -56,7 +56,7 @@ cdef class Asset:
         Full name of the asset.
     exchange : str
         Canonical short name of the exchange on which the asset trades (e.g.,
-        'NYSE').
+        'XSHG').
     exchange_full : str
         Full name of the exchange on which the asset trades (e.g., 'NEW YORK
         STOCK EXCHANGE').

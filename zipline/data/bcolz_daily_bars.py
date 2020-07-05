@@ -403,7 +403,7 @@ class BcolzDailyBarReader(SessionBarReader):
     end_session_ns: int
         Epoch ns of the last session used in this dataset.
     calendar_name: str
-        String identifier of trading calendar used (ie, "NYSE").
+        String identifier of trading calendar used (ie, "XSHG").
 
     We use first_row and last_row together to quickly find ranges of rows to
     load when reading an asset's data into memory.

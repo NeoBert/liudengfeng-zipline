@@ -1,6 +1,6 @@
 import os
 
-from parameterized import parameterized
+from nose_parameterized import parameterized
 import pandas as pd
 import sqlalchemy as sa
 from toolz import valmap
@@ -124,7 +124,7 @@ class BundleCoreTestCase(WithInstanceTmpDir,
         assert_true(called[0])
 
     def test_ingest(self):
-        calendar = get_calendar('XSHG')
+        calendar = get_calendar('XNYS')
         sessions = calendar.sessions_in_range(self.START_DATE, self.END_DATE)
         minutes = calendar.minutes_for_sessions_in_range(
             self.START_DATE, self.END_DATE,
@@ -215,12 +215,12 @@ class BundleCoreTestCase(WithInstanceTmpDir,
                 expected_bar_values_2d(sessions, sids, equities, colname),
                 msg=colname,
             )
-        adjustments_for_cols = bundle.adjustment_reader.load_adjustments(
+        adjs_for_cols = bundle.adjustment_reader.load_pricing_adjustments(
             columns,
             sessions,
             pd.Index(sids),
         )
-        for column, adjustments in zip(columns, adjustments_for_cols[:-1]):
+        for column, adjustments in zip(columns, adjs_for_cols[:-1]):
             # iterate over all the adjustments but `volume`
             assert_equal(
                 adjustments,
@@ -245,7 +245,7 @@ class BundleCoreTestCase(WithInstanceTmpDir,
 
         # check the volume, the value should be 1/ratio
         assert_equal(
-            adjustments_for_cols[-1],
+            adjs_for_cols[-1],
             {
                 2: [Float64Multiply(
                     first_row=0,
@@ -275,8 +275,10 @@ class BundleCoreTestCase(WithInstanceTmpDir,
             called[0] = True
 
         now = pd.Timestamp.utcnow()
-        with self.assertRaisesRegexp(ValueError,
-                                     "ingest .* creates writers .* downgrade"):
+        with self.assertRaisesRegex(
+                ValueError,
+                "ingest .* creates writers .* downgrade"
+        ):
             self.ingest('bundle', self.environ, assets_versions=versions,
                         timestamp=now - pd.Timedelta(seconds=1))
         assert_false(called[0])

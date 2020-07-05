@@ -22,7 +22,7 @@ def minute_value(ndarray[long_t, ndim=1] market_opens,
         The index of the desired minute.
 
     minutes_per_day: int
-        The number of minutes per day (e.g. 390 for NYSE).
+        The number of minutes per day (e.g. 390 for XSHG).
 
     Returns
     -------
@@ -57,7 +57,7 @@ def find_position_of_minute(ndarray[long_t, ndim=1] market_opens,
         The desired minute, as a minute epoch.
 
     minutes_per_day: int
-        The number of minutes per day (e.g. 390 for NYSE).
+        The number of minutes per day (e.g. 390 for XSHG).
 
     forward_fill: bool
         Whether to use the previous market minute if the given minute does
@@ -121,7 +121,7 @@ def find_last_traded_position_internal(
         The volume history for the given asset.
 
     minutes_per_day: int
-        The number of minutes per day (e.g. 390 for NYSE).
+        The number of minutes per day (e.g. 390 for XSHG).
 
     Returns
     -------

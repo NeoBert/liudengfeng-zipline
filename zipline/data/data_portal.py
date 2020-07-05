@@ -1277,7 +1277,7 @@ class DataPortal(object):
         # Step 2. Count the minutes from the prior ``days_count - 1`` sessions.
         # Step 3. Return the sum of the results from steps (1) and (2).
 
-        # Example (NYSE Calendar)
+        # Example (XSHG Calendar)
         #     ending_minute = 2016-12-28 9:40 AM US/Eastern
         #     days_count = 3
         # Step 1. Calculate that there are 10 minutes in the ending session.

@@ -260,7 +260,7 @@ def _make_bundle_core():
                   Show the progress for the current load where possible.
         calendar_name : str, optional
             The name of a calendar used to align bundle data.
-            Default is 'NYSE'.
+            Default is 'XSHG'.
         start_session : pd.Timestamp, optional
             The first session for which we want data. If not provided,
             or if the date lies outside the range supported by the

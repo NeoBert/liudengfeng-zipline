@@ -10,7 +10,7 @@ class ExchangeInfo(object):
         The full name of the exchange, for example 'NEW YORK STOCK EXCHANGE' or
         'NASDAQ GLOBAL MARKET'.
     canonical_name : str
-        The canonical name of the exchange, for example 'NYSE' or 'NASDAQ'. If
+        The canonical name of the exchange, for example 'XSHG' or 'NASDAQ'. If
         None this will be the same as the name.
     country_code : str
         The ISO 3166 alpha-2 country code where the exchange is located.

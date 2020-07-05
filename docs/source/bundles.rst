@@ -353,7 +353,7 @@ our ``.csv`` files exist:
             ['daily'],
             '/path/to/your/csvs',
         ),
-        calendar_name='NYSE', # US equities
+        calendar_name='XSHG', # US equities
         start_session=start_session,
         end_session=end_session
     )
@@ -373,6 +373,6 @@ To finally ingest our data, we can run:
 	 $ CSVDIR=/path/to/your/csvs zipline ingest -b custom-csvdir-bundle
 
 
-If you would like to use equities that are not in the NYSE calendar, or the existing zipline calendars,
+If you would like to use equities that are not in the XSHG calendar, or the existing zipline calendars,
 you can look at the ``Trading Calendar Tutorial`` to build a custom trading calendar that you can then pass
 the name of to ``register()``.

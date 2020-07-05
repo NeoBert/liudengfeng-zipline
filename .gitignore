@@ -86,3 +86,4 @@ zipline.egg-info/
 .vs/
 tasks/
 tests/t.py
+report.html

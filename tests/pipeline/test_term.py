@@ -34,7 +34,7 @@ from zipline.pipeline.domain import US_EQUITIES
 from zipline.pipeline.expression import NUMEXPR_MATH_FUNCS
 from zipline.pipeline.factors import RecarrayField
 from zipline.pipeline.sentinels import NotSpecified
-from zipline.pipeline.term import AssetExists, LoadableTerm, Slice
+from zipline.pipeline.term import AssetExists, LoadableTerm
 from zipline.testing import parameter_space
 from zipline.testing.fixtures import WithTradingSessions, ZiplineTestCase
 from zipline.testing.predicates import (
@@ -210,11 +210,10 @@ class DependencyResolutionTestCase(WithTradingSessions, ZiplineTestCase):
             self.assertIn(SomeFactor(), resolution_order)
 
             self.assertEqual(
-                # # The Graph attribute node has moved its functionality to `G.nodes`
-                graph.graph.nodes[specialized_foo]['extra_rows'], 4,
+                graph.graph.node[specialized_foo]['extra_rows'], 4,
             )
             self.assertEqual(
-                graph.graph.nodes[specialized_bar]['extra_rows'], 4,
+                graph.graph.node[specialized_bar]['extra_rows'], 4,
             )
 
         for foobar in gen_equivalent_factors():
@@ -351,15 +350,15 @@ class ObjectIdentityTestCase(TestCase):
 
         f = GenericCustomFactor()
         f_slice = f[my_asset]
-        self.assertIs(f_slice, Slice(GenericCustomFactor(), my_asset))
+        self.assertIs(f_slice, type(f_slice)(GenericCustomFactor(), my_asset))
 
-        f = GenericFilter()
-        f_slice = f[my_asset]
-        self.assertIs(f_slice, Slice(GenericFilter(), my_asset))
+        filt = GenericFilter()
+        filt_slice = filt[my_asset]
+        self.assertIs(filt_slice, type(filt_slice)(GenericFilter(), my_asset))
 
         c = GenericClassifier()
         c_slice = c[my_asset]
-        self.assertIs(c_slice, Slice(GenericClassifier(), my_asset))
+        self.assertIs(c_slice, type(c_slice)(GenericClassifier(), my_asset))
 
     def test_instance_non_caching(self):
 

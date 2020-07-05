@@ -503,7 +503,7 @@ class WithTradingCalendars(object):
     class-level fixture.
 
     After ``init_class_fixtures`` has been called:
-    - `cls.trading_calendar` is populated with a default of the nyse trading
+    - `cls.trading_calendar` is populated with a default of the XSHG trading
     calendar for compatibility with existing tests
     - `cls.all_trading_calendars` is populated with the trading calendars
     keyed by name,
@@ -518,12 +518,12 @@ class WithTradingCalendars(object):
         A dictionary which maps asset type names to the calendar associated
         with that asset type.
     """
-    TRADING_CALENDAR_STRS = ('NYSE',)
-    TRADING_CALENDAR_FOR_ASSET_TYPE = {Equity: 'NYSE', Future: 'us_futures'}
+    TRADING_CALENDAR_STRS = ('XSHG',)
+    TRADING_CALENDAR_FOR_ASSET_TYPE = {Equity: 'XSHG', Future: 'us_futures'}
     # For backwards compatibility, exisitng tests and fixtures refer to
-    # `trading_calendar` with the assumption that the value is the NYSE
+    # `trading_calendar` with the assumption that the value is the XSHG
     # calendar.
-    TRADING_CALENDAR_PRIMARY_CAL = 'NYSE'
+    TRADING_CALENDAR_PRIMARY_CAL = 'XSHG'
 
     @classmethod
     def init_class_fixtures(cls):
@@ -671,7 +671,7 @@ class WithTradingSessions(WithDefaultDateBounds, WithTradingCalendars):
     (DATA_MAX_DAY - (cls.TRADING_DAY_COUNT) -> DATA_MAX_DAY)
 
     `cls.trading_days`, for compatibility with existing tests which make the
-    assumption that trading days are equity only, defaults to the nyse trading
+    assumption that trading days are equity only, defaults to the XSHG trading
     sessions.
 
     Attributes
@@ -687,7 +687,7 @@ class WithTradingSessions(WithDefaultDateBounds, WithTradingCalendars):
     DATA_MAX_DAY = alias('END_DATE')
 
     # For backwards compatibility, exisitng tests and fixtures refer to
-    # `trading_days` with the assumption that the value is days of the NYSE
+    # `trading_days` with the assumption that the value is days of the XSHG
     # calendar.
     trading_days = alias('nyse_sessions')
 
@@ -2064,7 +2064,7 @@ class WithWerror(object):
         super(WithWerror, cls).init_class_fixtures()
 
 
-register_calendar_alias("TEST", "NYSE")
+register_calendar_alias("TEST", "XSHG")
 
 
 class WithSeededRandomState(object):

@@ -7,7 +7,7 @@ from os.path import (
     realpath,
 )
 
-from parameterized import parameterized
+from nose_parameterized import parameterized
 import numpy as np
 from numpy import (
     array,
@@ -48,7 +48,7 @@ from zipline.pipeline.factors import VWAP
 from zipline.pipeline.data import USEquityPricing
 from zipline.pipeline.loaders.frame import DataFrameLoader
 from zipline.pipeline.loaders.equity_pricing_loader import (
-    CNEquityPricingLoader,
+    USEquityPricingLoader,
 )
 from zipline.testing import (
     str_to_seconds
@@ -496,7 +496,7 @@ class PipelineAlgorithmTestCase(WithMakeAlgo,
     @classmethod
     def init_class_fixtures(cls):
         super(PipelineAlgorithmTestCase, cls).init_class_fixtures()
-        cls.pipeline_loader = CNEquityPricingLoader(
+        cls.pipeline_loader = USEquityPricingLoader.without_fx(
             cls.bcolz_equity_daily_bar_reader,
             cls.adjustment_reader,
         )

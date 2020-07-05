@@ -339,4 +339,4 @@ def quantopian_quandl_bundle(environ,
         tar.extractall(output_dir)
 
 
-register_calendar_alias("QUANDL", "NYSE")
+register_calendar_alias("QUANDL", "XSHG")

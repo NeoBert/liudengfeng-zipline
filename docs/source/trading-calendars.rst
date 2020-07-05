@@ -7,7 +7,7 @@ A trading calendar represents the timing information of a single market exchange
 
 A session represents a contiguous set of minutes, and has a label that is midnight UTC. It is important to note that a session label should not be considered a specific point in time, and that midnight UTC is just being used for convenience.
 
-For an average day of the `New York Stock Exchange <https://www.nyse.com/index>`__, the market opens at 9:30AM and closes at 4PM. Trading sessions can change depending on the exchange, day of the year, etc.
+For an average day of the `New York Stock Exchange <https://www.XSHG.com/index>`__, the market opens at 9:30AM and closes at 4PM. Trading sessions can change depending on the exchange, day of the year, etc.
 
 
 Why Should You Care About Trading Calendars?

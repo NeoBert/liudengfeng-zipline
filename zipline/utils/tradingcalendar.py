@@ -252,8 +252,8 @@ def get_non_trading_days(start, end):
         non_trading_days.append(
             datetime(2012, 10, day_num, tzinfo=pytz.utc))
 
-    # Misc closings from NYSE listing.
-    # http://www.nyse.com/pdfs/closings.pdf
+    # Misc closings from XSHG listing.
+    # http://www.XSHG.com/pdfs/closings.pdf
     #
     # National Days of Mourning
     # - President Richard Nixon
@@ -282,8 +282,8 @@ trading_days = get_trading_days(start, end)
 
 def get_early_closes(start, end):
     # 1:00 PM close rules based on
-    # http://quant.stackexchange.com/questions/4083/nyse-early-close-rules-july-4th-and-dec-25th # noqa
-    # and verified against http://www.nyse.com/pdfs/closings.pdf
+    # http://quant.stackexchange.com/questions/4083/XSHG-early-close-rules-july-4th-and-dec-25th # noqa
+    # and verified against http://www.XSHG.com/pdfs/closings.pdf
 
     # These rules are valid starting in 1993
 
@@ -375,8 +375,8 @@ def get_early_closes(start, end):
         early_close_ruleset.rrule(rule)
     early_closes = early_close_ruleset.between(start, end, inc=True)
 
-    # Misc early closings from NYSE listing.
-    # http://www.nyse.com/pdfs/closings.pdf
+    # Misc early closings from XSHG listing.
+    # http://www.XSHG.com/pdfs/closings.pdf
     #
     # New Year's Eve
     nye_1999 = datetime(1999, 12, 31, tzinfo=pytz.utc)
