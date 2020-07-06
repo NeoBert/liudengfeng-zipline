@@ -176,7 +176,6 @@ class ExplodingPipelineEngine(PipelineEngine):
     """
     A PipelineEngine that doesn't do anything.
     """
-
     def run_pipeline(self, pipeline, start_date, end_date, hooks=None):
         raise NoEngineRegistered(
             "Attempted to run a pipeline but no pipeline "
@@ -578,10 +577,9 @@ class SimplePipelineEngine(PipelineEngine):
             for input_ in specialized:
                 input_data = ensure_ndarray(workspace[input_])
                 offset = offsets[term, input_]
-                # OPTIMIZATION: Don't make a copy by doing input_data[0:] if
-                # offset is zero.
-                if offset:
-                    input_data = input_data[offset:]
+                input_data = input_data[offset:]
+                if refcounts[input_] > 1:
+                    input_data = input_data.copy()
                 out.append(input_data)
         return out
 
@@ -696,7 +694,10 @@ class SimplePipelineEngine(PipelineEngine):
                 assert set(loaded) == set(to_load), (
                     'loader did not return an AdjustedArray for each column\n'
                     'expected: %r\n'
-                    'got:      %r' % (sorted(to_load), sorted(loaded))
+                    'got:      %r' % (
+                        sorted(to_load, key=repr),
+                        sorted(loaded, key=repr),
+                    )
                 )
                 workspace.update(loaded)
             else:
@@ -932,11 +933,8 @@ def _pipeline_output_index(dates, assets, mask):
     asset_labels = repeat_first_axis(arange(len(assets)), len(dates))[mask]
     return MultiIndex(
         levels=[dates, assets],
-        # labels=[date_labels, asset_labels],
-        # # 签名更改
-        codes=[date_labels, asset_labels],
+        labels=[date_labels, asset_labels],
         # TODO: We should probably add names for these.
-        # names=[None, None],
-        names=['date', 'asset'],
+        names=[None, None],
         verify_integrity=False,
     )

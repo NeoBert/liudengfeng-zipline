@@ -74,7 +74,7 @@ class BusinessDaysUntilNextEvent(Factor):
     information that may not have been available to the algorithm at the time
     when `compute` is called.
 
-    For example, the XSHG closings September 11th 2001, would not have been
+    For example, the NYSE closings September 11th 2001, would not have been
     known to the algorithm on September 10th.
 
     Assets that announced or will announce the event today will produce a value

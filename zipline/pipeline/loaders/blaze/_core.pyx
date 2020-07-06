@@ -563,6 +563,7 @@ cdef arrays_from_rows(DatetimeIndex_t dates,
                       object all_rows,
                       AsArrayKind array_kind):
     cdef dict column_ixs = dict(zip(assets, range(len(assets))))
+
     # We use searchsorted right here to be exclusive on the data query time.
     # This means that if a data_query_time = 8:45, and a timestamp is exactly
     # 8:45, we would mark that the data point became available the next day.

@@ -173,7 +173,7 @@ class TermGraph(object):
         nodes get one extra reference to ensure that they're still in the graph
         at the end of execution.
         """
-        # # networkx升级后签名变化
+        # 🆗 networkx升级后签名变化
         # refcounts = self.graph.out_degree()
         refcounts = dict(self.graph.out_degree)
         for t in self.outputs.values():
@@ -453,18 +453,17 @@ class ExecutionPlan(TermGraph):
         :meth:`zipline.pipeline.graph.ExecutionPlan.offset`
         :meth:`zipline.pipeline.Term.dependencies`
         """
-        # # The Graph attribute node has moved its functionality to `G.nodes`
+        # 🆗 The Graph attribute node has moved its functionality to `G.nodes`
         return {
             term: attrs['extra_rows']
-            for term, attrs in iteritems(self.graph.nodes)
+            for term, attrs in iteritems(self.graph.node)
         }
 
     def _ensure_extra_rows(self, term, N):
         """
         Ensure that we're going to compute at least N extra rows of `term`.
         """
-        # # The Graph attribute node has moved its functionality to `G.nodes`
-        attrs = self.graph.nodes[term]
+        attrs = self.graph.node[term] # 🆗
         attrs['extra_rows'] = max(N, attrs.get('extra_rows', 0))
 
     def mask_and_dates_for_term(self,
@@ -507,8 +506,8 @@ class ExecutionPlan(TermGraph):
     def _assert_all_loadable_terms_specialized_to(self, domain):
         """Make sure that we've specialized all loadable terms in the graph.
         """
-        # # The Graph attribute node has moved its functionality to `G.nodes`
-        for term in self.graph.nodes:
+        for term in self.graph.node:
+            # 🆗
             if isinstance(term, LoadableTerm):
                 assert term.domain is domain
 

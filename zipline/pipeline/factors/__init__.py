@@ -17,9 +17,7 @@ from .basic import (
     PeerCount,
     PercentChange,
     Returns,
-    OpenReturns,
     SimpleMovingAverage,
-    SMA,
     VWAP,
     WeightedAverageValue,
 )
@@ -44,8 +42,10 @@ from .technical import (
     RSI,
     TrueRange,
 )
-# 别名 平均成交额
+
+# 🆗 平均成交额
 AverageAmount = AverageDollarVolume
+
 __all__ = [
     'AnnualizedVolatility',
     'Aroon',
@@ -72,16 +72,13 @@ __all__ = [
     'RateOfChangePercentage',
     'RecarrayField',
     'Returns',
-    'OpenReturns',
     'RollingLinearRegressionOfReturns',
     'RollingPearsonOfReturns',
     'RollingSpearmanOfReturns',
     'RSI',
     'SimpleBeta',
     'SimpleMovingAverage',
-    'SMA',
     'TrueRange',
     'VWAP',
     'WeightedAverageValue',
-    'AverageAmount',
 ]

@@ -36,7 +36,7 @@ This says that the value was 0 on 2014-01-01; however, we did not learn this
 until 2014-01-02. This is useful for avoiding look-ahead bias in your
 pipelines. If this column does not exist, the ``asof_date`` column will be used
 instead.
-``asof_date`` 发生时间。``timestamp``代表知悉时间或者公布时间。
+
 If your data references a particular asset, you can add a ``sid`` column to
 your dataset to represent this. For example:
 
@@ -994,7 +994,7 @@ class BlazeLoader(implements(PipelineLoader)):
             This can return more data than needed. The in memory reindex will
             handle this.
             """
-            # √ 字段数据类型为datetime64，而upper_dt为Timestamp，需要转换才能比较
+            # TODO：再次确认 字段数据类型为datetime64，而upper_dt为Timestamp，需要转换才能比较
             predicate = e[TS_FIELD_NAME] < upper_dt.to_datetime64()
             if lower is not None:
                 predicate &= e[TS_FIELD_NAME] >= lower.to_datetime64()
@@ -1019,8 +1019,7 @@ class BlazeLoader(implements(PipelineLoader)):
         # from LabelArrays with Nones in the categories, pandas
         # complains. Ignore those warnings for now until we have a story for
         # updating our categorical missing values to NaN.
-        with ignore_pandas_nan_categorical_warning():
-            try:
+        with ignore_pandas_nan_categorical_warning():            try:
                 all_rows = pd.concat(
                     filter(
                         # # 可能为空
@@ -1038,11 +1037,12 @@ class BlazeLoader(implements(PipelineLoader)):
             except ValueError:
                 raise NotImplementedError(f'列：{colnames}, 期间：{lower_dt} ~ {upper_dt} 无数据')
 
+
         all_rows[TS_FIELD_NAME] = all_rows[TS_FIELD_NAME].astype(
             'datetime64[ns]',
         )
-
         all_rows.sort_values([TS_FIELD_NAME, AD_FIELD_NAME], inplace=True)
+
         # # 以下将UTC更改为None
         if have_sids:
             return adjusted_arrays_from_rows_with_assets(
@@ -1054,8 +1054,8 @@ class BlazeLoader(implements(PipelineLoader)):
             )
         else:
             return adjusted_arrays_from_rows_without_assets(
-                dates.tz_localize(None),
-                data_query_cutoff_times.tz_localize(None),
+                dates,
+                data_query_cutoff_times,
                 columns,
                 all_rows,
             )
