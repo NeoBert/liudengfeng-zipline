@@ -83,20 +83,22 @@ class EquityPricingLoader(implements(PipelineLoader)):
         # query dates back by a trading session.
         sessions = domain.all_sessions()
         shifted_dates = shift_dates(sessions, dates[0], dates[-1], shift=1)
-        # 🆗 划分 货币列 与 非货币列
+
+        # 🆗 划分 货币列 与 非货币列 此处为列对象
         non_currency_cols, currency_cols = self._split_column_types(columns)
         del columns  # From here on we should use ohlcv_cols or currency_cols.
-        non_adj_colnames = [
-            c.name for c in non_currency_cols if c.name not in OHLCV]
 
         # 🆗 调整与非调整列名称
+        non_adj_colnames = [
+            c.name for c in non_currency_cols if c.name not in OHLCV]
         adj_colnames = [c.name for c in non_currency_cols if c.name in OHLCV]
-        # √ 调整与非调整列对象
-        adj_columns = [
-            col for col in non_currency_cols if col.name in adj_colnames]
+
+        # 🆗 调整与非调整列对象
+        adj_columns = [c for c in non_currency_cols if c.name in adj_colnames]
         non_adj_columns = [
-            col for col in non_currency_cols if col.name in non_adj_colnames]
-        del non_currency_cols  # 分割列后，删除
+            c for c in non_currency_cols if c.name in non_adj_colnames]
+        del non_currency_cols  # 分割非货币列后，删除原对象
+
         adj_raw_arrays = self.raw_price_reader.load_raw_arrays(
             adj_colnames,
             shifted_dates[0],
