@@ -413,6 +413,7 @@ class NoMetaDataWarning(UserWarning):
     field : {'deltas',  'checkpoints'}
         The field that was looked up.
     """
+
     def __init__(self, expr, field):
         self._expr = expr
         self._field = field
@@ -734,6 +735,7 @@ class ExprData(object):
     odo_kwargs : dict, optional
         The keyword arguments to forward to the odo calls internally.
     """
+
     def __init__(self,
                  expr,
                  deltas=None,
@@ -834,6 +836,7 @@ class BlazeLoader(implements(PipelineLoader)):
     :class:`zipline.utils.pool.SequentialPool`
     :class:`multiprocessing.Pool`
     """
+
     def __init__(self, dsmap=None, pool=SequentialPool()):
         # explicitly public
         self.pool = pool
@@ -1019,7 +1022,8 @@ class BlazeLoader(implements(PipelineLoader)):
         # from LabelArrays with Nones in the categories, pandas
         # complains. Ignore those warnings for now until we have a story for
         # updating our categorical missing values to NaN.
-        with ignore_pandas_nan_categorical_warning():            try:
+        with ignore_pandas_nan_categorical_warning():
+            try:
                 all_rows = pd.concat(
                     filter(
                         # # 可能为空
@@ -1035,8 +1039,8 @@ class BlazeLoader(implements(PipelineLoader)):
                     copy=False,
                 )
             except ValueError:
-                raise NotImplementedError(f'列：{colnames}, 期间：{lower_dt} ~ {upper_dt} 无数据')
-
+                raise NotImplementedError(
+                    f'列：{colnames}, 期间：{lower_dt} ~ {upper_dt} 无数据')
 
         all_rows[TS_FIELD_NAME] = all_rows[TS_FIELD_NAME].astype(
             'datetime64[ns]',
