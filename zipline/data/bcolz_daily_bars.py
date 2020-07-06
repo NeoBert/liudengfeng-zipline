@@ -442,6 +442,7 @@ class BcolzDailyBarReader(SessionBarReader):
     --------
     zipline.data.bcolz_daily_bars.BcolzDailyBarWriter
     """
+
     def __init__(self, table, read_all_threshold=3000):
         self._maybe_table_rootdir = table
         # Cache of fully read np.array for the carrays in the daily bar table.
@@ -701,7 +702,7 @@ class BcolzDailyBarReader(SessionBarReader):
         price = self._spot_col(field)[ix]
         if field == 'volume':
             # # 恢复成交量(损失精度)
-            return price * 100            
+            return price * 100
         elif field in OHLC:
             if price == 0:
                 return nan
@@ -710,3 +711,16 @@ class BcolzDailyBarReader(SessionBarReader):
         elif field in ADJUST_FACTOR.keys():
             return price / ADJUST_FACTOR[field]
         raise ValueError(f"表没有列：'{field}'")
+
+    def currency_codes(self, sids):
+        # XXX: This is pretty inefficient. This reader doesn't really support
+        # country codes, so we always either return CNY or None if we don't
+        # know about the sid at all.
+        first_rows = self._first_rows
+        out = []
+        for sid in sids:
+            if sid in first_rows:
+                out.append('CNY')
+            else:
+                out.append(None)
+        return np.array(out, dtype=object)
