@@ -1,4 +1,4 @@
-from contextlib2 import ExitStack
+from contextlib import ExitStack
 from interface import implements
 
 from zipline.utils.compat import contextmanager, wraps
