@@ -2,6 +2,7 @@
 
 查询本地数据
 
+尽管`bcolz`最终会丢失时区信息，但写入时依旧将时间列转换为UTC时区。
 """
 
 import re
@@ -54,6 +55,14 @@ MATCH_ONLY_A = {
 }
 
 # region 辅助函数
+
+
+def _fix_to_utc(df, local_tz='Asia/Shanghai'):
+    for col in ['asof_date', 'timestamp']:
+        if col in df.columns:
+            df[col] = pd.DatetimeIndex(
+                df[col].values, tz=local_tz).tz_convert('UTC')
+    return df
 
 
 def _normalized_col_name(x):
@@ -480,6 +489,8 @@ def get_dividend_data(only_A=True):
     df['每股派息'] = df['每股派息'] / 10.0
     df.sort_values(['sid', 'asof_date'], inplace=True, ignore_index=True)
     df['sid'] = df['sid'].map(lambda x: int(x))
+    # 修复时区信息
+    df = _fix_to_utc(df)
     return df
 
 

@@ -105,14 +105,14 @@ def write_dynamic_data_to_bcolz():
         3. 股票简称变动历史
         4. 投资评级
     """
-    df_m = get_margin_data()
-    write_dataframe(df_m, 'margin')
+    # df_m = get_margin_data()
+    # write_dataframe(df_m, 'margin')
     df_dd = get_dividend_data()
     write_dataframe(df_dd, 'dividend')
-    df_sn, sn_maps = get_short_name_history()
-    write_dataframe(df_sn, 'shortname', sn_maps)
-    df_ir, attr_dic = get_investment_rating()
-    write_dataframe(df_ir, 'investment_rating', attr_dic)
+    # df_sn, sn_maps = get_short_name_history()
+    # write_dataframe(df_sn, 'shortname', sn_maps)
+    # df_ir, attr_dic = get_investment_rating()
+    # write_dataframe(df_ir, 'investment_rating', attr_dic)
 
 
 def write_financial_data_to_bcolz():
@@ -145,8 +145,8 @@ def write_data_to_bcolz():
     """写入Fundamentals数据"""
     print('准备写入Fundamentals数据......')
     s = time.time()
-    write_static_info_to_bcolz()
-    # write_dynamic_data_to_bcolz()
+    # write_static_info_to_bcolz()
+    write_dynamic_data_to_bcolz()
     # write_financial_data_to_bcolz()
     # write_yahoo()
     print(f"用时{time.time() - s:.2f}秒")
