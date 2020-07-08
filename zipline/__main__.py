@@ -431,7 +431,7 @@ def bundles():
 
 @main.command()
 def fm():
-    """写入基础数据(Fundamental)"""
+    """写入基础数据（查询及写入约400万行数据，耗时<180s）"""
     # 提高`import zipline`速度
     from zipline.pipeline.fundamentals.writer import write_data_to_bcolz
     write_data_to_bcolz()
