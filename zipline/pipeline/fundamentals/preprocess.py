@@ -3,6 +3,7 @@
 预处理数据
 
 TODO：由于最终会丢失时区信息，写入时所有时间列均不带时区。
+# 废弃 _normalize_ad_ts_sid
 """
 import warnings
 
@@ -138,24 +139,25 @@ def get_static_info_table():
     ).join(
         concept.set_index('sid'),
     )
+    df.reset_index(inplace=True)
     maps = {}
     _, name_maps = field_code_concept_maps()
     maps['概念'] = name_maps
 
-    # 规范列数据类型及填充无效值
+    # 确保 布尔类型
     bool_cols = df.columns[df.columns.str.match(r'A\d{3}')]
-    col_dtypes = {col: 'bool' for col in bool_cols}
-    col_dtypes.update({
-        'sector_code': 'int64',
-        'super_sector_code': 'int64',
-        'sw_sector': 'int64',
-        '上市地点': 'str',
-        '会计师事务所': 'str',
-        '律师事务所': 'str',
-    })
-    industry_cols = {col: 'str' for col in df.columns if '级行业' in col}
-    col_dtypes.update(industry_cols)
-    df = _fillna(df, col_dtypes)
+    for col in bool_cols:
+        df[col].fillna(value={col: False}, inplace=True)
+        df[col] = df[col].astype(bool)
+
+    # industries = df.columns[df.columns.str.match(r'.{2,3}[一二三四]级行业$')]
+
+    # cate_cols_pat = [
+    #     c for c in df.columns if pd.api.types.is_string_dtype(df[c]) and c not in industries]
+
+    # for col_pat in cate_cols_pat:
+    #     df, maps = _handle_cate(df, col_pat, maps)
+
     return df, maps
 
 
@@ -167,7 +169,7 @@ def get_investment_rating():
     """
     maps = {}
     df = get_investment_rating_data()
-    df = _normalize_ad_ts_sid(df)
+    # df = _normalize_ad_ts_sid(df)
     cate_cols_pat = ['研究机构简称', '研究员名称']
     for col_pat in cate_cols_pat:
         df, maps = _handle_cate(df, col_pat, maps)

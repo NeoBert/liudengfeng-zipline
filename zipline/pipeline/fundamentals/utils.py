@@ -30,8 +30,8 @@ def _normalized_dshape(input_dshape, utc=False):
             else:
                 out_dshape.append([name, DateTime()])
         else:
-            if isinstance(type_, Option):
-                type_ = type_.ty
+            # if isinstance(type_, Option):
+            #     type_ = type_.ty
             out_dshape.append([name, type_])
         # out_dshape.append([name, datashape_type_to_numpy(type_)])
     return var * Record(out_dshape)

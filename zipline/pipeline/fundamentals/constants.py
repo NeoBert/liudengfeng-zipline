@@ -8,7 +8,7 @@ SUPER_SECTOR_NAMES = {
     1: '周期',  # 'Cyclical'),
     2: '防御',  # 'Defensive'),
     3: '敏感',  # 'Sensitive'),
-    -1: '未知',
+    -1: '未分类',
 }
 
 SECTOR_NAMES = {
@@ -23,8 +23,9 @@ SECTOR_NAMES = {
     309: '能源',      # 'ENERGY'),
     310: '工业领域',  # 'INDUSTRIALS'),
     311: '工程技术',  # 'TECHNOLOGY'),
-    -1:  '未知',
+    -1:  '未分类',
 }
+
 # 国证一级行业分类转换为`SECTOR`编码
 CN_TO_SECTOR = {
     'Z01': 309,
@@ -70,5 +71,5 @@ SW_SECTOR_MAPS = {
     801790: 'S49',  # 非银金融
     801880: 'S28',  # 汽车
     801890: 'S64',  # 机械设备
-    -1:  '未知',
+    -1:  '未分类',
 }

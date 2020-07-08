@@ -23,7 +23,9 @@ from shutil import rmtree
 
 import bcolz
 import logbook
-from logbook import Logger
+import pandas as pd
+
+from cnswd.utils import make_logger
 
 from ..common import AD_FIELD_NAME, SID_FIELD_NAME, TS_FIELD_NAME
 from .base import bcolz_table_path
@@ -35,13 +37,15 @@ from .localdata import (get_dividend_data,
                         get_q_cash_flow_data, get_q_income_data,
                         get_quarterly_financial_indicator_data,
                         get_ttm_cash_flow_data, get_ttm_income_data)
-from .preprocess import (_normalize_ad_ts_sid, get_investment_rating,
+from .preprocess import (get_investment_rating,
                          get_short_name_history, get_static_info_table)
+
 # from .yahoo import YAHOO_ITEMS, read_item_data
 
 # 设置显示日志
 logbook.set_datetime_format('local')
 logbook.StreamHandler(sys.stdout).push_application()
+logger = make_logger('to_bcolz')
 
 TAB_MAPS = {
     # 定期财务报告
@@ -66,18 +70,33 @@ TAB_MAPS = {
 }
 
 
+def _fix_mixed_type(df):
+    # 1. 修复str类型中存在混合类型的列 如 ldf np.NaN lyy
+    # 2. bool 类型含空值
+    for col in df.columns:
+        if pd.api.types.is_string_dtype(df[col]):
+            # 注意，必须输入字符None，否则会出错
+            df.fillna(value={col: 'None'}, inplace=True)
+        if pd.api.types.is_bool_dtype(df[col]):
+            df.fillna(value={col: False}, inplace=True)
+        if pd.api.types.is_integer_dtype(df[col]):
+            df.fillna(value={col: -1}, inplace=True)
+        if pd.api.types.is_datetime64tz_dtype(df[col]):
+            raise ValueError('时间列不得带时区信息')
+
+
 def write_dataframe(df, table_name, attr_dict=None):
     """以bcolz格式写入数据框"""
-    log = Logger(table_name)
     # 转换为bcolz格式并存储
     rootdir = bcolz_table_path(table_name)
     if os.path.exists(rootdir):
         rmtree(rootdir)
-    # df = _normalize_ad_ts_sid(df)
     for c in (AD_FIELD_NAME, TS_FIELD_NAME, SID_FIELD_NAME):
         if c in df.columns and df[c].hasnans:
             warnings.warn(f'{c}列含有空值，已移除')
-            df = df.loc[~df[c].isnan(), :]
+            df = df.loc[~df[c].isnull(), :]
+    # 修复混合类型，填充默认值，否则bcolz.ctable.fromdataframe会出错
+    _fix_mixed_type(df)
     # 丢失tz信息
     ct = bcolz.ctable.fromdataframe(df, rootdir=rootdir)
     if attr_dict:
@@ -85,11 +104,12 @@ def write_dataframe(df, table_name, attr_dict=None):
         for k, v in attr_dict.items():
             ct.attrs[k] = v
     ct.flush()
-    log.info(f'{len(df)} 行 写入：{rootdir}')
+    logger.info(f'{len(df)} 行 写入：{rootdir}')
 
 
 def write_static_info_to_bcolz():
     """写入股票分类等静态数据"""
+    logger.info('读取股票分类数据')
     table_name = 'infoes'
     df, attr_dict = get_static_info_table()
     write_dataframe(df, table_name, attr_dict)
@@ -105,14 +125,18 @@ def write_dynamic_data_to_bcolz():
         3. 股票简称变动历史
         4. 投资评级
     """
-    # df_m = get_margin_data()
-    # write_dataframe(df_m, 'margin')
+    logger.info('读取融资融券')
+    df_m = get_margin_data()
+    write_dataframe(df_m, 'margin')
+    logger.info('读取现金股利')
     df_dd = get_dividend_data()
     write_dataframe(df_dd, 'dividend')
-    # df_sn, sn_maps = get_short_name_history()
-    # write_dataframe(df_sn, 'shortname', sn_maps)
-    # df_ir, attr_dic = get_investment_rating()
-    # write_dataframe(df_ir, 'investment_rating', attr_dic)
+    logger.info('读取股票简称变动历史')
+    df_sn, sn_maps = get_short_name_history()
+    write_dataframe(df_sn, 'shortname', sn_maps)
+    logger.info('读取股票投资评级')
+    df_ir, attr_dic = get_investment_rating()
+    write_dataframe(df_ir, 'investment_rating', attr_dic)
 
 
 def write_financial_data_to_bcolz():
@@ -132,6 +156,7 @@ def write_financial_data_to_bcolz():
         11. 季度现金流量表
     """
     for table, func in TAB_MAPS.items():
+        logger.info(f'读取{table}')
         write_dataframe(func(), table)
 
 
@@ -145,8 +170,8 @@ def write_data_to_bcolz():
     """写入Fundamentals数据"""
     print('准备写入Fundamentals数据......')
     s = time.time()
-    # write_static_info_to_bcolz()
+    write_static_info_to_bcolz()
     write_dynamic_data_to_bcolz()
-    # write_financial_data_to_bcolz()
+    write_financial_data_to_bcolz()
     # write_yahoo()
     print(f"用时{time.time() - s:.2f}秒")

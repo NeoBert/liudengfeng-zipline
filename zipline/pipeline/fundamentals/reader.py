@@ -19,13 +19,13 @@ import warnings
 import bcolz
 import blaze
 import pandas as pd
-
 from odo import discover
 
 from zipline.pipeline.domain import CN_EQUITIES
 from zipline.pipeline.loaders.blaze import from_blaze
 from zipline.utils.memoize import classlazyval
 
+# from zipline.pipeline.loaders.blaze import global_loader
 from ..data.dataset import BoundColumn
 from .base import bcolz_table_path
 from .constants import SECTOR_NAMES, SUPER_SECTOR_NAMES
@@ -44,9 +44,13 @@ def _gen_expr(table_name):
     """生成表所对应的表达式"""
     rootdir = bcolz_table_path(table_name)
     ct = bcolz.ctable(rootdir=rootdir, mode='r')
-    raw_dshape = discover(ct)
-    dshape_ = _normalized_dshape(raw_dshape, True)
-    expr = blaze.data(ct, name=table_name, dshape=dshape_)
+    # 必须转换为DataFrame对象
+    df = ct.todataframe()
+    raw_dshape = discover(df)
+    # 此处不得使用UTC，即 asof_date: datetime
+    # 而不是 asof_date: datetime[tz='UTC']
+    dshape_ = _normalized_dshape(raw_dshape, False)
+    expr = blaze.data(df, name=table_name, dshape=dshape_)
     return expr
 
 
@@ -55,10 +59,10 @@ def gen_data_set(table_name):
     expr = _gen_expr(table_name)
     return from_blaze(
         expr,
-        # loader=global_loader,
+        # loader=None,
         no_deltas_rule='ignore',
         no_checkpoints_rule='ignore',
-        odo_kwargs=gen_odo_kwargs(expr, utc=True),
+        # odo_kwargs=gen_odo_kwargs(expr, utc=False),
         missing_values=fillvalue_for_expr(expr),
         domain=CN_EQUITIES,
     )
@@ -261,7 +265,7 @@ class Fundamentals(object):
     @classlazyval
     def info(self):
         """股票静态信息数据集"""
-        return gen_data_set(table_name='infoes')
+        return gen_data_set('infoes')
 
     # @classlazyval
     # def equity(self):

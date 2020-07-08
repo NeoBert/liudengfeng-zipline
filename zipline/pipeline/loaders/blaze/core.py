@@ -20,6 +20,15 @@ asof_date,value
 2014-01-07,1
 2014-01-08,2
 
+# 关于事件时间图示
+
+=================================>
+ 事件发生         获知事件
+    ^               ^
+    |               |
+asof_date       timestamp
+
+
 This says that the value on 2014-01-01 was 0 and so on.
 
 Optionally, we may provide a ``timestamp`` column to be used to represent
@@ -997,10 +1006,10 @@ class BlazeLoader(implements(PipelineLoader)):
             This can return more data than needed. The in memory reindex will
             handle this.
             """
-            # TODO：再次确认 字段数据类型为datetime64，而upper_dt为Timestamp，需要转换才能比较
-            predicate = e[TS_FIELD_NAME] < upper_dt.to_datetime64()
+            # 原始数据不带时区信息
+            predicate = e[TS_FIELD_NAME] < upper_dt.tz_convert(None)
             if lower is not None:
-                predicate &= e[TS_FIELD_NAME] >= lower.to_datetime64()
+                predicate &= e[TS_FIELD_NAME] >= lower.tz_convert(None)
 
             return odo(e[predicate][colnames], pd.DataFrame, **odo_kwargs)
 
@@ -1023,35 +1032,35 @@ class BlazeLoader(implements(PipelineLoader)):
         # complains. Ignore those warnings for now until we have a story for
         # updating our categorical missing values to NaN.
         with ignore_pandas_nan_categorical_warning():
-            try:
-                all_rows = pd.concat(
-                    filter(
-                        # # 可能为空
-                        # # 排除非空数据，确保AD_FIELD_NAME数据类型为M
-                        # lambda df: df is not None, (
-                        lambda df: (df is not None) and (not df.empty), (
-                            materialized_checkpoints,
-                            materialized_expr_deferred.get(),
-                            materialized_deltas,
-                        ),
+            all_rows = pd.concat(
+                filter(
+                    lambda df: df is not None, (
+                        materialized_checkpoints,
+                        materialized_expr_deferred.get(),
+                        materialized_deltas,
                     ),
-                    ignore_index=True,
-                    copy=False,
-                )
-            except ValueError:
-                raise NotImplementedError(
-                    f'列：{colnames}, 期间：{lower_dt} ~ {upper_dt} 无数据')
-
+                ),
+                ignore_index=True,
+                copy=False,
+            )
+        # 🆗 转换后丢失时区信息
+        # 为使其正常运行，且尽量少改动代码，在 `_core.pyx`中有关searchsorted部分
+        # 使用pd.DatetimeIndex(all_rows[TS_FIELD_NAME]).tz_localize('UTC')
+        # 而非原代码all_rows[TS_FIELD_NAME].values
         all_rows[TS_FIELD_NAME] = all_rows[TS_FIELD_NAME].astype(
             'datetime64[ns]',
         )
+        # 🆗 也需强迫`AD_FIELD_NAME`丢失tz信息
+        all_rows[AD_FIELD_NAME] = all_rows[AD_FIELD_NAME].astype(
+            'datetime64[ns]',
+        )
+        # dates data_query_cutoff_times 全部为 DatetimeIndex 对象
+        # tz = "UTC"
         all_rows.sort_values([TS_FIELD_NAME, AD_FIELD_NAME], inplace=True)
-
-        # # 以下将UTC更改为None
         if have_sids:
             return adjusted_arrays_from_rows_with_assets(
-                dates.tz_localize(None),
-                data_query_cutoff_times.tz_localize(None),
+                dates,
+                data_query_cutoff_times,
                 assets,
                 columns,
                 all_rows,

@@ -3,6 +3,8 @@
 查询本地数据
 
 尽管`bcolz`最终会丢失时区信息，但写入时依旧将时间列转换为UTC时区。
+除asof_date、timestamp列外，其余时间列无需转换
+
 """
 
 import re
@@ -17,11 +19,12 @@ from cnswd.mongodb import get_db
 from cnswd.setting.constants import MAX_WORKER
 from cnswd.utils.tools import filter_a
 
+from ..common import AD_FIELD_NAME, TS_FIELD_NAME
 from .constants import SW_SECTOR_MAPS
 
 # from cnswd.store import (ClassifyTreeStore, DataBrowseStore, MarginStore,
 #                          TctGnStore, WyStockDailyStore)
-
+LOCAL_TZ = 'Asia/Shanghai'
 warnings.filterwarnings('ignore')
 
 STOCK_PAT = re.compile(r"^\d{6}$")
@@ -57,11 +60,13 @@ MATCH_ONLY_A = {
 # region 辅助函数
 
 
-def _fix_to_utc(df, local_tz='Asia/Shanghai'):
-    for col in ['asof_date', 'timestamp']:
+def _to_timestamp(df):
+    # 无需 tz 信息
+    for col in [AD_FIELD_NAME, TS_FIELD_NAME]:
         if col in df.columns:
-            df[col] = pd.DatetimeIndex(
-                df[col].values, tz=local_tz).tz_convert('UTC')
+            # df[col] = df[col].map(lambda x: pd.Timestamp(
+            #     x, tz=LOCAL_TZ).tz_convert('UTC').to_pydatetime())
+            df[col] = df[col].map(pd.Timestamp)
     return df
 
 
@@ -99,11 +104,14 @@ def get_stock_info(only_A=True):
         '_id': 0,
         '股票代码': 1,
         '上市日期': 1,
-        '申万行业一级名称': 1,
-        '申万行业二级名称': 1,
-        '申万行业三级名称': 1,
-        '证监会一级行业名称': 1,
-        '证监会二级行业名称': 1,
+        # 与行业分类重复
+        # '申万行业一级名称': 1,
+        # '申万行业二级名称': 1,
+        # '申万行业三级名称': 1,
+        # '证监会一级行业名称': 1,
+        # '证监会二级行业名称': 1,
+        '省份': 1,
+        '城市': 1,
         '注册资本': 1,
         '上市状态': 1,
         '律师事务所': 1,
@@ -124,8 +132,8 @@ def get_stock_info(only_A=True):
     cond1 = ~ df['上市日期'].isnull()
     cond2 = df['上市日期'] <= pd.Timestamp('today')
     df = df.loc[cond1 & cond2, :]
-    df = _select_only_a(df, only_A, '股票代码')
     df['asof_date'] = df['上市日期'] - pd.Timedelta(days=1)
+    df = _to_timestamp(df)
     # 注册资本转换 -> 十分位数
     df['注册资本十分位数'] = pd.qcut(np.log(df['注册资本'].values), 10, labels=False)
     df.rename(columns={'股票代码': 'sid'}, inplace=True)
@@ -451,9 +459,11 @@ def get_margin_data(only_A=True):
     df = pd.DataFrame.from_records(
         collection.find(projection=projection))
     df = _select_only_a(df, only_A, '股票代码')
-    df.rename(columns={'交易日期': 'asof_date', '股票代码': 'sid'}, inplace=True)
+    df.rename(columns={'交易日期': 'timestamp', '股票代码': 'sid'}, inplace=True)
     df['sid'] = df['sid'].map(lambda x: int(x))
-    df.sort_values(['sid', 'asof_date'], inplace=True, ignore_index=True)
+    # 设置晚8小时
+    df['asof_date'] = df['timestamp'] - pd.Timedelta(hours=8)
+    df.sort_values(['sid', 'timestamp'], inplace=True, ignore_index=True)
     return df
 
 
@@ -474,23 +484,25 @@ def get_dividend_data(only_A=True):
             }
         }
     ]
+    if only_A:
+        pipeline.insert(0, MATCH_ONLY_A)
     ds = collection.aggregate(pipeline)
     df = pd.DataFrame.from_records(ds)
     cols = {'股票代码': 'sid', 'A股股权登记日': 'asof_date', '派息比例(人民币)': '每股派息'}
     df.rename(columns=cols, inplace=True)
-    df = _select_only_a(df, only_A, code_col='sid')
     # 首先将日期缺失值默认为分红年度后一个季度
     cond = df['asof_date'].isnull()
     df.loc[cond, 'asof_date'] = df.loc[cond, '分红年度'] + pd.Timedelta(days=45)
-    # 然后才填充数字默认值
-    # 重要：对未分派的记录，将其更改为0，而非舍弃
-    df.fillna(0.0, inplace=True)
+    # 重要：对未分派的记录，不得舍弃
+    # 派息NaN -> 0.0 不影响实际意义，加快读写速度
+    values = {'每股派息': 0.0}
+    df.fillna(value=values, inplace=True)
     # 数值更改为每股派息
     df['每股派息'] = df['每股派息'] / 10.0
     df.sort_values(['sid', 'asof_date'], inplace=True, ignore_index=True)
     df['sid'] = df['sid'].map(lambda x: int(x))
-    # 修复时区信息
-    df = _fix_to_utc(df)
+    # datetime -> timestamp
+    df = _to_timestamp(df)
     return df
 
 
@@ -498,26 +510,26 @@ def get_dividend_data(only_A=True):
 
 # region 定期财务报告
 
-
-def _fix_sid_ad_ts(df, col='报告年度', ndays=45):
-    """
-    修复截止日期、公告日期。
-    如果`asof_date`为空，则使用`col`的值
-        `timestamp`在`col`的值基础上加`ndays`天"""
-    df['sid'] = df['sid'].map(lambda x: int(x))
-    cond = df.asof_date.isna()
-    df.loc[cond, 'asof_date'] = df.loc[cond, col]
-    df.loc[cond, 'timestamp'] = df.loc[cond, col] + pd.Timedelta(days=ndays)
-    # 由于存在数据不完整的情形，当timestamp为空，在asof_date基础上加ndays
-    cond1 = df.timestamp.isna()
-    df.loc[cond1,
-           'timestamp'] = df.loc[cond1, 'asof_date'] + pd.Timedelta(days=ndays)
-    # 1991-12-31 时段数据需要特别修正
-    cond2 = df.timestamp.map(lambda x: x.is_quarter_end)
-    cond3 = df.asof_date == df.timestamp
-    df.loc[cond2 & cond3,
-           'timestamp'] = df.loc[cond2 & cond3,
-                                 'asof_date'] + pd.Timedelta(days=ndays)
+# 废弃
+# def _fix_sid_ad_ts(df, col='报告年度', ndays=45):
+#     """
+#     修复截止日期、公告日期。
+#     如果`asof_date`为空，则使用`col`的值
+#         `timestamp`在`col`的值基础上加`ndays`天"""
+#     df['sid'] = df['sid'].map(lambda x: int(x))
+#     cond = df.asof_date.isna()
+#     df.loc[cond, 'asof_date'] = df.loc[cond, col]
+#     df.loc[cond, 'timestamp'] = df.loc[cond, col] + pd.Timedelta(days=ndays)
+#     # 由于存在数据不完整的情形，当timestamp为空，在asof_date基础上加ndays
+#     cond1 = df.timestamp.isna()
+#     df.loc[cond1,
+#            'timestamp'] = df.loc[cond1, 'asof_date'] + pd.Timedelta(days=ndays)
+#     # 1991-12-31 时段数据需要特别修正
+#     cond2 = df.timestamp.map(lambda x: x.is_quarter_end)
+#     cond3 = df.asof_date == df.timestamp
+#     df.loc[cond2 & cond3,
+#            'timestamp'] = df.loc[cond2 & cond3,
+#                                  'asof_date'] + pd.Timedelta(days=ndays)
 
 
 def _periodly_report(only_A, item_name):
@@ -747,6 +759,7 @@ def get_performance_forecaste_data(only_A=True):
         "报告年度": "asof_date",
         "公告日期": "timestamp",
     }, inplace=True)
+    df['sid'] = df['sid'].map(lambda x: int(x))
     return df
 
 

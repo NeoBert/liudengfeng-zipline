@@ -1,13 +1,31 @@
+from datetime import time
+
 import pandas as pd
+import pytz
 
 from zipline.data import bundles
 from zipline.pipeline.data import EquityPricing
-from zipline.pipeline.domain import CN_EQUITIES
+from zipline.pipeline.domain import (CN_EQUITIES, GENERIC, Domain,
+                                     EquitySessionDomain)
 from zipline.pipeline.engine import SimplePipelineEngine
 from zipline.pipeline.loaders import EquityPricingLoader
 from zipline.pipeline.loaders.blaze import global_loader
 from zipline.utils.memoize import remember_last
 from zipline.utils.ts_utils import ensure_utc
+
+
+def create_domain(sessions,
+                  data_query_time=time(0, 0, tzinfo=pytz.utc),
+                  data_query_date_offset=0):
+    if sessions.tz is None:
+        sessions = sessions.tz_localize('UTC')
+
+    return EquitySessionDomain(
+        sessions,
+        country_code='CN',
+        data_query_time=data_query_time,
+        data_query_date_offset=data_query_date_offset,
+    )
 
 
 def run_pipeline(pipeline, start_date, end_date):
@@ -65,6 +83,9 @@ def run_pipeline_against_bundle(pipeline, start_date, end_date, bundle):
         d2 = _tdate(calendar, end_date, 'previous').normalize()
         if d1 > d2:
             d1 = d2
+
+    if pipeline._domain is GENERIC:
+        pipeline._domain = CN_EQUITIES
     return engine.run_pipeline(pipeline, d1, d2)
 
 
@@ -94,7 +115,9 @@ def _pipeline_engine_and_calendar_for_bundle(bundle):
     def choose_loader(column):
         if column.unspecialize() in EquityPricing.columns:
             return pipeline_loader
-        elif column in global_loader:
+        # elif column in global_loader:
+        #     return global_loader
+        else:
             return global_loader
         raise ValueError("%s is NOT registered in `PipelineLoader`." % column)
 
@@ -103,7 +126,6 @@ def _pipeline_engine_and_calendar_for_bundle(bundle):
         SimplePipelineEngine(
             choose_loader,
             bundle_data.asset_finder,
-            default_domain=CN_EQUITIES,
         ),
         calendar,
     )

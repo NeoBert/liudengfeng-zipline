@@ -568,7 +568,7 @@ cdef arrays_from_rows(DatetimeIndex_t dates,
     # This means that if a data_query_time = 8:45, and a timestamp is exactly
     # 8:45, we would mark that the data point became available the next day.
     cdef np.ndarray[np.int64_t] ts_ixs = data_query_cutoff_times.searchsorted(
-        all_rows[TS_FIELD_NAME].values,
+        pd.DatetimeIndex(all_rows[TS_FIELD_NAME]).tz_localize('UTC'),
         'right',
     )
 
@@ -576,7 +576,7 @@ cdef arrays_from_rows(DatetimeIndex_t dates,
     # expects. In a CustomFactor, when today = t_1, the last row of the input
     # array should be data whose asof_date is t_0.
     cdef np.ndarray[np.int64_t] asof_ixs = dates.searchsorted(
-        all_rows[AD_FIELD_NAME].values,
+        pd.DatetimeIndex(all_rows[AD_FIELD_NAME]).tz_localize('UTC'),
         'right',
     )
 
@@ -596,6 +596,7 @@ cdef arrays_from_rows(DatetimeIndex_t dates,
             size,
             (
                 all_rows[TS_FIELD_NAME].values.view('int64')
+                # all_rows[TS_FIELD_NAME].astype('int64').values
                 if len(all_rows) else
                 # workaround for empty data frames which often lost type
                 # information; enforce than an empty column as an int64 type
@@ -605,6 +606,7 @@ cdef arrays_from_rows(DatetimeIndex_t dates,
             ts_ixs,
             (
                 all_rows[AD_FIELD_NAME].values.view('int64')
+                # all_rows[AD_FIELD_NAME].astype('int64').values
                 if len(all_rows) else
                 # workaround for empty data frames which often lost type
                 # information; enforce than an empty column as an int64 type
