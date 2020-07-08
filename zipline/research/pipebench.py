@@ -12,6 +12,10 @@ from zipline.pipeline.loaders import EquityPricingLoader
 from zipline.pipeline.loaders.blaze import global_loader
 from zipline.utils.memoize import remember_last
 from zipline.utils.ts_utils import ensure_utc
+from zipline.pipeline.hooks.progress import ProgressHooks, IPythonWidgetProgressPublisher
+
+publisher = IPythonWidgetProgressPublisher()
+hooks = [ProgressHooks.with_static_publisher(publisher)]
 
 
 def create_domain(sessions,
@@ -86,7 +90,7 @@ def run_pipeline_against_bundle(pipeline, start_date, end_date, bundle):
 
     if pipeline._domain is GENERIC:
         pipeline._domain = CN_EQUITIES
-    return engine.run_pipeline(pipeline, d1, d2)
+    return engine.run_pipeline(pipeline, d1, d2, hooks=hooks)
 
 
 @remember_last
