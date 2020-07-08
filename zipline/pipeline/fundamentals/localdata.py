@@ -813,6 +813,8 @@ def get_investment_rating_data(only_A=True):
     },
         inplace=True)
     df.dropna(subset=['投资评级'], inplace=True)
+    df['timestamp'] = df['asof_date']
+    df['asof_date'] -= pd.Timedelta(hours=1)
     df['sid'] = df['sid'].map(lambda x: int(x))
     return df
 
