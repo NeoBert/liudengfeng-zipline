@@ -760,6 +760,10 @@ def get_performance_forecaste_data(only_A=True):
         "公告日期": "timestamp",
     }, inplace=True)
     df['sid'] = df['sid'].map(lambda x: int(x))
+    # 部分数据无效，公告日期 < 报告年度
+    # 以下筛选出有效数据
+    cond = df['timestamp'] > df['asof_date']
+    df = df.loc[cond, :]
     return df
 
 
