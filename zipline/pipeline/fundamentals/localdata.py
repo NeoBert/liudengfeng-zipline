@@ -751,18 +751,24 @@ def get_performance_forecaste_data(only_A=True):
     ds = collection.aggregate(pipeline)
     df = pd.DataFrame.from_records(ds)
 
-    # 将缺少的公告日期+45天
+    # 业绩预告反映未来事件
+
     cond = df['公告日期'].isnull()
-    df.loc[cond, '公告日期'] = df.loc[cond, '报告年度'] + pd.Timedelta(days=45)
+    df.loc[cond, '公告日期'] = df.loc[cond, '报告年度'] - pd.Timedelta(days=45)
+    # 保留`报告年度`列
     df.rename(columns={
         "股票代码": "sid",
-        "报告年度": "asof_date",
+        # "报告年度": "asof_date",
         "公告日期": "timestamp",
     }, inplace=True)
+    # 将 asof_date 定义为前一分钟
+    df['asof_date'] = df['timestamp'] - pd.Timedelta(minutes=1)
     df['sid'] = df['sid'].map(lambda x: int(x))
-    # 部分数据无效，公告日期 < 报告年度
-    # 以下筛选出有效数据
-    cond = df['timestamp'] > df['asof_date']
+    # 深证信原始数据中 股票代码  "002746"
+    # 公告日期  2013-10-13 报告年度 2016-09-30 
+    # 即做出提前三年的业绩预告，有违常理，需删除
+    # 一般而言，业绩预告不会领先报告年度一个季度发布
+    cond = df['timestamp'] - df['asof_date'] < pd.Timedelta(days=90)
     df = df.loc[cond, :]
     return df
 
