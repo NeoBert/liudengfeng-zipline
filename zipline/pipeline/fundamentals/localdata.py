@@ -132,6 +132,7 @@ def get_stock_info(only_A=True):
     cond1 = ~ df['上市日期'].isnull()
     cond2 = df['上市日期'] <= pd.Timestamp('today')
     df = df.loc[cond1 & cond2, :]
+    df['timestamp'] = df['上市日期']
     df['asof_date'] = df['上市日期'] - pd.Timedelta(days=1)
     df = _to_timestamp(df)
     # 注册资本转换 -> 十分位数
