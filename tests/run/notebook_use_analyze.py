@@ -1,5 +1,7 @@
 # %%
 %load_ext zipline
+import matplotlib.pyplot as plt
+from zipline.api import order_target, record, symbol
 
 # %%
 # %%zipline --start 2016-1-1 --end 2018-1-1
@@ -17,11 +19,8 @@
 # _.head()
 
 # %% 分钟级别
-%%zipline --start 2020-1-2 --end 2020-1-8 --data-frequency minute -b cnminutely -o dma.pickle
+% % zipline - -start 2020-1-2 - -end 2020-1-8 - -data-frequency minute - b cnminutely - o dma.pickle
 
-
-from zipline.api import order_target, record, symbol
-import matplotlib.pyplot as plt
 
 def initialize(context):
     context.i = 0
@@ -37,8 +36,10 @@ def handle_data(context, data):
     # Compute averages
     # data.history() has to be called with the same params
     # from above and returns a pandas dataframe.
-    short_mavg = data.history(context.asset, 'price', bar_count=30, frequency="1m").mean()
-    long_mavg = data.history(context.asset, 'price', bar_count=60, frequency="1m").mean()
+    short_mavg = data.history(context.asset, 'price',
+                              bar_count=30, frequency="1m").mean()
+    long_mavg = data.history(context.asset, 'price',
+                             bar_count=60, frequency="1m").mean()
 
     # Trading logic
     if short_mavg > long_mavg:
@@ -55,7 +56,7 @@ def handle_data(context, data):
 
 
 def analyze(context, perf):
-    print('总计数',context.i) # 应为 1210 = 5 * 242 五个交易日 242 bar / per day
+    print('总计数', context.i)  # 应为 1210 = 5 * 242 五个交易日 242 bar / per day
     fig = plt.figure()
     ax1 = fig.add_subplot(211)
     perf.portfolio_value.plot(ax=ax1)
@@ -65,13 +66,14 @@ def analyze(context, perf):
     perf['MDJT'].plot(ax=ax2)
     perf[['short_mavg', 'long_mavg']].plot(ax=ax2)
 
-    perf_trans = perf.ix[[t != [] for t in perf.transactions]]
-    buys = perf_trans.ix[[t[0]['amount'] > 0 for t in perf_trans.transactions]]
-    sells = perf_trans.ix[
-        [t[0]['amount'] < 0 for t in perf_trans.transactions]]
-    ax2.plot(buys.index, perf.short_mavg.ix[buys.index],
+    perf_trans = perf.loc[[t != [] for t in perf.transactions], :]
+    buys = perf_trans.loc[[t[0]['amount'] >
+                           0 for t in perf_trans.transactions], :]
+    sells = perf_trans.loc[
+        [t[0]['amount'] < 0 for t in perf_trans.transactions], :]
+    ax2.plot(buys.index, perf.short_mavg.loc[buys.index, :],
              '^', markersize=10, color='m')
-    ax2.plot(sells.index, perf.short_mavg.ix[sells.index],
+    ax2.plot(sells.index, perf.short_mavg.loc[sells.index, :],
              'v', markersize=10, color='k')
     ax2.set_ylabel('price in $')
     plt.legend(loc=0)

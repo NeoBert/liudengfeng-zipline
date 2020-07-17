@@ -132,7 +132,7 @@ from zipline.sources.requests_csv import PandasRequestsCSV
 from zipline.gens.sim_engine import MinuteSimulationClock
 from zipline.sources.benchmark_source import BenchmarkSource
 from zipline.zipline_warnings import ZiplineDeprecationWarning
-
+from zipline.data.benchmarks_cn import get_cn_benchmark_returns
 
 log = logbook.Logger("ZiplineLog")
 
@@ -267,7 +267,9 @@ class TradingAlgorithm(object):
                     "Inconsistent asset_finders in TradingAlgorithm()"
                 )
             self.asset_finder = data_portal.asset_finder
-
+        if benchmark_returns is None:
+            # TODO:修正设置方式
+            benchmark_returns = get_cn_benchmark_returns()
         self.benchmark_returns = benchmark_returns
 
         # XXX: This is also a mess. We should remove all of this and only allow
@@ -483,8 +485,8 @@ class TradingAlgorithm(object):
         """
         If the clock property is not set, then create one based on frequency.
         """
-        trading_o_and_c = self.trading_calendar.schedule.ix[
-            self.sim_params.sessions]
+        trading_o_and_c = self.trading_calendar.schedule.loc[
+            self.sim_params.sessions, :]
         market_closes = trading_o_and_c['market_close']
         minutely_emission = False
 
@@ -513,8 +515,8 @@ class TradingAlgorithm(object):
         # FIXME generalize these values
         before_trading_start_minutes = days_at_time(
             self.sim_params.sessions,
-            time(9, 30), # √
-            "Asia/Shanghai" # √
+            time(9, 30),  # √
+            "Asia/Shanghai"  # √
         )
 
         return MinuteSimulationClock(
@@ -663,10 +665,14 @@ class TradingAlgorithm(object):
                 daily_perfs.append(perf['daily_perf'])
             else:
                 self.risk_report = perf
-        #TODO: √ tz='UTC' 是否需要注释掉 tz
-        daily_dts = pd.DatetimeIndex(
-            [p['period_close'] for p in daily_perfs], tz='UTC'
-        )
+        # dts含tz信息
+        dts = [p['period_close'] for p in daily_perfs]
+        if dts[0].tz is None:
+            daily_dts = pd.DatetimeIndex(
+                dts, tz='UTC'
+            )
+        else:
+            daily_dts = pd.DatetimeIndex(dts)
         daily_stats = pd.DataFrame(daily_perfs, index=daily_dts)
         return daily_stats
 
@@ -937,7 +943,7 @@ class TradingAlgorithm(object):
         if calendar is None:
             cal = self.trading_calendar
         elif calendar is calendars.US_EQUITIES:
-            cal = get_calendar('XSHG') # √ 修改交易日历名称
+            cal = get_calendar('XSHG')  # √ 修改交易日历名称
         elif calendar is calendars.US_FUTURES:
             cal = get_calendar('us_futures')
         else:

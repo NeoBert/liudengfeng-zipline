@@ -1,7 +1,28 @@
-import click
 import os
 import sys
 import warnings
+
+import click
+import logbook
+import pandas as pd
+import six
+from toolz import concatv
+from trading_calendars import get_calendar
+
+import zipline.utils.paths as pth
+from zipline.algorithm import TradingAlgorithm
+from zipline.data import bundles
+from zipline.data.benchmarks import get_benchmark_returns_from_file
+from zipline.data.data_portal import DataPortal
+from zipline.errors import SymbolNotFound
+from zipline.extensions import load
+from zipline.finance import metrics
+from zipline.finance.blotter import Blotter
+from zipline.finance.trading import SimulationParameters
+from zipline.pipeline.data import BoundColumn, CNEquityPricing, USEquityPricing
+from zipline.pipeline.loaders import (CNEquityPricingLoader,
+                                      USEquityPricingLoader)
+
 
 try:
     from pygments import highlight
@@ -11,26 +32,7 @@ try:
     PYGMENTS = True
 except ImportError:
     PYGMENTS = False
-import logbook
-import pandas as pd
-import six
-from toolz import concatv
-from trading_calendars import get_calendar
 
-from zipline.data import bundles
-from zipline.data.benchmarks import get_benchmark_returns_from_file
-from zipline.data.data_portal import DataPortal
-from zipline.finance import metrics
-from zipline.finance.trading import SimulationParameters
-from zipline.pipeline.data import USEquityPricing, CNEquityPricing
-from zipline.pipeline.loaders import USEquityPricingLoader
-
-import zipline.utils.paths as pth
-from zipline.extensions import load
-from zipline.errors import SymbolNotFound
-from zipline.algorithm import TradingAlgorithm
-from zipline.finance.blotter import Blotter
-from zipline.pipeline.data import BoundColumn
 
 log = logbook.Logger(__name__)
 
@@ -166,7 +168,7 @@ def _run(handle_data,
         adjustment_reader=bundle_data.adjustment_reader,
     )
 
-    pipeline_loader = USEquityPricingLoader.without_fx(
+    pipeline_loader = CNEquityPricingLoader.without_fx(
         bundle_data.equity_daily_bar_reader,
         bundle_data.adjustment_reader,
     )
