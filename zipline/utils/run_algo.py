@@ -1,28 +1,7 @@
+import click
 import os
 import sys
 import warnings
-
-import click
-import logbook
-import pandas as pd
-import six
-from toolz import concatv
-from trading_calendars import get_calendar
-
-import zipline.utils.paths as pth
-from zipline.algorithm import TradingAlgorithm
-from zipline.data import bundles
-from zipline.data.benchmarks import get_benchmark_returns_from_file
-from zipline.data.data_portal import DataPortal
-from zipline.errors import SymbolNotFound
-from zipline.extensions import load
-from zipline.finance import metrics
-from zipline.finance.blotter import Blotter
-from zipline.finance.trading import SimulationParameters
-from zipline.pipeline.data import BoundColumn, CNEquityPricing, USEquityPricing
-from zipline.pipeline.loaders import (CNEquityPricingLoader,
-                                      USEquityPricingLoader)
-
 
 try:
     from pygments import highlight
@@ -32,7 +11,26 @@ try:
     PYGMENTS = True
 except ImportError:
     PYGMENTS = False
+import logbook
+import pandas as pd
+import six
+from toolz import concatv
+from trading_calendars import get_calendar
 
+from zipline.data import bundles
+from zipline.data.benchmarks import get_benchmark_returns_from_file
+from zipline.data.data_portal import DataPortal
+from zipline.finance import metrics
+from zipline.finance.trading import SimulationParameters
+from zipline.pipeline.data import BoundColumn, CNEquityPricing, USEquityPricing
+from zipline.pipeline.loaders import (CNEquityPricingLoader,
+                                      USEquityPricingLoader)
+
+import zipline.utils.paths as pth
+from zipline.extensions import load
+from zipline.errors import SymbolNotFound
+from zipline.algorithm import TradingAlgorithm
+from zipline.finance.blotter import Blotter
 
 log = logbook.Logger(__name__)
 
@@ -95,7 +93,7 @@ def _run(handle_data,
     )
 
     if trading_calendar is None:
-        trading_calendar = get_calendar('XSHG')
+        trading_calendar = get_calendar('XNYS')
 
     # date parameter validation
     if trading_calendar.session_distance(start, end) < 1:
@@ -411,14 +409,14 @@ class BenchmarkSpec(object):
 
     Parameters
     ----------
-    benchmark_returns : pd.Series
+    benchmark_returns : pd.Series, optional
         Series of returns to use as the benchmark.
     benchmark_file : str or file
         File containing a csv with `date` and `return` columns, to be read as
         the benchmark.
-    benchmark_sid : int
+    benchmark_sid : int, optional
         Sid of the asset to use as a benchmark.
-    benchmark_symbol : int
+    benchmark_symbol : str, optional
         Symbol of the asset to use as a benchmark. Symbol will be looked up as
         of the end date of the backtest.
     no_benchmark : bool
@@ -511,28 +509,27 @@ class BenchmarkSpec(object):
                 raise _RunAlgoError(
                     "Symbol %s as a benchmark not found in this bundle."
                 )
+        elif self.no_benchmark:
+            benchmark_sid = None
+            benchmark_returns = self._zero_benchmark_returns(
+                start_date=start_date,
+                end_date=end_date,
+            )
         else:
-            if not self.no_benchmark:
-                log.warn(
-                    "No benchmark configured. "
-                    "Assuming algorithm calls set_benchmark."
-                )
-                log.warn(
-                    "Pass --benchmark-sid, --benchmark-symbol, or"
-                    " --benchmark-file to set a source of benchmark returns."
-                )
-                log.warn(
-                    "Pass --no-benchmark to use a dummy benchmark "
-                    "of zero returns.",
-                )
-                benchmark_sid = None
-                benchmark_returns = None
-            else:
-                benchmark_sid = None
-                benchmark_returns = self._zero_benchmark_returns(
-                    start_date=start_date,
-                    end_date=end_date,
-                )
+            log.warn(
+                "No benchmark configured. "
+                "Assuming algorithm calls set_benchmark."
+            )
+            log.warn(
+                "Pass --benchmark-sid, --benchmark-symbol, or"
+                " --benchmark-file to set a source of benchmark returns."
+            )
+            log.warn(
+                "Pass --no-benchmark to use a dummy benchmark "
+                "of zero returns.",
+            )
+            benchmark_sid = None
+            benchmark_returns = None
 
         return benchmark_sid, benchmark_returns
 
