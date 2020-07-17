@@ -293,9 +293,30 @@ def run(ctx, algofile, algotext, define, data_frequency, capital_base, bundle,
     if output == '-':
         click.echo(str(perf))
     elif output != os.devnull:  # make the zipline magic not write any data
-        perf.to_pickle(output)
+        # perf.to_pickle(output)
+        write_backtest(perf)
 
     return perf
+
+
+def backtest_result_path():
+    from zipline.utils import paths as pth
+
+    ret = pth.zipline_path(['backtest'])
+    pth.ensure_directory(ret)
+    return ret
+
+
+def write_backtest(perfs):
+    '''See zipline.research.get_backtest
+    '''
+    from uuid import uuid4
+
+    backtest = '{}/{}.pkl'.format(backtest_result_path(),
+                                  uuid4().hex)
+    perfs.to_pickle(backtest)
+    logger = logbook.Logger('回测')
+    logger.info(f"回测结果写入到:{backtest}")
 
 
 def zipline_magic(line, cell=None):
