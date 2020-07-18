@@ -8,11 +8,12 @@ from zipline.pipeline.data import EquityPricing
 from zipline.pipeline.domain import (CN_EQUITIES, GENERIC, Domain,
                                      EquitySessionDomain)
 from zipline.pipeline.engine import SimplePipelineEngine
+from zipline.pipeline.hooks.progress import (IPythonWidgetProgressPublisher,
+                                             ProgressHooks)
 from zipline.pipeline.loaders import EquityPricingLoader
 from zipline.pipeline.loaders.blaze import global_loader
 from zipline.utils.memoize import remember_last
 from zipline.utils.ts_utils import ensure_utc
-from zipline.pipeline.hooks.progress import ProgressHooks, IPythonWidgetProgressPublisher
 
 publisher = IPythonWidgetProgressPublisher()
 hooks = [ProgressHooks.with_static_publisher(publisher)]
@@ -77,20 +78,23 @@ def run_pipeline_against_bundle(pipeline, start_date, end_date, bundle):
         The result of the pipeline.
     """
     engine, calendar = _pipeline_engine_and_calendar_for_bundle(bundle)
+    # start_date = ensure_utc(start_date)
+    # end_date = ensure_utc(end_date)
 
-    start_date = ensure_utc(start_date)
-    end_date = ensure_utc(end_date)
-    if start_date == end_date:
-        d1 = d2 = _tdate(calendar, end_date, 'previous')
-    else:
-        d1 = _tdate(calendar, start_date, 'next').normalize()
-        d2 = _tdate(calendar, end_date, 'previous').normalize()
-        if d1 > d2:
-            d1 = d2
+    # if start_date == end_date:
+    #     d1 = d2 = _tdate(calendar, end_date, 'previous')
+    # else:
+    #     d1 = _tdate(calendar, start_date, 'next').normalize()
+    #     d2 = _tdate(calendar, end_date, 'previous').normalize()
+    #     if d1 > d2:
+    #         d1 = d2
+
+    dts = pd.date_range(start_date, end_date, tz='UTC')
+    trading_sessions = calendar.schedule.index.intersection(dts)
 
     if pipeline._domain is GENERIC:
         pipeline._domain = CN_EQUITIES
-    return engine.run_pipeline(pipeline, d1, d2, hooks=hooks)
+    return engine.run_pipeline(pipeline, trading_sessions[0], trading_sessions[-1], hooks=hooks)
 
 
 @remember_last
