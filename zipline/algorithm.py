@@ -515,8 +515,8 @@ class TradingAlgorithm(object):
         # FIXME generalize these values
         before_trading_start_minutes = days_at_time(
             trading_sessions,
-            time(9, 30),  # √
-            "Asia/Shanghai"  # √
+            time(9, 30),  # 🆗
+            "Asia/Shanghai"  # 🆗
         )
 
         return MinuteSimulationClock(
@@ -943,7 +943,7 @@ class TradingAlgorithm(object):
         if calendar is None:
             cal = self.trading_calendar
         elif calendar is calendars.US_EQUITIES:
-            cal = get_calendar('XSHG')  # √ 修改交易日历名称
+            cal = get_calendar('XSHG')  # 🆗 修改交易日历名称
         elif calendar is calendars.US_FUTURES:
             cal = get_calendar('us_futures')
         else:

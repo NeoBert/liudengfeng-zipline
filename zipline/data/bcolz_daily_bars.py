@@ -582,14 +582,14 @@ class BcolzDailyBarReader(SessionBarReader):
             offsets,
             read_all,
         )
-        # √ 恢复原始单位
+        # 🆗 恢复原始单位
         for i, col in enumerate(list(columns)):
             if col == 'volume':
                 adj = 100
             else:
                 adj = 1 / ADJUST_FACTOR.get(col, 1)
             raw_arrays[i] = raw_arrays[i] * adj
-            # √ 为0值 无效值
+            # 🆗 为0值 无效值
             raw_arrays[i] = np.where(raw_arrays[i] == 0., np.nan,
                                      raw_arrays[i])
         return raw_arrays
