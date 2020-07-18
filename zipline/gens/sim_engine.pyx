@@ -62,27 +62,33 @@ cdef class MinuteSimulationClock:
         cdef np.ndarray[np.int64_t, ndim=1] minutes_nanos, am_minutes_nanos, pm_minutes_nanos
 
         minutes_by_session = {}
-        for session_idx, session_nano in enumerate(self.sessions_nanos):
-            # minutes_nanos = np.arange(
-            #     self.market_opens_nanos[session_idx],
-            #     self.market_closes_nanos[session_idx] + _nanos_in_minute,
-            #     _nanos_in_minute
-            # )
-            # # 固定上午结束、下午开始时间，且忽略延迟开盘及提早收盘
-            am_minutes_nanos = np.arange(
-                self.market_opens_nanos[session_idx],
-                self.am_end_nanos[session_idx] + _nanos_in_minute,
-                _nanos_in_minute
-            )
-            pm_minutes_nanos = np.arange(
-                self.pm_start_nanos[session_idx],
-                self.market_closes_nanos[session_idx] + _nanos_in_minute,
-                _nanos_in_minute
-            )
-            minutes_nanos = np.append(am_minutes_nanos, pm_minutes_nanos)
-            minutes_by_session[session_nano] = pd.to_datetime(
-                minutes_nanos, utc=True
-            )
+        if self.minute_emission:
+            for session_idx, session_nano in enumerate(self.sessions_nanos):
+                # # 固定上午结束、下午开始时间，且忽略延迟开盘及提早收盘
+                am_minutes_nanos = np.arange(
+                    self.market_opens_nanos[session_idx],
+                    self.am_end_nanos[session_idx] + _nanos_in_minute,
+                    _nanos_in_minute
+                )
+                pm_minutes_nanos = np.arange(
+                    self.pm_start_nanos[session_idx],
+                    self.market_closes_nanos[session_idx] + _nanos_in_minute,
+                    _nanos_in_minute
+                )
+                minutes_nanos = np.append(am_minutes_nanos, pm_minutes_nanos)
+                minutes_by_session[session_nano] = pd.to_datetime(
+                    minutes_nanos, utc=True
+                )
+        else:
+            for session_idx, session_nano in enumerate(self.sessions_nanos):
+                minutes_nanos = np.arange(
+                    self.market_opens_nanos[session_idx],
+                    self.market_closes_nanos[session_idx] + _nanos_in_minute,
+                    _nanos_in_minute
+                )
+                minutes_by_session[session_nano] = pd.to_datetime(
+                    minutes_nanos, utc=True
+                )        
         return minutes_by_session
 
     def __iter__(self):
