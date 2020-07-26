@@ -134,10 +134,18 @@ from zipline.sources.benchmark_source import BenchmarkSource
 from zipline.zipline_warnings import ZiplineDeprecationWarning
 from zipline.data.benchmarks_cn import get_cn_benchmark_returns
 
+
 log = logbook.Logger("ZiplineLog")
 
 # For creating and storing pipeline instances
 AttachedPipeline = namedtuple('AttachedPipeline', 'pipe chunks eager')
+
+
+class NoBenchmark(ValueError):
+    def __init__(self):
+        super(NoBenchmark, self).__init__(
+            'Must specify either benchmark_sid or benchmark_returns.',
+        )
 
 
 class TradingAlgorithm(object):
@@ -535,8 +543,7 @@ class TradingAlgorithm(object):
             benchmark_returns = None
         else:
             if self.benchmark_returns is None:
-                raise ValueError("Must specify either benchmark_sid "
-                                 "or benchmark_returns.")
+                raise NoBenchmark()
             benchmark_asset = None
             benchmark_returns = self.benchmark_returns
         return BenchmarkSource(
