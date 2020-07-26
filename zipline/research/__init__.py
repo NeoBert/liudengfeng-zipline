@@ -2,7 +2,7 @@
 from ._backtest_analysis import get_backtest, get_latest_backtest_info
 from ._talib import indicators
 from .core import (benchmark_returns, get_pricing, prices, returns,  # , ohlcv
-                   symbol, symbols, to_tdates, treasury_returns, volumes)
+                   symbol, symbols, trading_sessions, treasury_returns, volumes, get_forward_returns)
 from .data import get_sector_mappings
 from .pipebench import create_domain, run_pipeline
 from .utils import select_output_by
@@ -16,7 +16,7 @@ __all__ = (
     'prices',
     'returns',
     'volumes',
-    'to_tdates',
+    'trading_sessions',
     # 'ohlcv',
     'indicators',
     'get_backtest',
@@ -25,4 +25,5 @@ __all__ = (
     'benchmark_returns',
     'treasury_returns',
     'get_sector_mappings',
+    'get_forward_returns'
 )

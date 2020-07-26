@@ -5,22 +5,20 @@ from zipline.assets import Asset, Equity
 from zipline.data.benchmarks_cn import get_cn_benchmark_returns
 from zipline.data.treasuries_cn import get_treasury_data, TREASURY_COL_MAPS
 from .factory import _asset_finder, _data_portal, _trading_calendar
+from zipline.pipeline.domain import CN_EQUITIES
+
 
 OHLCV = ('open', 'high', 'low', 'close', 'volume')
 
 
-def to_tdates(start, end):
-    """修正交易日期"""
+def trading_sessions(start, end):
+    """期间交易日"""
     calendar = _trading_calendar()
-    dates = calendar.all_sessions
-    # 修正日期
-    start, end = sanitize_dates(start, end)
-    # 定位交易日期
-    start_date = dates[dates.get_loc(start, method='bfill')]
-    end_date = dates[dates.get_loc(end, method='ffill')]
-    if start_date > end_date:
-        start_date = end_date
-    return dates, start_date, end_date
+    dts = pd.date_range(start, end, tz='UTC')
+    trading_sessions = calendar.schedule.index.intersection(dts)
+    if len(trading_sessions) < 1:
+        raise ValueError(f"期间{start} ~ {end} 无交易日")
+    return trading_sessions
 
 
 def symbols(symbols_,
@@ -119,21 +117,9 @@ def prices(assets,
                           str) and (price_field in adj_fields), msg
     data_portal, calendar = _data_portal()
 
-    start = pd.Timestamp(start, tz='utc')
-    if not calendar.is_session(start):
-        # this is not a trading session, advance to the next session
-        start = calendar.minute_to_session_label(
-            start,
-            direction='next',
-        )
-
-    end = pd.Timestamp(end, tz='utc')
-    if not calendar.is_session(end):
-        # this is not a trading session, advance to the previous session
-        end = calendar.minute_to_session_label(
-            end,
-            direction='previous',
-        )
+    sessions = trading_sessions(start, end)
+    start = sessions[0]
+    end = sessions[-1]
 
     if start_offset:
         start -= start_offset * calendar.day
@@ -370,3 +356,41 @@ def get_pricing(assets,
         ret = pd.concat(dfs, axis=1)
         ret.columns = fields
     return ret
+
+
+def get_forward_returns(factor, periods, domain=CN_EQUITIES):
+    """Get forward returns for the dates and assets in ``factor``, calculated
+    over the given periods.
+
+    Parameters
+    ----------
+    factor : pd.Series
+        The factor whose dates and assets to use.
+
+    periods : list[int]
+        The periods over which to calculate the forward returns.
+        Example: [1, 5, 10]
+
+    domain : zipline.pipeline.domain.EquityCalendarDomain
+        The domain to use when calculating forward returns. Should match the
+        domain used when calculating ``factor``.
+
+        For convenience, domains can imported from
+        ``quantopian.pipeline.domain``.
+
+    Returns
+    -------
+    result : pd.DataFrame
+
+    A dataframe of computed forward returns containing one column per
+    requested period. It is indexed first by date, then by asset."""
+    assert isinstance(periods, list)
+    tdates = sorted(factor.index.levels[0].unique())
+    start, end = tdates[0], tdates[-1]
+    assets = factor.index.levels[1].unique()
+    res = [returns(assets, start, end, p, price_field='b_close').shift(-p).stack()
+           for p in periods]
+    df = pd.concat(res, axis=1)
+    df.columns = [f"{p}D" for p in periods]
+    df.index.set_names(['date', 'asset'], inplace=True)
+    return df

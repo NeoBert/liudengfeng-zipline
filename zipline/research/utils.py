@@ -5,13 +5,13 @@ import warnings
 
 from cnswd.utils import ensure_list
 
-from .core import symbols, to_tdates
+from .core import symbols, trading_sessions
 
 
 def select_output_by(output, start=None, end=None, assets=None, reduce_format=True):
     """
     按时间及代码选择`pipeline`输出数据框
-    
+
     专用于研究环境下的run_pipeline输出结果分析
 
     参数
@@ -40,7 +40,8 @@ def select_output_by(output, start=None, end=None, assets=None, reduce_format=Tr
     if nlevels != 2:
         raise ValueError('输入数据框只能是run_pipeline输出结果，MultiIndex DataFrame')
 
-    _, start, end = to_tdates(start, end)
+    sessions = trading_sessions(start, end)
+    start, end = sessions[0], sessions[-1]
     if assets is not None:
         assets = symbols(assets)
     else:
