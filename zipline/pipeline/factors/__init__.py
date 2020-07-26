@@ -26,6 +26,8 @@ from .events import (
     BusinessDaysUntilNextEvent,
 )
 from .statistical import (
+    RollingPearson,
+    RollingSpearman,
     RollingLinearRegressionOfReturns,
     RollingPearsonOfReturns,
     RollingSpearmanOfReturns,
@@ -42,10 +44,8 @@ from .technical import (
     RSI,
     TrueRange,
 )
-
 # 🆗 平均成交额
 AverageAmount = AverageDollarVolume
-
 __all__ = [
     'AnnualizedVolatility',
     'Aroon',
@@ -67,18 +67,21 @@ __all__ = [
     'MACDSignal',
     'MaxDrawdown',
     'MovingAverageConvergenceDivergenceSignal',
-    'PercentChange',
     'PeerCount',
+    'PercentChange',
+    'RSI',
     'RateOfChangePercentage',
     'RecarrayField',
     'Returns',
     'RollingLinearRegressionOfReturns',
+    'RollingPearson',
     'RollingPearsonOfReturns',
+    'RollingSpearman',
     'RollingSpearmanOfReturns',
-    'RSI',
     'SimpleBeta',
     'SimpleMovingAverage',
     'TrueRange',
     'VWAP',
     'WeightedAverageValue',
+    'AverageAmount',
 ]
