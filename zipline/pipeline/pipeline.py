@@ -7,7 +7,7 @@ from zipline.utils.input_validation import (
     optional,
 )
 
-from .domain import Domain, GENERIC, infer_domain
+from .domain import Domain, GENERIC, infer_domain, CN_EQUITIES
 from .graph import ExecutionPlan, TermGraph, SCREEN_NAME
 from .filters import Filter
 from .term import AssetExists, ComputableTerm, Term
@@ -43,7 +43,7 @@ class Pipeline(object):
         screen=optional(Filter),
         domain=Domain
     )
-    def __init__(self, columns=None, screen=None, domain=GENERIC):
+    def __init__(self, columns=None, screen=None, domain=CN_EQUITIES):
         if columns is None:
             columns = {}
 

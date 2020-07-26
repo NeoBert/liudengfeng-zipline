@@ -286,6 +286,7 @@ class SWSector(CustomClassifier):
 
 # region 别名
 QTradableStocksCN = QTradableStocksUS
+QTradableStocks = QTradableStocksUS
 # endregion
 
 # region Valuation

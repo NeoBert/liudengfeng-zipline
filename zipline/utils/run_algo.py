@@ -172,14 +172,12 @@ def _run(handle_data,
     )
 
     def choose_loader(column):
-        # # unspecialize ✔
-        if column.unspecialize() in CNEquityPricing.columns:
+        # 🆗 首先使用pipeline_loader
+        if 'EquityPricing' in column.qualname:
             return pipeline_loader
-        # # 简单处理
+        # 🆗 然后只要是绑定列即使用Fundamentals
         elif type(column) == BoundColumn:
-            # # 加载Fundamentals所包含的数据集各列
             from zipline.pipeline.loaders.blaze import global_loader
-            # # 使用实例才能避免KeyError ✔
             return global_loader
         raise ValueError(
             "No PipelineLoader registered for column %s." % column

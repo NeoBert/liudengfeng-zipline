@@ -179,9 +179,13 @@ def get_investment_rating():
 
 def get_short_name_history():
     """股票简称更改历史"""
-    maps = {}
+    # maps = {}
     df = get_short_name_changes()
-    cate_cols_pat = ['股票简称']
-    for col_pat in cate_cols_pat:
-        df, maps = _handle_cate(df, col_pat, maps)
-    return df, maps
+    df[AD_FIELD_NAME] = df[AD_FIELD_NAME] - pd.Timedelta(days=1)
+    df[TS_FIELD_NAME] = df[AD_FIELD_NAME] + pd.Timedelta(days=1)
+    # 作为原始字符串对象
+    # cate_cols_pat = ['股票简称']
+    # for col_pat in cate_cols_pat:
+    #     df, maps = _handle_cate(df, col_pat, maps)
+    # return df, maps
+    return df

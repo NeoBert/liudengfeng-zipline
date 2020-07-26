@@ -218,13 +218,6 @@ def ignore_pandas_nan_categorical_warning():
         )
         yield
 
-try:
-    _INDEXER_NAMES = [
-        '_' + name for (name, _) in pd.core.indexing.get_indexers_list()
-    ]
-except AttributeError:
-    pass
-
 
 def clear_dataframe_indexer_caches(df):
     """
@@ -239,11 +232,18 @@ def clear_dataframe_indexer_caches(df):
     ----------
     df : pd.DataFrame
     """
-    for attr in _INDEXER_NAMES:
-        try:
-            delattr(df, attr)
-        except AttributeError:
-            pass
+    try:
+        # pandas 1.0.5 废弃此函数
+        _INDEXER_NAMES = [
+            '_' + name for (name, _) in pd.core.indexing.get_indexers_list()
+        ]
+        for attr in _INDEXER_NAMES:
+            try:
+                delattr(df, attr)
+            except AttributeError:
+                pass
+    except AttributeError:
+        pass
 
 
 def categorical_df_concat(df_list, inplace=False):
