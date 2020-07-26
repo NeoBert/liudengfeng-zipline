@@ -22,6 +22,21 @@ strategies.
 - `Documentation <http://www.zipline.io>`_
 - Want to Contribute? See our `Development Guidelines <http://zipline.io/development-guidelines.html>`_
 
+安装
+====
+- 前置条件：
+    1. visual studio 2019(附加C++桌面开发工具组) 
+    2. anaconda
+    3. mongodb
+- `conda install h5py` # 本机使用win10，pip install 出现异常
+- `git clone https://github.com/liudengfeng/zipline.git`
+- `cd <zipline path>`
+- `pip install -r etc\requirements_cus.txt`
+- `python setup.py build_ext --inplace`
+- `pip install .` # 安装模式
+- `pip install -e .` # 开发模式
+
+
 Features
 ========
 
