@@ -278,7 +278,7 @@ def _is_single(x):
     raise TypeError(f'期望输入类型为`str`或`可迭代对象`，实际输入类型为：{type(x)}')
 
 
-def get_pricing(assets,
+def get_pricing(symbols_,
                 start_date,
                 end_date,
                 symbol_reference_date=None,
@@ -289,53 +289,69 @@ def get_pricing(assets,
     """
     Load a table of historical trade data.
 
-    Parameters:	
-    -----------
+    Parameters
+    ----------
+    symbols : Object (or iterable of objects) convertible to Asset
+        Valid input types are Asset, Integral, or basestring.  In the case that
+        the passed objects are strings, they are interpreted
+        as ticker symbols and resolved relative to the date specified by
+        symbol_reference_date.
 
-    assets (Object (or iterable of objects) convertible to Asset) – Valid input types are Asset, Integral, or basestring. 
-        In the case that the passed objects are strings, they are interpreted as ticker symbols and resolved relative to 
-        the date specified by symbol_reference_date.
-    start_date (str or pd.Timestamp, optional) – String or Timestamp representing a start date or start intraday minute for the returned data. 
-        Defaults to "2013-01-03".
-    end_date (str or pd.Timestamp, optional) – String or Timestamp representing an end date or end intraday minute for the returned data. 
-        Defaults to "2013-01-03".
-    symbol_reference_date (str or pd.Timestamp, optional) – String or Timestamp representing a date used to resolve symbols that have been held by multiple companies. 
-        Defaults to the current time.
-    frequency ({'daily', 'minute'}, optional) – Resolution of the data to be returned.
-    fields (str or list, optional) – String or list drawn from {'open', 'high', 'low', 'close', 'volume'}. 
-        Default behavior is to return all fields.
-    handle_missing ({'raise', 'log', 'ignore'}, optional) – String specifying how to handle unmatched securities. 
-        Defaults to ‘raise’.
-    start_offset (int, optional) – Number of periods before start to fetch. Default is 0.
+    start_date : str or pd.Timestamp, optional
+        String or Timestamp representing a start date or start intraday minute
+        for the returned data. Defaults to '2013-01-03'.
 
-    Returns:	
-    --------
+    end_date : str or pd.Timestamp, optional
+        String or Timestamp representing an end date or end intraday minute for
+        the returned data. Defaults to '2014-01-03'.
 
-    pandas Panel/DataFrame/Series – The pricing data that was requested. See note below.
+    symbol_reference_date : str or pd.Timestamp, optional
+        String or Timestamp representing a date used to resolve symbols that
+        have been held by multiple companies. Defaults to the current time.
+
+    frequency : {'daily', 'minute'}, optional
+        Resolution of the data to be returned.
+
+    fields : str or list, optional
+        String or list drawn from {'price', 'open', 'high', 'low',
+        'close', 'volume',...及附加列}.  Default behavior is to return all fields.
+
+    handle_missing : {'raise', 'log', 'ignore'}, optional
+        String specifying how to handle unmatched securities.
+        Defaults to 'raise'.
+
+    start_offset : int, optional
+        Number of periods before ``start`` to fetch.
+        Default is 0.
+
+    Returns
+    -------
+    pandas Panel/DataFrame/Series
+        The pricing data that was requested.  See note below.
 
     Notes
     -----
-
-    If a list of symbols is provided, data is returned in the form of a pandas Panel object with the following indices:
+    If a list of symbols is provided, data is returned in the form of a pandas
+    Panel object with the following indices::
 
         items = fields
         major_axis = TimeSeries (start_date -> end_date)
         minor_axis = symbols
 
-    If a string is passed for the value of symbols and fields is None or a list of strings, data is returned as a DataFrame 
-    with a DatetimeIndex and columns given by the passed fields.
+    If a string is passed for the value of `symbols` and `fields` is None or a
+    list of strings, data is returned as a DataFrame with a DatetimeIndex and
+    columns given by the passed fields.
 
-    If a list of symbols is provided, and fields is a string, data is returned as a DataFrame with a DatetimeIndex and a columns
-    given by the passed symbols.
-
-    If both parameters are passed as strings, data is returned as a Series.
+    If a list of symbols is provided, and `fields` is a string, data is
+    returned as a DataFrame with a DatetimeIndex and a columns given by the
+    passed `symbols`.
     """
-    single_asset = _is_single(assets)
+    single_asset = _is_single(symbols_)
     single_field = _is_single(fields)
-    assets = symbols(assets, symbol_reference_date)
+    assets = symbols(symbols_, symbol_reference_date)
     if single_field:
         is_adj = fields.startswith('b_')
-        ret = prices(assets, start_date, end_date, 'daily', fields,
+        ret = prices(symbols_, start_date, end_date, 'daily', fields,
                      symbol_reference_date, start_offset, is_adj)
         if single_asset:
             ret = pd.Series(ret.values[:, 0],
@@ -347,7 +363,7 @@ def get_pricing(assets,
         dfs = []
         for field in fields:
             is_adj = field.startswith('b_')
-            df = prices(assets, start_date, end_date, 'daily', field,
+            df = prices(symbols_, start_date, end_date, 'daily', field,
                         symbol_reference_date, start_offset, is_adj)
             if single_asset:
                 dfs.append(df)

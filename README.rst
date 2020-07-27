@@ -37,6 +37,11 @@ strategies.
 - `pip install -e .` # 开发模式
 
 
+演示文档
+========
+
+使用A股数据运作`zipline`参考文档，参见[Pipeline](https://github.com/liudengfeng/zipline_doc/tree/master/quantopian/learn/tutorials/Pipeline),[alphalens](https://github.com/liudengfeng/zipline_doc/blob/master/quantopian/learn/tutorials/alphalens/lesson1_introduction.ipynb)
+
 Features
 ========
 
