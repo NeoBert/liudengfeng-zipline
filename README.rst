@@ -40,9 +40,11 @@ strategies.
 演示文档
 ========
 
-使用A股数据运作`zipline`参考文档，参见
-- `Pipeline <https://github.com/liudengfeng/zipline_doc/tree/master/quantopian/learn/tutorials/Pipeline>`_
-- `alphalens <https://github.com/liudengfeng/zipline_doc/blob/master/quantopian/learn/tutorials/alphalens/lesson1_introduction.ipynb>`_
+使用A股数据运作`zipline`参考文档，请阅：
+
+- `Pipeline <https://github.com/liudengfeng/zipline_doc/tree/master/quantopian/learn/tutorials/Pipeline>` _
+- `alphalens <https://github.com/liudengfeng/zipline_doc/blob/master/quantopian/learn/tutorials/alphalens>` _
+
 若图示部分未能正确显示，请使用`nbviewer <https://nbviewer.jupyter.org/>`
 
 
