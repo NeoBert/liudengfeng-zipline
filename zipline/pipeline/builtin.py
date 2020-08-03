@@ -8,6 +8,7 @@
 import numpy as np
 import pandas as pd
 
+from . import factors, filters, classifiers
 from ..utils.math_utils import nanmean, nansum
 from ..utils.numpy_utils import changed_locations, int64_dtype
 from .classifiers import CustomClassifier
@@ -110,84 +111,6 @@ class TradingDays(CustomFactor):
 
     def compute(self, today, assets, out, vs):
         out[:] = np.count_nonzero(vs, 0)
-
-# region 过滤器
-
-# 交易总体仅保护股票、指数，不包含ETF、债券
-
-class IsIndex(CustomFilter):
-    inputs = []
-    window_length = 1
-
-    def compute(self, today, assets, out):
-        out[:] = [len(str(x)) == 7 for x in assets]
-
-
-class IsShares(CustomFilter):
-    inputs = []
-    window_length = 1
-
-    def compute(self, today, assets, out):
-        out[:] = [len(str(x)) != 7 for x in assets]
-
-
-def QTradableStocksUS():
-    """
-    可交易股票(过滤器)
-
-    条件
-    ----
-        1. 该股票在过去200天内必须有180天的有效收盘价
-        2. 并且在最近20天的每一天都正常交易(非停牌状态)
-        以上均使用成交量来判定，成交量为0，代表当天停牌
-    """
-    is_stock = IsShares()
-    v20 = TradingDays(window_length=20)
-    v200 = TradingDays(window_length=200)
-    return is_stock & (v20 >= 20) & (v200 >= 180)
-
-# endregion
-
-
-class PE(CustomFactor):
-    """股价与每股收益比率(市盈率)"""
-    window_length = 1
-    window_safe = True
-    inputs = (CNEquityPricing.close, Fundamentals.profit_statement.基本每股收益)
-
-    def compute(self, today, assets, out, n, d):
-        out[:] = n[-1] / d[-1]
-
-
-class PB(CustomFactor):
-    """市值与账面资产净值比率(市净率)"""
-    window_length = 1
-    window_safe = True
-
-    inputs = (CNEquityPricing.close, CNEquityPricing.total_shares,
-              Fundamentals.balance_sheet.所有者权益或股东权益合计)
-
-    def compute(self, today, assets, out, c, n, d):
-        out[:] = c[-1] * n[-1] / d[-1] * 10000.0
-
-
-class PS(CustomFactor):
-    """市值与销售总额比率(市销率)"""
-    window_length = 1
-    window_safe = True
-    inputs = (CNEquityPricing.close, CNEquityPricing.total_shares,
-              Fundamentals.profit_statement.其中营业收入)
-
-    def compute(self, today, assets, out, c, n, d):
-        out[:] = c[-1] * n[-1] / d[-1] * 10000.0
-
-
-def ttm_sales():
-    return TTM(inputs=[Fundamentals.profit_statement.其中营业收入,
-                       Fundamentals.profit_statement.asof_date],
-               is_cum=True)
-
-# endregion
 
 # region 行业分类器
 
@@ -303,6 +226,180 @@ class SWSector(CustomClassifier):
 
     def compute(self, today, assets, out, cats):
         out[:] = cats[0]
+# endregion
+# region 过滤器
+
+# 交易总体仅保护股票、指数，不包含ETF、债券
+
+
+class IsIndex(CustomFilter):
+    inputs = []
+    window_length = 1
+
+    def compute(self, today, assets, out):
+        out[:] = [len(str(x)) == 7 for x in assets]
+
+
+class IsStock(CustomFilter):
+    inputs = []
+    window_length = 1
+
+    def compute(self, today, assets, out):
+        out[:] = [len(str(x)) != 7 for x in assets]
+
+
+def QTradableStocksUS():
+    """
+    可交易股票(过滤器)
+
+    条件
+    ----
+        1. 该股票在过去200天内必须有180天的有效收盘价
+        2. 并且在最近20天的每一天都正常交易(非停牌状态)
+        以上均使用成交量来判定，成交量为0，代表当天停牌
+    """
+    is_stock = IsStock()
+    v20 = TradingDays(window_length=20)
+    v200 = TradingDays(window_length=200)
+    return is_stock & (v20 >= 20) & (v200 >= 180)
+
+
+def default_us_equity_universe_mask(minimum_market_cap=500000000):
+    class C(CustomFactor):
+        inputs = [CNEquityPricing.market_cap]
+        window_length = 1
+
+        def compute(self, today, assets, out, mc):
+            out[:] = mc[-1]
+    return C() >= minimum_market_cap
+
+
+def make_us_equity_universe(target_size,
+                            rankby=factors.AverageDollarVolume(
+                                window_length=200),
+                            groupby=Sector(),
+                            max_group_weight=0.3,
+                            mask=default_us_equity_universe_mask(),
+                            frequency='month_start',
+                            exclude_ipos=False):
+    """Create a QUS-style universe filter.
+
+    The constructed Filter accepts approximately the top target_size assets ranked by rankby, 
+    subject to tradeability, weighting, and turnover constraints.
+
+    The selection algorithm implemented by the generated Filter is as follows:
+
+    Look at all known stocks and eliminate stocks for which mask returns False.
+
+    Partition the remaining stocks into buckets based on the labels computed by groupby.
+
+    Choose the top target_size stocks, sorted by rankby, subject to the constraint that 
+    the percentage of stocks accepted in any single group in (2) is less than or equal 
+    to max_group_weight.
+
+    Pass the resulting "naive" filter to smoothing_func, which must return a new Filter.
+
+    Smoothing is most often useful for applying transformations that reduce turnover at 
+    the boundary of the universe's rank-inclusion criterion. For example, a smoothing 
+    function might require that an asset pass the naive filter for 5 consecutive days 
+    before acceptance, reducing the number of assets that too-regularly enter and exit 
+    the universe.
+
+    Another common smoothing technique is to reduce the frequency at which we recalculate 
+    using Filter.downsample. The default smoothing behavior is to downsample to monthly 
+    frequency.
+
+    & the result of smoothing with mask, ensuring that smoothing does not re-introduce 
+    masked-out assets.
+
+    Parameters:	
+    ==========
+    target_size (int > 0) -- The target number of securities to accept each day. Exactly 
+    target_size assets will be accepted by the Filter supplied to smoothing_func, but more 
+    or fewer may be accepted in the final output depending on the smoothing function applied.
+    rankby (zipline.pipeline.Factor) -- The Factor by which to rank all assets each day. The 
+    top target_size assets that pass mask will be accepted, subject to the constraint that no 
+    single group receives greater than max_group_weight as a percentage of the total number of 
+    accepted assets.
+    mask (zipline.pipeline.Filter) -- An initial filter used to ignore securities deemed 
+    "untradeable". Assets for which mask returns False on a given day will always be rejected 
+    by the final output filter, and will be ignored when calculating ranks.
+    groupby (zipline.pipeline.Classifier) -- A classifier that groups assets into buckets. Each 
+    bucket will receive at most max_group_weight as a percentage of the total number of accepted 
+    assets.
+    max_group_weight (float) -- A float between 0.0 and 1.0 indicating the maximum percentage 
+    of assets that should be accepted in any single bucket returned by groupby.
+    smoothing_func (callable[Filter -> Filter], optional) --
+    A function accepting a Filter and returning a new Filter.
+
+    This is generally used to apply 'stickiness' to the output of the "naive" filter. 
+    Adding stickiness helps reduce turnover of the final output by preventing assets from 
+    entering or exiting the final universe too frequently.
+
+    The default smoothing behavior is to downsample at monthly frequency. This means that 
+    the naive universe is recalculated at the start of each month, rather than continuously 
+    every day, reducing the impact of spurious turnover.
+    """
+    rankby = rankby.downsample(frequency)
+    n_industry = len(groupby.SECTOR_NAMES)
+    row_industry = int(target_size / n_industry)
+    mask = mask & IsStock()
+    f = rankby.rank(ascending=False, mask=mask,
+                    groupby=groupby) <= row_industry
+    return f & mask
+
+
+def Q500US():
+    return make_us_equity_universe(500)
+
+
+def Q1500US():
+    return make_us_equity_universe(1500)
+
+
+def Q3000US():
+    return make_us_equity_universe(3000)
+# endregion
+
+
+class PE(CustomFactor):
+    """股价与每股收益比率(市盈率)"""
+    window_length = 1
+    window_safe = True
+    inputs = (CNEquityPricing.close, Fundamentals.profit_statement.基本每股收益)
+
+    def compute(self, today, assets, out, n, d):
+        out[:] = n[-1] / d[-1]
+
+
+class PB(CustomFactor):
+    """市值与账面资产净值比率(市净率)"""
+    window_length = 1
+    window_safe = True
+
+    inputs = (CNEquityPricing.close, CNEquityPricing.total_shares,
+              Fundamentals.balance_sheet.所有者权益或股东权益合计)
+
+    def compute(self, today, assets, out, c, n, d):
+        out[:] = c[-1] * n[-1] / d[-1] * 10000.0
+
+
+class PS(CustomFactor):
+    """市值与销售总额比率(市销率)"""
+    window_length = 1
+    window_safe = True
+    inputs = (CNEquityPricing.close, CNEquityPricing.total_shares,
+              Fundamentals.profit_statement.其中营业收入)
+
+    def compute(self, today, assets, out, c, n, d):
+        out[:] = c[-1] * n[-1] / d[-1] * 10000.0
+
+
+def ttm_sales():
+    return TTM(inputs=[Fundamentals.profit_statement.其中营业收入,
+                       Fundamentals.profit_statement.asof_date],
+               is_cum=True)
+
 # endregion
 
 
