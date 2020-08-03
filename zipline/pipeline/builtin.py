@@ -111,6 +111,9 @@ class TradingDays(CustomFactor):
     def compute(self, today, assets, out, vs):
         out[:] = np.count_nonzero(vs, 0)
 
+# region 过滤器
+
+# 交易总体仅保护股票、指数，不包含ETF、债券
 
 class IsIndex(CustomFilter):
     inputs = []
@@ -138,9 +141,12 @@ def QTradableStocksUS():
         2. 并且在最近20天的每一天都正常交易(非停牌状态)
         以上均使用成交量来判定，成交量为0，代表当天停牌
     """
+    is_stock = IsShares()
     v20 = TradingDays(window_length=20)
     v200 = TradingDays(window_length=200)
-    return (v20 >= 20) & (v200 >= 180)
+    return is_stock & (v20 >= 20) & (v200 >= 180)
+
+# endregion
 
 
 class PE(CustomFactor):

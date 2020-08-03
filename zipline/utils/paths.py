@@ -7,7 +7,7 @@ Otherwise default to expanduser(~/.zipline)
 from errno import EEXIST
 import os
 from os.path import exists, expanduser, join
-
+from pathlib import Path
 import pandas as pd
 
 
@@ -126,7 +126,9 @@ def zipline_root(environ=None):
 
     root = environ.get('ZIPLINE_ROOT', None)
     if root is None:
-        root = expanduser('~/.zipline')
+        root = Path("D://") / '.zipline'
+        # root = expanduser('~/.zipline')
+        root = str(root)
 
     return root
 
