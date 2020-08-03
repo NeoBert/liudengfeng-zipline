@@ -28,20 +28,15 @@ def _exchanges():
     # 通过 `股票.exchange = exchanges.exchange`来关联
     # 深证信 股票信息 上市地点
     return pd.DataFrame({
-        'exchange': ['深交所主板', '上交所', '深交所中小板', '深交所创业板', '上交所科创板'],
-        'canonical_name': ['XSHE', 'XSHG', 'XSHE', 'XSHE', 'XSHG'],
-        'country_code': ['CN'] * 5
+        'exchange': ['深交所主板', '上交所', '深交所中小板', '深交所创业板', '上交所科创板', '指数'],
+        'canonical_name': ['XSHE', 'XSHG', 'XSHE', 'XSHE', 'XSHG', 'XSHG'],
+        'country_code': ['CN'] * 6
     })
 
 
 def _to_sid(x):
     """符号转换为sid"""
     return int(x)
-
-
-def _to_symbol(x):
-    """sid转换为符号"""
-    return str(x).zfill(6)
 
 
 def _update_splits(splits, asset_id, origin_data):
@@ -82,6 +77,7 @@ def _update_dividends(dividends, asset_id, origin_data):
 
 
 def gen_symbol_data(symbol_map, sessions, splits, dividends, is_minutely):
+    cols = OHLCV_COLS + list(ADJUST_FACTOR.keys())
     for _, symbol in symbol_map.iteritems():
         asset_id = _to_sid(symbol)
         if not is_minutely:
@@ -97,9 +93,7 @@ def gen_symbol_data(symbol_map, sessions, splits, dividends, is_minutely):
 
                 # 以日期、符号为索引
                 raw_data.set_index(['date', 'symbol'], inplace=True)
-
-                raw_data = raw_data.loc[:, OHLCV_COLS +
-                                        list(ADJUST_FACTOR.keys())]
+                raw_data = raw_data.loc[:, cols]
 
                 # 时区调整，以0.0填充na
                 # 转换为以日期为索引的表(与sessions保持一致)

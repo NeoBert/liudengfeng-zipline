@@ -274,8 +274,9 @@ class BcolzDailyBarWriter(object):
                     columns['id'].append(
                         full((nrows, ), asset_id, dtype='uint32'), )
                     continue
-
-                columns[column_name].append(table[column_name])
+                # 🆗 判断列名称是否在表中
+                if column_name in table.names:
+                    columns[column_name].append(table[column_name])
 
             if earliest_date is None:
                 earliest_date = table["day"][0]

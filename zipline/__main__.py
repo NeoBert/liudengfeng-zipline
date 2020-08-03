@@ -178,7 +178,7 @@ def ipython_only(option):
 )
 @click.option(
     '--benchmark-sid',
-    default=None,
+    default=1000002, # 🆗 默认使用A股指数
     type=int,
     help="The sid of the instrument to be used as a benchmark "
          "(should exist in the ingested bundle)",

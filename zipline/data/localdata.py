@@ -48,9 +48,21 @@ SZX_ADJUSTMENT_COLS = {
 }
 
 
+def encode_index_code(x, offset=1000000):
+    i = int(x) + offset
+    return str(i).zfill(7)
+
+
+def decode_index_code(x, offset=1000000):
+    i = int(x) - offset
+    return str(i).zfill(6)
+
+
 def get_exchange(code):
     """股票所在交易所编码"""
     # https://www.iso20022.org/10383/iso-10383-market-identifier-codes
+    if len(code) == 7:
+        return '指数'
     if code.startswith('688'):
         return "上交所科创板"
     elif code.startswith('6'):
@@ -79,6 +91,49 @@ def _select_only_a(df, code_col):
     cond2 = df[code_col].str.startswith('9')
     df = df.loc[~(cond1 | cond2), :]
     return df
+
+
+def _gen_index_metadata(db, code):
+    collection = db[code]
+    name = collection.find_one(projection={
+        '_id': 0,
+        '名称': 1,
+    },
+        sort=[('日期', -1)])
+    if name is None:
+        return pd.DataFrame()
+    first = collection.find_one(projection={
+        '_id': 0,
+        '日期': 1,
+    },
+        sort=[('日期', 1)])
+    last = collection.find_one(projection={
+        '_id': 0,
+        '日期': 1,
+    },
+        sort=[('日期', -1)])
+    start_date = pd.Timestamp(first['日期'], tz='UTC')
+    end_date = pd.Timestamp(last['日期'], tz='UTC')
+    return pd.DataFrame(
+        {
+            'symbol': encode_index_code(code),
+            'exchange': '指数',
+            'asset_name': name['名称'],  # 简称
+            'start_date': start_date,
+            'end_date': end_date,
+            'first_traded': start_date,
+            # 适应于分钟级别的数据
+            'last_traded': end_date,
+            'auto_close_date': end_date + pd.Timedelta(days=1),
+        },
+        index=[0])
+
+
+def gen_index_metadata():
+    db = get_db('wy_index_daily')
+    codes = db.list_collection_names()
+    dfs = [_gen_index_metadata(db, code) for code in codes]
+    return pd.concat(dfs)
 
 
 def _stock_basic_info():
@@ -125,7 +180,7 @@ def _stock_basic_info():
 
 def _stock_first_and_last(code):
     """
-    自股票日线交易数据查询开始交易及结束交易日期
+    日线交易数据开始交易及结束交易日期
 
     Examples
     --------
@@ -142,13 +197,13 @@ def _stock_first_and_last(code):
         '日期': 1,
         '名称': 1,
     },
-                                sort=[('日期', 1)])
+        sort=[('日期', 1)])
     last = collection.find_one(projection={
         '_id': 0,
         '日期': 1,
         '名称': 1,
     },
-                               sort=[('日期', -1)])
+        sort=[('日期', -1)])
     return pd.DataFrame(
         {
             'symbol':
@@ -164,9 +219,9 @@ def _stock_first_and_last(code):
         index=[0])
 
 
-def gen_asset_metadata(only_in=True, only_A=True):
+def gen_asset_metadata(only_in=True, only_A=True, include_index=True):
     """
-    生成股票元数据
+    生成符号元数据
 
     Paras
     -----
@@ -174,6 +229,8 @@ def gen_asset_metadata(only_in=True, only_A=True):
         是否仅仅包含当前在市的股票，默认为真。
     only_A : bool
         是否仅仅为A股股票(即：不包含B股股票)，默认为不包含。
+    include_index : bool
+        是否包含指数，默认包含指数。
 
     Examples
     --------
@@ -209,7 +266,11 @@ def gen_asset_metadata(only_in=True, only_A=True):
     df['exchange'] = df['symbol'].map(get_exchange)
     df['auto_close_date'] = df['last_traded'].map(
         lambda x: x + pd.Timedelta(days=1))
-    return df
+    if not include_index:
+        return df
+    else:
+        i = gen_index_metadata()
+        return pd.concat([df, i])
 
 
 @lru_cache(None)
@@ -298,6 +359,35 @@ def _fetch_single_equity(stock_code, start, end):
     return df
 
 
+def _fetch_single_index(code, start, end):
+    index_code = decode_index_code(code)
+    start, end = sanitize_dates(start, end)
+    db = get_db('wy_index_daily')
+    collection = db[index_code]
+    predicate = {'日期': {'$gte': start, '$lte': end}}
+    projection = {'_id': 0}
+    sort = [('日期', 1)]
+    cursor = collection.find(predicate, projection, sort=sort)
+    df = pd.DataFrame.from_records(cursor)
+    if df.empty:
+        return df
+    df['股票代码'] = code
+    # fill 0
+    df['换手率'] = 0.0
+    df['流通市值'] = 0.0
+    df['总市值'] = 0.0
+    # 截取所需列
+    df = df[WY_DAILY_COL_MAPS.keys()]
+    df.rename(columns=WY_DAILY_COL_MAPS, inplace=True)
+    df.sort_values('date', inplace=True)
+    # fill 0
+    cols = ['b_close', 'b_high', 'b_low', 'b_open',
+            'shares_outstanding', 'total_shares']
+    for col in cols:
+        df[col] = 0.0
+    return df
+
+
 def fetch_single_equity(stock_code, start, end):
     """
     从本地数据库读取股票期间日线交易数据
@@ -337,6 +427,9 @@ def fetch_single_equity(stock_code, start, end):
     326	2017-07-28	600710	9.36	9.36	9.36	9.36	9.36	NaN
     327	2017-07-31	600710	9.25	9.64	7.48	7.55	9.31	-18.9044
     """
+    # 指数日线数据
+    if len(stock_code) == 7:
+        return _fetch_single_index(stock_code, start, end)
     start, end = sanitize_dates(start, end)
     # 首先提取全部数据，确保自IPO以来复权价一致
     df = _fetch_single_equity(stock_code, None, None)
@@ -406,7 +499,7 @@ def _fetch_single_minutely_equity(stock_code, one_day):
         '最新价': 'close',
         '成交量': 'volume',
     },
-              inplace=True)
+        inplace=True)
 
     ret = df[cols]
     # 可能存在重复
@@ -489,6 +582,8 @@ def fetch_single_quity_adjustments(stock_code, start, end):
     4  000333 2017-06-30      0.0      0.0     0.0           NaT         NaT        NaT        NaT
     5  000333 2017-12-31      0.0      0.0     1.2    2018-04-24  2018-05-03 2018-05-04 2018-05-04
     """
+    if len(stock_code) == 7:
+        return pd.DataFrame()
     # start, end = sanitize_dates(start, end)
     db = get_db('cninfo')
     collection = db['分红指标']
@@ -519,7 +614,8 @@ def fetch_single_quity_adjustments(stock_code, start, end):
         # 尚未登记，将其日期默认为未来一个月
         cond = df['A股股权登记日'] >= today
         df.loc[cond, "A股除权日"] = df.loc[cond, "A股股权登记日"] + pd.Timedelta(days=30)
-        df.loc[cond, "派息日(A)"] = df.loc[cond, "A股股权登记日"] + pd.Timedelta(days=30)
+        df.loc[cond, "派息日(A)"] = df.loc[cond, "A股股权登记日"] + \
+            pd.Timedelta(days=30)
     # 当派息日为空，使用`A股除权日`
     if '派息日(A)' not in df.columns:
         df['派息日(A)'] = df['A股除权日']

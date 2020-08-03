@@ -132,7 +132,7 @@ from zipline.sources.requests_csv import PandasRequestsCSV
 from zipline.gens.sim_engine import MinuteSimulationClock
 from zipline.sources.benchmark_source import BenchmarkSource
 from zipline.zipline_warnings import ZiplineDeprecationWarning
-from zipline.data.benchmarks_cn import get_cn_benchmark_returns
+# from zipline.data.benchmarks_cn import get_cn_benchmark_returns
 
 
 log = logbook.Logger("ZiplineLog")
@@ -275,9 +275,7 @@ class TradingAlgorithm(object):
                     "Inconsistent asset_finders in TradingAlgorithm()"
                 )
             self.asset_finder = data_portal.asset_finder
-        if benchmark_returns is None:
-            # TODO:修正设置方式
-            benchmark_returns = get_cn_benchmark_returns()
+
         self.benchmark_returns = benchmark_returns
 
         # XXX: This is also a mess. We should remove all of this and only allow

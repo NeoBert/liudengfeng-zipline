@@ -112,6 +112,22 @@ class TradingDays(CustomFactor):
         out[:] = np.count_nonzero(vs, 0)
 
 
+class IsIndex(CustomFilter):
+    inputs = []
+    window_length = 1
+
+    def compute(self, today, assets, out):
+        out[:] = [len(str(x)) == 7 for x in assets]
+
+
+class IsShares(CustomFilter):
+    inputs = []
+    window_length = 1
+
+    def compute(self, today, assets, out):
+        out[:] = [len(str(x)) != 7 for x in assets]
+
+
 def QTradableStocksUS():
     """
     可交易股票(过滤器)
