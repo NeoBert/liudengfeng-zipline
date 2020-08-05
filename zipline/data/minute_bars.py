@@ -725,6 +725,9 @@ class BcolzMinuteBarWriter(object):
                 volume : float64|int64
             index : DatetimeIndex of market minutes.
         """
+        # 🆗 为空退出
+        if df.empty or df is None:
+            return
         cols = {
             'open': df.open.values,
             'high': df.high.values,
