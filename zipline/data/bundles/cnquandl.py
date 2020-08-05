@@ -11,15 +11,16 @@
 """
 
 import pandas as pd
-from logbook import Logger
-
+# from logbook import Logger
+from cnswd.utils import make_logger
 from ..localdata import (fetch_single_equity, fetch_single_quity_adjustments,
                          fetch_single_minutely_equity, gen_asset_metadata)
 from . import core as bundles
 from .adjusts import ADJUST_FACTOR
 
 TODAY = pd.Timestamp('today').normalize()
-log = Logger('cnquandl')
+log = make_logger('cnquandl', collection='zipline')
+
 
 OHLCV_COLS = ['open', 'high', 'low', 'close', 'volume']
 

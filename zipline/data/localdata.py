@@ -501,8 +501,11 @@ def _fetch_single_minutely_equity(stock_code, one_day):
     df = _single_minutely_equity(one_day)
     if df.empty:
         return df
-    p = df.xs(stock_code, level=0)['price']
-    v = df.xs(stock_code, level=0)['volume']
+    try:
+        p = df.xs(stock_code, level=0)['price']
+        v = df.xs(stock_code, level=0)['volume']
+    except KeyError:
+        return pd.DataFrame()
     ohlc = p.resample('1T').ohlc().bfill()
     v = v.resample('1T').sum()
     ohlcv = pd.concat([ohlc, v], axis=1)
