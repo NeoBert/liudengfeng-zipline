@@ -461,7 +461,7 @@ def _fetch_single_minutely_equity(stock_code, one_day):
     Examples
     --------
     >>> stock_code = '000333'
-    >>> one_day = pd.Timestamp('2020-06-29 00:00:00', freq='B')
+    >>> one_day = pd.Timestamp('2020-07-31 00:00:00', freq='B')
     >>> df = _fetch_single_minutely_equity(stock_code, one_day)
     >>> df.tail()
                         close   high    low   open  volume
@@ -505,9 +505,27 @@ def _fetch_single_minutely_equity(stock_code, one_day):
     # 可能存在重复
     data = ret.drop_duplicates('datetime', keep='last')
     data.set_index('datetime', inplace=True)
+    # 0.0 -> nan
+    data.replace(0.0, np.nan, inplace=True)
+    # 填充价格
+    data.bfill(inplace=True)
+    am_index = pd.date_range(
+        one_day.replace(hour=9, minute=31),
+        one_day.replace(hour=11, minute=31),
+        freq='T',  # 分钟
+        tz=None,
+    )
+    pm_index = pd.date_range(
+        one_day.replace(hour=13, minute=1),
+        one_day.replace(hour=15, minute=1),
+        freq='T',  # 分钟
+        tz=None,
+    )
     # # 将11：31、15：01 -> 11:30 15:00
-    am = data.between_time('09:31', '11:31')
-    pm = data.between_time('13:00', '15:01')
+    am = data.between_time('09:31', '11:31').reindex(
+        am_index, method='ffill').bfill()
+    pm = data.between_time('13:00', '15:01').reindex(
+        pm_index, method='ffill').bfill()
     return pd.concat([am, pm]).sort_index()
 
 
@@ -546,7 +564,7 @@ def fetch_single_minutely_equity(stock_code, start, end):
     2018-04-19 14:59:00  51.55  51.55  51.55  51.55       0
     2018-04-19 15:00:00  51.57  51.57  51.57  51.57  353900
     """
-    dates = pd.date_range(start, end, freq='B')
+    dates = pd.date_range(start, end, freq='B').tz_localize(None)
     return pd.concat(
         [_fetch_single_minutely_equity(stock_code, d) for d in dates])
 

@@ -73,14 +73,20 @@ class MinuteBarReader(BarReader):
 def _calc_minute_index(market_opens, minutes_per_day):
     minutes = np.zeros(len(market_opens) * minutes_per_day,
                        dtype='datetime64[ns]')
-    deltas = np.arange(0, minutes_per_day, dtype='timedelta64[m]')
+    half = minutes_per_day // 2
+    offset = 90  # 午休 1个半小时
+    deltas = np.arange(0, minutes_per_day+offset, dtype='timedelta64[m]')
+
     for i, market_open in enumerate(market_opens):
         start = market_open.asm8
         minute_values = start + deltas
+        am_minute_values = minute_values[:half]
+        pm_minute_values = minute_values[-half-1:-1]
+        values = am_minute_values.tolist() + pm_minute_values.tolist()
         start_ix = minutes_per_day * i
         end_ix = start_ix + minutes_per_day
-        minutes[start_ix:end_ix] = minute_values
-    return pd.to_datetime(minutes, utc=True) #, box=True)
+        minutes[start_ix:end_ix] = values
+    return pd.to_datetime(minutes, utc=True)  # , box=True)
 
 
 def _sid_subdir_path(sid):
@@ -643,8 +649,8 @@ class BcolzMinuteBarWriter(object):
         if date <= last_date or date < tds[0]:
             # No need to pad.
             return
-
-        if last_date == pd.NaT:
+        # 🆗 不得使用相等判断
+        if last_date is pd.NaT:
             # If there is no data, determine how many days to add so that
             # desired days are written to the correct slots.
             days_to_zerofill = tds[tds.slice_indexer(end=date)]
@@ -689,7 +695,8 @@ class BcolzMinuteBarWriter(object):
         ctx = maybe_show_progress(
             data,
             show_progress=show_progress,
-            item_show_func=lambda e: e if e is None else str(e[0]),
+            # 🆗 显示股票代码
+            item_show_func=lambda e: e if e is None else str(e[0]).zfill(6),
             label="Merging minute equity files:",
         )
         write_sid = self.write_sid
@@ -1373,6 +1380,7 @@ class H5MinuteBarUpdateReader(MinuteBarUpdateReader):
     path : str
         The path of the HDF5 file from which to source data.
     """
+
     def __init__(self, path):
         try:
             self._panel = pd.read_hdf(path)

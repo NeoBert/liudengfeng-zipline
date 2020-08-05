@@ -77,7 +77,10 @@ def _update_dividends(dividends, asset_id, origin_data):
 
 
 def gen_symbol_data(symbol_map, sessions, splits, dividends, is_minutely):
-    cols = OHLCV_COLS + list(ADJUST_FACTOR.keys())
+    if not is_minutely:
+        cols = OHLCV_COLS + list(ADJUST_FACTOR.keys())
+    else:
+        cols = OHLCV_COLS
     for _, symbol in symbol_map.iteritems():
         asset_id = _to_sid(symbol)
         if not is_minutely:
@@ -184,12 +187,12 @@ def cnminutely_bundle(environ, asset_db_writer, minute_bar_writer,
     """Build a zipline data bundle from the cnstock dataset.
     """
     log.info('读取股票元数据......')
-    metadata = gen_asset_metadata()
+    metadata = gen_asset_metadata(include_index=False)
     metadata['sid'] = metadata.symbol.map(_to_sid)
     symbol_map = metadata.symbol
-    # 限定为最近一周的数据
+    # 限定为最近二周的数据
     end = calendar.actual_last_session
-    start = end - 5 * calendar.day
+    start = end - 10 * calendar.day
     sessions = calendar.sessions_in_range(start, end)
 
     log.info('分钟级别数据集（股票数量：{}）'.format(len(symbol_map)))
