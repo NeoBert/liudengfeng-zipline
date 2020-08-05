@@ -40,7 +40,7 @@ def _to_sid(x):
     return int(x)
 
 
-def _update_splits(splits, asset_id, origin_data):
+def _update_splits(splits, asset_id, origin_data, start, end):
     if origin_data.empty:
         # 如为空表，直接返回，不进行任何处理
         return
@@ -52,11 +52,12 @@ def _update_splits(splits, asset_id, origin_data):
         'effective_date': pd.to_datetime(origin_data.ex_date),
         'sid': asset_id
     })
+    cond = (start <= df['effective_date']) & (df['effective_date'] <= end)
     # df['ratio'] = df.ratio.astype('float')
-    splits.append(df)
+    splits.append(df.loc[cond, :])
 
 
-def _update_dividends(dividends, asset_id, origin_data):
+def _update_dividends(dividends, asset_id, origin_data, start, end):
     if origin_data.empty:
         return
     # date -> datetime64[ns]
@@ -74,7 +75,8 @@ def _update_dividends(dividends, asset_id, origin_data):
         'sid':
         asset_id
     })
-    dividends.append(df)
+    cond = (start <= df['pay_date']) & (df['pay_date'] <= end)
+    dividends.append(df.loc[cond, :])
 
 
 def gen_symbol_data(symbol_map, sessions, splits, dividends, is_minutely):
@@ -82,6 +84,8 @@ def gen_symbol_data(symbol_map, sessions, splits, dividends, is_minutely):
         cols = OHLCV_COLS + list(ADJUST_FACTOR.keys())
     else:
         cols = OHLCV_COLS
+    start, end = sessions[0], sessions[-1]
+    start, end = start.tz_localize(None), end.tz_localize(None)
     for _, symbol in symbol_map.iteritems():
         asset_id = _to_sid(symbol)
         if not is_minutely:
@@ -126,11 +130,11 @@ def gen_symbol_data(symbol_map, sessions, splits, dividends, is_minutely):
             # 送转比率大于0才有意义
             ratio = raw_adjustment.s_ratio + raw_adjustment.z_ratio
             raw_splits = raw_adjustment.loc[ratio > 0.0, :]
-            _update_splits(splits, asset_id, raw_splits)
+            _update_splits(splits, asset_id, raw_splits, start, end)
 
             # 更新股利
             raw_dividends = raw_adjustment.loc[raw_adjustment.amount > 0.0, :]
-            _update_dividends(dividends, asset_id, raw_dividends)
+            _update_dividends(dividends, asset_id, raw_dividends, start, end)
         yield asset_id, asset_data
 
 
