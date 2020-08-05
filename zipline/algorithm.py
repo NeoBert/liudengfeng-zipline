@@ -251,7 +251,7 @@ class TradingAlgorithm(object):
         self.namespace = namespace or {}
 
         self._platform = platform
-        self.logger = None
+        self.logger = log # None
 
         # XXX: This is kind of a mess.
         # We support passing a data_portal in `run`, but we need an asset

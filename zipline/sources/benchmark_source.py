@@ -270,7 +270,7 @@ class BenchmarkSource(object):
                 data_frequency=self.emission_rate,
                 ffill=True
             )[asset]
-
+            
             returns = benchmark_series.pct_change()[1:]
             return returns, returns
         elif start_date == trading_days[0]:
