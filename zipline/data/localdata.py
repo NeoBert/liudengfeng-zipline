@@ -10,11 +10,11 @@ import re
 import warnings
 from concurrent.futures.thread import ThreadPoolExecutor
 from functools import lru_cache
-from cnswd.setting.constants import MAX_WORKER
+
 import numpy as np
 import pandas as pd
-
 from cnswd.mongodb import get_db
+from cnswd.setting.constants import MAX_WORKER
 from cnswd.utils import sanitize_dates
 
 warnings.filterwarnings('ignore')
@@ -456,6 +456,33 @@ def fetch_single_equity(stock_code, start, end):
     return df
 
 
+@lru_cache(None)
+def _single_minutely_equity(one_day):
+    db = get_db('cjmx')
+    name = one_day.strftime(r"%Y-%m-%d")
+    if name not in db.list_collection_names():
+        return pd.DataFrame()
+    collection = db[name]
+    projection = {
+        '成交时间': 1,
+        '股票代码': 1,
+        '成交价': 1,
+        '成交量': 1,
+        '_id': 0
+    }
+    cursor = collection.find(projection=projection)
+    df = pd.DataFrame.from_records(cursor)
+    df.rename(columns={
+        '成交时间': 'datetime',
+        '股票代码': 'symbol',
+        '成交价': 'price',
+        '成交量': 'volume',
+    },
+        inplace=True)
+    df.set_index(['symbol', 'datetime'], inplace=True)
+    return df
+
+
 def _fetch_single_minutely_equity(stock_code, one_day):
     """
     Examples
@@ -471,61 +498,18 @@ def _fetch_single_minutely_equity(stock_code, one_day):
     2018-04-19 14:59:00  51.55  51.55  51.55  51.55       0
     2018-04-19 15:00:00  51.57  51.57  51.57  51.57  353900
     """
-    db = get_db('minutely')
-    collection = db[one_day.strftime(r"%Y-%m-%d")]
-    predicate = {'股票代码': stock_code}
-    projection = {
-        '时间': 1,
-        '股票代码': 1,
-        '今开': 1,
-        '最高': 1,
-        '最低': 1,
-        '最新价': 1,
-        '成交量': 1,
-        '_id': 0
-    }
-    sort = [('时间', 1)]
-    cursor = collection.find(predicate, projection, sort=sort)
-    df = pd.DataFrame.from_records(cursor)
+    df = _single_minutely_equity(one_day)
     if df.empty:
         return df
-    cols = ['datetime', 'open', 'high', 'low', 'close', 'volume']
-    df.rename(columns={
-        '时间': 'datetime',
-        '股票代码': 'symbol',
-        '今开': 'open',
-        '最高': 'high',
-        '最低': 'low',
-        '最新价': 'close',
-        '成交量': 'volume',
-    },
-        inplace=True)
-
-    ret = df[cols]
-    # 可能存在重复
-    data = ret.drop_duplicates('datetime', keep='last')
-    data.set_index('datetime', inplace=True)
-    # 0.0 -> nan
-    data.replace(0.0, np.nan, inplace=True)
-    # 填充价格
-    data.bfill(inplace=True)
-    am_index = pd.date_range(
-        one_day.replace(hour=9, minute=31),
-        one_day.replace(hour=11, minute=31),
-        freq='T',  # 分钟
-        tz=None,
-    )
-    pm_index = pd.date_range(
-        one_day.replace(hour=13, minute=1),
-        one_day.replace(hour=15, minute=1),
-        freq='T',  # 分钟
-        tz=None,
-    )
-    # # 将11：31、15：01 -> 11:30 15:00
-    am = data.between_time('09:31', '11:31').reindex(
-        am_index, method='ffill').bfill()
-    pm = data.between_time('13:00', '15:01').reindex(
-        pm_index, method='ffill').bfill()
+    p = df.xs(stock_code, level=0)['price']
+    v = df.xs(stock_code, level=0)['volume']
+    ohlc = p.resample('1T').ohlc().bfill()
+    v = v.resample('1T').sum()
+    ohlcv = pd.concat([ohlc, v], axis=1)
+    # 调整1分钟
+    ohlcv.index += pd.Timedelta('1T')
+    am = ohlcv.between_time('09:31', '11:31')
+    pm = ohlcv.between_time('13:01', '15:01')
     return pd.concat([am, pm]).sort_index()
 
 
