@@ -6,13 +6,17 @@ from types import CodeType
 from uuid import uuid4
 
 from toolz.curried.operator import getitem
-from six import viewkeys, exec_, PY3
-
+# from six import viewkeys, exec_, PY3
+from six import viewkeys, exec_
 from zipline.utils.compat import getargspec, wraps
 
 
 _code_argorder = (
-    ('co_argcount', 'co_kwonlyargcount') if PY3 else ('co_argcount',)
+    ('co_argcount',)
+) + (
+    ('co_kwonlyargcount', ) if hasattr(CodeType, 'co_kwonlyargcount') else ()
+) + (
+    ('co_posonlyargcount', ) if hasattr(CodeType, 'co_posonlyargcount') else ()
 ) + (
     'co_nlocals',
     'co_stacksize',

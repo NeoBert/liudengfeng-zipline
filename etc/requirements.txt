@@ -43,7 +43,7 @@ requests>=2.21.0
 Cython>=0.29.2
 
 # faster OrderedDict
-cyordereddict>=1.0.0
+# cyordereddict>=1.0.0
 
 # faster array ops.
 bottleneck>=1.2.1
