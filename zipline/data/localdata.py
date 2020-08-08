@@ -10,7 +10,7 @@ import re
 import warnings
 from concurrent.futures.thread import ThreadPoolExecutor
 from functools import lru_cache
-
+from trading_calendars import get_calendar
 import numpy as np
 import pandas as pd
 from cnswd.mongodb import get_db
@@ -167,7 +167,10 @@ def _stock_basic_info():
     df.drop_duplicates('股票代码', inplace=True)
     # 剔除未上市、未交易的无效股票
     cond1 = ~df['上市日期'].isnull()
-    cond2 = df['上市日期'] <= pd.Timestamp('today')
+    calendar = get_calendar('XSHG')
+    last_session = calendar.actual_last_session
+    # 有效交易的股票
+    cond2 = df['上市日期'] <= pd.Timestamp(last_session.date())
     df = df.loc[cond1 & cond2, :]
     # 可能并不包含该字段
     cols = [x for x in col_names.keys() if x in df.columns]
@@ -243,7 +246,7 @@ def gen_asset_metadata(only_in=True, only_A=True, include_index=True):
     3     000005 1990-12-10 2018-12-21    深交所主板       世纪星源   1991-01-02  2018-12-21      2018-12-22
     4     000006 1992-04-27 2018-12-21    深交所主板       深振业Ａ   1992-04-27  2018-12-21      2018-12-22
     """
-    s_and_e = _stock_basic_info()  # .iloc[:10, :]
+    s_and_e = _stock_basic_info()
     # 剔除非A股部分
     s_and_e = _select_only_a(s_and_e, 'symbol')
     # 股票数量 >3900
