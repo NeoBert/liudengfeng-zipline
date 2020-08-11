@@ -7,12 +7,40 @@ from .core import symbol
 from zipline.assets.assets import SymbolNotFound
 import random
 from cnswd.mongodb import get_db
+from trading_calendars import get_calendar
+
+MATCH_ONLY_A = {
+    '$match': {
+        '$expr': {
+            '$in': [
+                {
+                    '$substrBytes': [
+                        '$股票代码', 0, 1
+                    ]
+                }, [
+                    '0', '3', '6'
+                ]
+            ]
+        }
+    }
+}
 
 
-def random_sample_codes(n):
+def random_sample_codes(n, only_A=True):
     """随机选择N个股票代码"""
-    db = get_db('wy_stock_daily')
-    codes = db.list_collection_names()
+    db = get_db('cninfo')
+    coll = db['基本资料']
+    calendar = get_calendar('XSHG')
+    last_session = calendar.actual_last_session
+    projection = {'_id': 0, '股票代码': 1}
+    pipeline = [
+        {'$match': {'上市日期': {'$lte': last_session}}},
+        {'$project': projection},
+    ]
+    if only_A:
+        pipeline.insert(0, MATCH_ONLY_A)
+    cursor = coll.aggregate(pipeline)
+    codes = [d['股票代码'] for d in list(cursor)]
     return random.sample(codes, n)
 
 
