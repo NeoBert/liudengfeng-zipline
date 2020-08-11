@@ -5,6 +5,15 @@ from zipline.pipeline.fundamentals.localdata import get_cn_industry
 from zipline.pipeline.fundamentals.constants import CN_TO_SECTOR, SECTOR_NAMES
 from .core import symbol
 from zipline.assets.assets import SymbolNotFound
+import random
+from cnswd.mongodb import get_db
+
+
+def random_sample_codes(n):
+    """随机选择N个股票代码"""
+    db = get_db('wy_stock_daily')
+    codes = db.list_collection_names()
+    return random.sample(codes, n)
 
 
 def get_ff_factors(n):
