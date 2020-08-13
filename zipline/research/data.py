@@ -1,7 +1,7 @@
 import pandas as pd
 import os
 from zipline.utils.paths import zipline_path
-from zipline.pipeline.fundamentals.localdata import get_cn_industry
+from zipline.pipeline.fundamentals.localdata import get_cn_industry, get_sw_industry, get_zjh_industry
 from zipline.pipeline.fundamentals.constants import CN_TO_SECTOR, SECTOR_NAMES
 from .core import symbol
 from zipline.assets.assets import SymbolNotFound
@@ -23,6 +23,12 @@ MATCH_ONLY_A = {
             ]
         }
     }
+}
+NUM_MAPS = {
+    1: '一',
+    2: '二',
+    3: '三',
+    4: '四'
 }
 
 
@@ -54,6 +60,7 @@ def get_ff_factors(n):
 
 
 def get_sector_mappings(to_symbol=True):
+    """部门映射"""
     df = get_cn_industry(True)
     codes = df['sid'].map(lambda x: str(x).zfill(6)).values
     if to_symbol:
@@ -67,6 +74,93 @@ def get_sector_mappings(to_symbol=True):
         keys = codes
     names = df['国证一级行业编码'].map(
         CN_TO_SECTOR, na_action='ignore').map(SECTOR_NAMES).values
+    return {
+        c: v for c, v in zip(keys, names)
+    }
+
+
+def get_cn_industry_maps(level=1, to_symbol=True):
+    """国证行业分级映射
+
+    Args:
+        level (int, optional): 行业层级[1,2,3,4]. Defaults to 1.
+        to_symbol (bool, optional): 是否转换为Equity. Defaults to True.
+
+    Returns:
+        dict: key:股票代码或Equity, value:行业分类名称
+    """
+    assert level in (1, 2, 3, 4)
+    df = get_cn_industry(True)
+    codes = df['sid'].map(lambda x: str(x).zfill(6)).values
+    if to_symbol:
+        keys = []
+        for code in codes:
+            try:
+                keys.append(symbol(code))
+            except SymbolNotFound:
+                pass
+    else:
+        keys = codes
+    col = f"国证{NUM_MAPS[level]}级行业"
+    names = df[col].values
+    return {
+        c: v for c, v in zip(keys, names)
+    }
+
+
+def get_sw_industry_maps(level=1, to_symbol=True):
+    """申万行业分级映射
+
+    Args:
+        level (int, optional): 行业层级[1,2,3]. Defaults to 1.
+        to_symbol (bool, optional): 是否转换为Equity. Defaults to True.
+
+    Returns:
+        dict: key:股票代码或Equity, value:行业分类名称
+    """
+    assert level in (1, 2, 3)
+    df = get_sw_industry(True)
+    codes = df['sid'].map(lambda x: str(x).zfill(6)).values
+    if to_symbol:
+        keys = []
+        for code in codes:
+            try:
+                keys.append(symbol(code))
+            except SymbolNotFound:
+                pass
+    else:
+        keys = codes
+    col = f"申万{NUM_MAPS[level]}级行业"
+    names = df[col].values
+    return {
+        c: v for c, v in zip(keys, names)
+    }
+
+
+def get_zjh_industry_maps(level=1, to_symbol=True):
+    """证监会行业分级映射
+
+    Args:
+        level (int, optional): 行业层级[1,2]. Defaults to 1.
+        to_symbol (bool, optional): 是否转换为Equity. Defaults to True.
+
+    Returns:
+        dict: key:股票代码或Equity, value:行业分类名称
+    """
+    assert level in (1, 2)
+    df = get_zjh_industry(True)
+    codes = df['sid'].map(lambda x: str(x).zfill(6)).values
+    if to_symbol:
+        keys = []
+        for code in codes:
+            try:
+                keys.append(symbol(code))
+            except SymbolNotFound:
+                pass
+    else:
+        keys = codes
+    col = f"证监会{NUM_MAPS[level]}级行业"
+    names = df[col].values
     return {
         c: v for c, v in zip(keys, names)
     }
