@@ -164,3 +164,52 @@ def get_zjh_industry_maps(level=1, to_symbol=True):
     return {
         c: v for c, v in zip(keys, names)
     }
+
+
+def _get_concept_maps(collection):
+    projection = {
+        '_id': 0,
+        '概念名称': 1,
+        '股票列表': 1,
+    }
+    pipeline = [
+        {
+            '$project': projection
+        },
+    ]
+    cursor = collection.aggregate(pipeline)
+    return {record['概念名称']: record['股票列表'] for record in cursor}
+
+
+def get_concept_maps(by='all', to_symbol=True):
+    """概念对应股票列表
+
+    Args:
+        by (str, optional): 分类单位. Defaults to 'all'.
+            all 代表合并
+        to_symbol (bool, optional): 转换为Equity. Defaults to True.
+
+    Returns:
+        dict: 以概念名称为键，股票列表为值
+    """
+    assert by in ('ths', 'tct', 'all')
+    db = get_db()
+    if by == 'ths':
+        collection = db['同花顺概念']
+        return _get_concept_maps(collection)
+    elif by == 'tct':
+        collection = db['腾讯概念']
+        return _get_concept_maps(collection)
+    else:
+        ths = _get_concept_maps(db['同花顺概念'])
+        tct = _get_concept_maps(db['腾讯概念'])
+        keys = set(list(ths.keys()) + list(tct.keys()))
+        res = {}
+        for key in keys:
+            p1 = ths.get(key, [])
+            p2 = tct.get(key, [])
+            v = set(p1 + p2)
+            if to_symbol:
+                v = [symbol(s) for s in v]
+            res[key] = v
+        return res

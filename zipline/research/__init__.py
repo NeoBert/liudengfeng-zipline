@@ -4,7 +4,9 @@ from ._talib import indicators
 from .core import (benchmark_returns, get_forward_returns,  # , ohlcv
                    get_pricing, prices, returns, symbol, symbols,
                    trading_sessions, treasury_returns, volumes)
-from .data import get_sector_mappings, random_sample_codes, get_zjh_industry_maps, get_sw_industry_maps, get_cn_industry_maps
+from .data import (
+    get_cn_industry_maps, get_concept_maps, get_sector_mappings,
+    get_sw_industry_maps, get_zjh_industry_maps, random_sample_codes)
 from .pipebench import create_domain, run_pipeline
 from .utils import select_output_by
 
@@ -31,4 +33,5 @@ __all__ = (
     'get_zjh_industry_maps',
     'get_cn_industry_maps',
     'get_sw_industry_maps',
+    'get_concept_maps',
 )
