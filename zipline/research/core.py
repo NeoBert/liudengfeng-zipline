@@ -15,10 +15,10 @@ def trading_sessions(start, end):
     """期间交易日"""
     calendar = _trading_calendar()
     dts = pd.date_range(start, end, tz='UTC')
-    trading_sessions = calendar.schedule.index.intersection(dts)
+    sessions = calendar.schedule.index.intersection(dts)
     if len(trading_sessions) < 1:
         raise ValueError(f"期间{start} ~ {end} 无交易日")
-    return trading_sessions
+    return sessions
 
 
 def symbols(symbols_,
