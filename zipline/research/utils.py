@@ -3,7 +3,7 @@
 """
 import warnings
 
-from cnswd.utils import ensure_list
+from cnswd.utils import ensure_list, sanitize_dates
 
 from .core import symbols, trading_sessions
 
@@ -39,7 +39,7 @@ def select_output_by(output, start=None, end=None, assets=None, reduce_format=Tr
     nlevels = output.index.nlevels
     if nlevels != 2:
         raise ValueError('输入数据框只能是run_pipeline输出结果，MultiIndex DataFrame')
-
+    start, end = sanitize_dates(start, end)
     sessions = trading_sessions(start, end)
     start, end = sessions[0], sessions[-1]
     if assets is not None:

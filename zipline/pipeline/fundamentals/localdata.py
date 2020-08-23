@@ -762,8 +762,8 @@ def get_performance_forecaste_data(only_A=True):
         # "报告年度": "asof_date",
         "公告日期": "timestamp",
     }, inplace=True)
-    # 将 asof_date 定义为前一分钟
-    df['asof_date'] = df['timestamp'] - pd.Timedelta(minutes=1)
+    # 将 asof_date 定义为前一小时
+    df['asof_date'] = df['timestamp'] - pd.Timedelta(hours=1)
     df['sid'] = df['sid'].map(lambda x: int(x))
     # 深证信原始数据中 股票代码  "002746"
     # 公告日期  2013-10-13 报告年度 2016-09-30 
@@ -825,6 +825,7 @@ def get_investment_rating_data(only_A=True):
         inplace=True)
     df.dropna(subset=['投资评级'], inplace=True)
     df['timestamp'] = df['asof_date']
+    # 至少相差一小时
     df['asof_date'] -= pd.Timedelta(hours=1)
     df['sid'] = df['sid'].map(lambda x: int(x))
     return df
