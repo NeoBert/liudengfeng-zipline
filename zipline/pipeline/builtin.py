@@ -522,7 +522,7 @@ def trailing_dividend_yield():
     """
     Dividends Per Share over the trailing 12 months / Price
     """
-    ttm = TTM(inputs=[Fundamentals.dividend.每股人民币派息,
+    ttm = TTM(inputs=[Fundamentals.dividend.每股派息,
                       Fundamentals.dividend.asof_date], is_cum=False)
     return ttm / CNEquityPricing.close.latest
 

@@ -95,6 +95,11 @@ def write_dataframe(df, table_name, attr_dict=None):
         if c in df.columns and df[c].hasnans:
             warnings.warn(f'{c}列含有空值，已移除')
             df = df.loc[~df[c].isnull(), :]
+    # 修复`asof_date newer than timestamp`
+    if AD_FIELD_NAME in df.columns and TS_FIELD_NAME in df.columns:
+        cond = df[AD_FIELD_NAME] == df[TS_FIELD_NAME]
+        df.loc[cond, AD_FIELD_NAME] = df.loc[cond,
+                                             TS_FIELD_NAME] - pd.Timedelta(minutes=1)
     # 修复混合类型，填充默认值，否则bcolz.ctable.fromdataframe会出错
     _fix_mixed_type(df)
     # 丢失tz信息
