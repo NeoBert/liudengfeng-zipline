@@ -176,6 +176,7 @@ class ExplodingPipelineEngine(PipelineEngine):
     """
     A PipelineEngine that doesn't do anything.
     """
+
     def run_pipeline(self, pipeline, start_date, end_date, hooks=None):
         raise NoEngineRegistered(
             "Attempted to run a pipeline but no pipeline "
@@ -384,6 +385,7 @@ class SimplePipelineEngine(PipelineEngine):
             each asset that existed each day.
         """
         hooks = self._resolve_hooks(hooks)
+        
         with hooks.running_pipeline(pipeline, start_date, end_date):
             return self._run_pipeline_impl(
                 pipeline,

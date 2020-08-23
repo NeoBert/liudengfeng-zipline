@@ -504,6 +504,7 @@ def get_dividend_data(only_A=True):
     df['sid'] = df['sid'].map(lambda x: int(x))
     # datetime -> timestamp
     df = _to_timestamp(df)
+    df[TS_FIELD_NAME] = df[AD_FIELD_NAME]
     return df
 
 
@@ -766,7 +767,7 @@ def get_performance_forecaste_data(only_A=True):
     df['asof_date'] = df['timestamp'] - pd.Timedelta(hours=1)
     df['sid'] = df['sid'].map(lambda x: int(x))
     # 深证信原始数据中 股票代码  "002746"
-    # 公告日期  2013-10-13 报告年度 2016-09-30 
+    # 公告日期  2013-10-13 报告年度 2016-09-30
     # 即做出提前三年的业绩预告，有违常理，需删除
     # 一般而言，业绩预告不会领先报告年度一个季度发布
     cond = df['timestamp'] - df['asof_date'] < pd.Timedelta(days=90)
