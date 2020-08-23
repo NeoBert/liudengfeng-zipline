@@ -16,7 +16,7 @@ def trading_sessions(start, end):
     calendar = _trading_calendar()
     dts = pd.date_range(start, end, tz='UTC')
     sessions = calendar.schedule.index.intersection(dts)
-    if len(trading_sessions) < 1:
+    if len(sessions) < 1:
         raise ValueError(f"期间{start} ~ {end} 无交易日")
     return sessions
 
