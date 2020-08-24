@@ -26,10 +26,10 @@ def get_latest_backtest_info(dir_name=zipline_path(['backtest'])):
     """最新回测结果文件路径及更新时间"""
     assert os.path.isdir(dir_name)
     try:
-        candidates = os.listdir(dir_name)
-        pref_file = os.path.join(dir_name, max(candidates))
-        return pref_file, pd.Timestamp(
-            int(os.path.getmtime(pref_file)), unit='s', tz='Asia/Shanghai')
+        candidates = [os.path.join(dir_name, x) for x in os.listdir(dir_name)]
+        most_recent = max(candidates, key=os.path.getmtime)
+        return most_recent, pd.Timestamp(
+            int(os.path.getmtime(most_recent)), unit='s', tz='Asia/Shanghai')
     except (ValueError, OSError) as e:
         if getattr(e, 'errno', errno.ENOENT) != errno.ENOENT:
             raise
