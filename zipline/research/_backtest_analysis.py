@@ -3,23 +3,8 @@ import errno
 import os
 
 import pandas as pd
-import pyfolio as pf
 
 from zipline.utils.paths import zipline_path
-
-
-def create_full_tear_sheet(self):
-    """创建完整工作底稿(DataFrame扩展方法)"""
-    returns, positions, transactions = pf.utils.extract_rets_pos_txn_from_zipline(
-        self)
-    loc = -int(len(self) / 4) if int(len(self) / 4) else -1
-    live_start_date = self.index[loc]
-    pf.create_full_tear_sheet(
-        returns,
-        positions=positions,
-        transactions=transactions,
-        live_start_date=live_start_date,
-        round_trips=True)
 
 
 def get_latest_backtest_info(dir_name=zipline_path(['backtest'])):
@@ -47,4 +32,23 @@ def get_backtest(dir_name=zipline_path(['backtest']), file_name=None):
     return pd.read_pickle(pref_file)
 
 
-pd.DataFrame.create_full_tear_sheet = create_full_tear_sheet
+# pd.DataFrame.create_full_tear_sheet = create_full_tear_sheet
+
+def view_full_tear_sheet(backtest=None, live_start_date=None):
+    """显示完整工作底稿(DataFrame扩展方法)"""
+    import pyfolio as pf
+    if backtest is None:
+        backtest = get_backtest()
+    returns, positions, transactions = pf.utils.extract_rets_pos_txn_from_zipline(
+        backtest)
+    if live_start_date is None:
+        loc = -int(len(backtest) / 4) if int(len(backtest) / 4) else -1
+        live_start_date = backtest.index[loc]
+    else:
+        live_start_date = backtest.index.asof(live_start_date)
+    pf.create_full_tear_sheet(
+        returns,
+        positions=positions,
+        transactions=transactions,
+        live_start_date=live_start_date,
+        round_trips=True)

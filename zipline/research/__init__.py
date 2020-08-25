@@ -1,5 +1,5 @@
 # from ._plotly import plot_ohlcv, iplot_ohlcv, AnalysisFigure
-from ._backtest_analysis import get_backtest, get_latest_backtest_info
+from ._backtest_analysis import get_backtest, get_latest_backtest_info, view_full_tear_sheet
 from ._talib import indicators
 from .core import (benchmark_returns, get_forward_returns,  # , ohlcv
                    get_pricing, prices, returns, symbol, symbols,
@@ -34,4 +34,5 @@ __all__ = (
     'get_cn_industry_maps',
     'get_sw_industry_maps',
     'get_concept_maps',
+    'view_full_tear_sheet',
 )
