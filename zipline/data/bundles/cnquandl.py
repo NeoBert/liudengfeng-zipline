@@ -195,9 +195,9 @@ def cnminutely_bundle(environ, asset_db_writer, minute_bar_writer,
     metadata = gen_asset_metadata(include_index=False)
     metadata['sid'] = metadata.symbol.map(_to_sid)
     symbol_map = metadata.symbol
-    # 限定为最近二周的数据
+    # 限定为最近25个交易日的数据
     end = calendar.actual_last_session
-    start = end - 10 * calendar.day
+    start = end - 25 * calendar.day
     sessions = calendar.sessions_in_range(start, end)
 
     log.info('分钟级别数据集（股票数量：{}）'.format(len(symbol_map)))
