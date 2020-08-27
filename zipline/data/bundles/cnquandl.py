@@ -62,14 +62,14 @@ def _update_dividends(dividends, asset_id, origin_data, start, end):
         return
     # date -> datetime64[ns]
     df = pd.DataFrame({
-        'record_date':
-        pd.to_datetime(origin_data['record_date']),
+        'record_date': pd.NaT,
+        # pd.to_datetime(origin_data['record_date']),
         'ex_date':
         pd.to_datetime(origin_data['ex_date']),
-        'declared_date':
-        pd.to_datetime(origin_data['declared_date']),
-        'pay_date':
-        pd.to_datetime(origin_data['pay_date']),
+        'declared_date': pd.NaT,
+        # pd.to_datetime(origin_data['declared_date']),
+        'pay_date': pd.NaT,
+        # pd.to_datetime(origin_data['pay_date']),
         'amount':
         origin_data['amount'],
         'sid':
@@ -184,6 +184,8 @@ def cndaily_bundle(environ, asset_db_writer, minute_bar_writer,
 @bundles.register(
     'cnminutely',
     calendar_name='XSHG',
+    start_session=pd.Timestamp('now', tz='UTC').round(
+        'D')-pd.Timedelta('45 days'),
     minutes_per_day=242)
 def cnminutely_bundle(environ, asset_db_writer, minute_bar_writer,
                       daily_bar_writer, adjustment_writer, calendar,
@@ -192,13 +194,14 @@ def cnminutely_bundle(environ, asset_db_writer, minute_bar_writer,
     """Build a zipline data bundle from the cnstock dataset.
     """
     log.info('读取股票元数据......')
-    metadata = gen_asset_metadata(include_index=False)
+    metadata = gen_asset_metadata(include_index=False) #.iloc[:20, :]
     metadata['sid'] = metadata.symbol.map(_to_sid)
     symbol_map = metadata.symbol
     # 限定为最近25个交易日的数据
-    end = calendar.actual_last_session
-    start = end - 25 * calendar.day
-    sessions = calendar.sessions_in_range(start, end)
+    # end = calendar.actual_last_session
+    # start = end - 25 * calendar.day
+    # sessions = calendar.sessions_in_range(start, end)
+    sessions = calendar.sessions_in_range(start_session, end_session)
 
     log.info('分钟级别数据集（股票数量：{}）'.format(len(symbol_map)))
 

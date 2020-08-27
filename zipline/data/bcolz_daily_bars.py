@@ -567,7 +567,7 @@ class BcolzDailyBarReader(SessionBarReader):
     def load_raw_arrays(self, columns, start_date, end_date, assets):
         start_idx = self._load_raw_arrays_date_to_index(start_date)
         end_idx = self._load_raw_arrays_date_to_index(end_date)
-
+        
         first_rows, last_rows, offsets = self._compute_slices(
             start_idx,
             end_idx,

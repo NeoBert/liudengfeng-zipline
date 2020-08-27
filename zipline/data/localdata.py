@@ -9,7 +9,7 @@
 import re
 import warnings
 from concurrent.futures.thread import ThreadPoolExecutor
-from functools import lru_cache
+from functools import lru_cache, partial
 from trading_calendars import get_calendar
 import numpy as np
 import pandas as pd
@@ -458,41 +458,49 @@ def fetch_single_equity(stock_code, start, end):
         df = df[cond]
     return df
 
+# with ThreadPoolExecutor(4) as pool:
+#     r = pool.map(_stock_first_and_last, s_and_e.symbol.values)
+# f_and_l = pd.concat(r)
 
-@lru_cache(None)
-def _single_minutely_equity(one_day):
+# @lru_cache(None)
+
+
+def _single_minutely_equity(one_day, code):
     db = get_db('cjmx')
     name = one_day.strftime(r"%Y-%m-%d")
     if name not in db.list_collection_names():
         return pd.DataFrame()
     collection = db[name]
+    predicate = {'股票代码': code}
     projection = {
         '成交时间': 1,
-        '股票代码': 1,
+        # '股票代码': 1,
         '成交价': 1,
         '成交量': 1,
         '_id': 0
     }
-    cursor = collection.find(projection=projection)
+    cursor = collection.find(predicate, projection=projection)
     df = pd.DataFrame.from_records(cursor)
+    if df.empty:
+        return df
     df.rename(columns={
         '成交时间': 'datetime',
-        '股票代码': 'symbol',
+        # '股票代码': 'symbol',
         '成交价': 'price',
         '成交量': 'volume',
     },
         inplace=True)
-    df.set_index(['symbol', 'datetime'], inplace=True)
+    df.set_index(['datetime'], inplace=True)
     return df
 
 
-def _fetch_single_minutely_equity(stock_code, one_day):
+def _fetch_single_minutely_equity(one_day, stock_code):
     """
     Examples
     --------
     >>> stock_code = '000333'
     >>> one_day = pd.Timestamp('2020-07-31 00:00:00', freq='B')
-    >>> df = _fetch_single_minutely_equity(stock_code, one_day)
+    >>> df = _fetch_single_minutely_equity(one_day, stock_code)
     >>> df.tail()
                         close   high    low   open  volume
     2018-04-19 14:56:00  51.55  51.56  51.50  51.55  376400
@@ -501,16 +509,17 @@ def _fetch_single_minutely_equity(stock_code, one_day):
     2018-04-19 14:59:00  51.55  51.55  51.55  51.55       0
     2018-04-19 15:00:00  51.57  51.57  51.57  51.57  353900
     """
-    df = _single_minutely_equity(one_day)
+    df = _single_minutely_equity(one_day, stock_code)
     if df.empty:
-        return df
-    try:
-        p = df.xs(stock_code, level=0)['price']
-        v = df.xs(stock_code, level=0)['volume']
-    except KeyError:
-        return pd.DataFrame()
-    ohlc = p.resample('1T').ohlc().bfill()
-    v = v.resample('1T').sum()
+        calendar = get_calendar('XSHG')
+        cols = ['open', 'high', 'low', 'close', 'volume']
+        index = calendar.minutes_for_session(one_day)
+        return pd.DataFrame(0, columns=cols, index=index).tz_convert('Asia/Shanghai').tz_localize(None)
+
+    resampled = df.resample('1T')
+    ohlc = resampled['price'].ohlc().bfill()
+    # 换算为股
+    v = resampled['volume'].sum() * 100
     ohlcv = pd.concat([ohlc, v], axis=1)
     # 调整1分钟
     ohlcv.index += pd.Timedelta('1T')
@@ -555,8 +564,10 @@ def fetch_single_minutely_equity(stock_code, start, end):
     2018-04-19 15:00:00  51.57  51.57  51.57  51.57  353900
     """
     dates = pd.date_range(start, end, freq='B').tz_localize(None)
-    return pd.concat(
-        [_fetch_single_minutely_equity(stock_code, d) for d in dates])
+    func = partial(_fetch_single_minutely_equity, stock_code=stock_code)
+    with ThreadPoolExecutor(4) as pool:
+        dfs = pool.map(func, dates)
+    return pd.concat(dfs)
 
 
 def fetch_single_quity_adjustments(stock_code, start, end):
