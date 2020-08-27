@@ -9,6 +9,7 @@
 import re
 import warnings
 from concurrent.futures.thread import ThreadPoolExecutor
+from concurrent.futures import ProcessPoolExecutor
 from functools import lru_cache, partial
 from trading_calendars import get_calendar
 import numpy as np
@@ -458,12 +459,6 @@ def fetch_single_equity(stock_code, start, end):
         df = df[cond]
     return df
 
-# with ThreadPoolExecutor(4) as pool:
-#     r = pool.map(_stock_first_and_last, s_and_e.symbol.values)
-# f_and_l = pd.concat(r)
-
-# @lru_cache(None)
-
 
 def _single_minutely_equity(one_day, code):
     db = get_db('cjmx')
@@ -573,9 +568,9 @@ def fetch_single_minutely_equity(stock_code, start, end):
                for d in dates}
     func = partial(_fetch_single_minutely_equity,
                    stock_code=stock_code, default=default)
-    # dfs = map(func, dates)
-    with ThreadPoolExecutor(4) as pool:
-        dfs = pool.map(func, dates)
+    # dfs = list(map(func, dates))
+    with ThreadPoolExecutor(8) as executor:
+        dfs = executor.map(func, dates)
     return pd.concat(dfs)
 
 

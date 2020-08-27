@@ -151,7 +151,7 @@ def cndaily_bundle(environ, asset_db_writer, minute_bar_writer,
     t = time.time()
     log.info('读取股票元数据......')
     # metadata = gen_asset_metadata(False)
-    hc = HotDataCache(gen_asset_metadata, only_in=False)
+    hc = HotDataCache(gen_asset_metadata, hour=9, minute=30, only_in=False)
     metadata = hc.data
     # 资产元数据写法要求添加`sid`列
     metadata['sid'] = metadata.symbol.map(_to_sid)
@@ -200,7 +200,8 @@ def cnminutely_bundle(environ, asset_db_writer, minute_bar_writer,
     t = time.time()
     log.info('读取股票元数据......')
     # metadata = gen_asset_metadata(include_index=False)  # .iloc[:40, :]
-    hc = HotDataCache(gen_asset_metadata, include_index=False)
+    hc = HotDataCache(gen_asset_metadata, hour=9,
+                      minute=30, include_index=False)
     metadata = hc.data
     metadata['sid'] = metadata.symbol.map(_to_sid)
     symbol_map = metadata.symbol
