@@ -11,7 +11,7 @@
 """
 
 import pandas as pd
-# from logbook import Logger
+import time
 from cnswd.utils import make_logger
 from ..localdata import (fetch_single_equity, fetch_single_quity_adjustments,
                          fetch_single_minutely_equity, gen_asset_metadata)
@@ -148,6 +148,7 @@ def cndaily_bundle(environ, asset_db_writer, minute_bar_writer,
                    output_dir):
     """Build a zipline data bundle from the cnstock dataset.
     """
+    t = time.time()
     log.info('读取股票元数据......')
     metadata = gen_asset_metadata(False)
     # 资产元数据写法要求添加`sid`列
@@ -179,6 +180,7 @@ def cndaily_bundle(environ, asset_db_writer, minute_bar_writer,
         dividends=None
         if len(dividends) == 0 else pd.concat(dividends, ignore_index=True),
     )
+    log.info(f'完成用时：{time.time() - t:.2f}秒')
 
 
 @bundles.register(
@@ -193,8 +195,9 @@ def cnminutely_bundle(environ, asset_db_writer, minute_bar_writer,
                       output_dir):
     """Build a zipline data bundle from the cnstock dataset.
     """
+    t = time.time()
     log.info('读取股票元数据......')
-    metadata = gen_asset_metadata(include_index=False) #.iloc[:20, :]
+    metadata = gen_asset_metadata(include_index=False)  # .iloc[:40, :]
     metadata['sid'] = metadata.symbol.map(_to_sid)
     symbol_map = metadata.symbol
     # 限定为最近25个交易日的数据
@@ -227,3 +230,4 @@ def cnminutely_bundle(environ, asset_db_writer, minute_bar_writer,
         dividends=None
         if len(dividends) == 0 else pd.concat(dividends, ignore_index=True),
     )
+    log.info(f'完成用时：{time.time() - t:.2f}秒')

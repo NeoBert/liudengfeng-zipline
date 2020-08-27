@@ -494,7 +494,7 @@ def _single_minutely_equity(one_day, code):
     return df
 
 
-def _fetch_single_minutely_equity(one_day, stock_code):
+def _fetch_single_minutely_equity(one_day, stock_code, default):
     """
     Examples
     --------
@@ -511,10 +511,7 @@ def _fetch_single_minutely_equity(one_day, stock_code):
     """
     df = _single_minutely_equity(one_day, stock_code)
     if df.empty:
-        calendar = get_calendar('XSHG')
-        cols = ['open', 'high', 'low', 'close', 'volume']
-        index = calendar.minutes_for_session(one_day)
-        return pd.DataFrame(0, columns=cols, index=index).tz_convert('Asia/Shanghai').tz_localize(None)
+        return default[one_day]
 
     resampled = df.resample('1T')
     ohlc = resampled['price'].ohlc().bfill()
@@ -564,7 +561,19 @@ def fetch_single_minutely_equity(stock_code, start, end):
     2018-04-19 15:00:00  51.57  51.57  51.57  51.57  353900
     """
     dates = pd.date_range(start, end, freq='B').tz_localize(None)
-    func = partial(_fetch_single_minutely_equity, stock_code=stock_code)
+    calendar = get_calendar('XSHG')
+    t_end = calendar.actual_last_session.date()
+    dates = list(filter(lambda d: d.date() <= t_end, dates))
+    cols = ['open', 'high', 'low', 'close', 'volume']
+
+    def to_index(d):
+        return calendar.minutes_for_session(d).tz_convert('Asia/Shanghai').tz_localize(None)
+
+    default = {d: pd.DataFrame(0, columns=cols, index=to_index(d))
+               for d in dates}
+    func = partial(_fetch_single_minutely_equity,
+                   stock_code=stock_code, default=default)
+    # dfs = map(func, dates)
     with ThreadPoolExecutor(4) as pool:
         dfs = pool.map(func, dates)
     return pd.concat(dfs)
