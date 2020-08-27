@@ -12,7 +12,7 @@
 
 import pandas as pd
 import time
-from cnswd.utils import make_logger
+from cnswd.utils import make_logger, HotDataCache
 from ..localdata import (fetch_single_equity, fetch_single_quity_adjustments,
                          fetch_single_minutely_equity, gen_asset_metadata)
 from . import core as bundles
@@ -150,7 +150,9 @@ def cndaily_bundle(environ, asset_db_writer, minute_bar_writer,
     """
     t = time.time()
     log.info('读取股票元数据......')
-    metadata = gen_asset_metadata(False)
+    # metadata = gen_asset_metadata(False)
+    hc = HotDataCache(gen_asset_metadata, only_in=False)
+    metadata = hc.data
     # 资产元数据写法要求添加`sid`列
     metadata['sid'] = metadata.symbol.map(_to_sid)
     symbol_map = metadata.symbol
@@ -197,7 +199,9 @@ def cnminutely_bundle(environ, asset_db_writer, minute_bar_writer,
     """
     t = time.time()
     log.info('读取股票元数据......')
-    metadata = gen_asset_metadata(include_index=False)  # .iloc[:40, :]
+    # metadata = gen_asset_metadata(include_index=False)  # .iloc[:40, :]
+    hc = HotDataCache(gen_asset_metadata, include_index=False)
+    metadata = hc.data
     metadata['sid'] = metadata.symbol.map(_to_sid)
     symbol_map = metadata.symbol
     # 限定为最近25个交易日的数据
