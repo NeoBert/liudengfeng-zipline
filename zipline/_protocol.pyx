@@ -735,6 +735,12 @@ cdef class BarData:
                 return pd.DataFrame(df_dict)
 
             else:
+                raise ValueError(
+                    "从pandas版本0.25开始，pandas已经移除`Panel`。"
+                    "`history`不接受同时请求多资产和多字段。"
+                    "如确实需要，可以使用多资产、单字段或者单资产、多字段，"
+                    "然后使用合适的方法进行数据合并。"
+                )
                 df_dict = {
                     field: self.data_portal.get_history_window(
                         assets,
