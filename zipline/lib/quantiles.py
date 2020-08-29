@@ -13,5 +13,6 @@ def quantiles(data, nbins_or_partition_bounds):
         qcut,
         1,
         data,
+        # 🆗 新增`duplicates`参数
         q=nbins_or_partition_bounds, labels=False, duplicates='drop'
     )
