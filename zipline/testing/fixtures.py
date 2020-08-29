@@ -3,10 +3,10 @@ import sqlite3
 from unittest import TestCase
 import warnings
 
-from contextlib import ExitStack
 from logbook import NullHandler, Logger
 import numpy as np
 import pandas as pd
+from pandas.core.common import PerformanceWarning
 from six import with_metaclass, iteritems, itervalues, PY2
 import responses
 from toolz import flip, groupby, merge
@@ -31,6 +31,7 @@ from zipline.pipeline.domain import GENERIC, US_EQUITIES
 from zipline.pipeline.loaders import USEquityPricingLoader
 from zipline.pipeline.loaders.testing import make_seeded_random_loader
 from zipline.protocol import BarData
+from zipline.utils.compat import ExitStack
 from zipline.utils.paths import ensure_directory, ensure_directory_containing
 from .core import (
     create_daily_bar_data,
@@ -503,7 +504,7 @@ class WithTradingCalendars(object):
     class-level fixture.
 
     After ``init_class_fixtures`` has been called:
-    - `cls.trading_calendar` is populated with a default of the XSHG trading
+    - `cls.trading_calendar` is populated with a default of the nyse trading
     calendar for compatibility with existing tests
     - `cls.all_trading_calendars` is populated with the trading calendars
     keyed by name,
@@ -518,33 +519,37 @@ class WithTradingCalendars(object):
         A dictionary which maps asset type names to the calendar associated
         with that asset type.
     """
-    TRADING_CALENDAR_STRS = ('XSHG',)
-    TRADING_CALENDAR_FOR_ASSET_TYPE = {Equity: 'XSHG', Future: 'us_futures'}
+    TRADING_CALENDAR_STRS = ('NYSE',)
+    TRADING_CALENDAR_FOR_ASSET_TYPE = {Equity: 'NYSE', Future: 'us_futures'}
     # For backwards compatibility, exisitng tests and fixtures refer to
-    # `trading_calendar` with the assumption that the value is the XSHG
+    # `trading_calendar` with the assumption that the value is the NYSE
     # calendar.
-    TRADING_CALENDAR_PRIMARY_CAL = 'XSHG'
+    TRADING_CALENDAR_PRIMARY_CAL = 'NYSE'
 
     @classmethod
     def init_class_fixtures(cls):
         super(WithTradingCalendars, cls).init_class_fixtures()
 
         cls.trading_calendars = {}
+        # Silence `pandas.errors.PerformanceWarning: Non-vectorized DateOffset
+        # being applied to Series or DatetimeIndex` in trading calendar
+        # construction. This causes nosetest to fail.
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", PerformanceWarning)
+            for cal_str in (
+                set(cls.TRADING_CALENDAR_STRS) |
+                {cls.TRADING_CALENDAR_PRIMARY_CAL}
+            ):
+                # Set name to allow aliasing.
+                calendar = get_calendar(cal_str)
+                setattr(cls,
+                        '{0}_calendar'.format(cal_str.lower()), calendar)
+                cls.trading_calendars[cal_str] = calendar
 
-        for cal_str in (
-            set(cls.TRADING_CALENDAR_STRS) |
-            {cls.TRADING_CALENDAR_PRIMARY_CAL}
-        ):
-            # Set name to allow aliasing.
-            calendar = get_calendar(cal_str)
-            setattr(cls,
-                    '{0}_calendar'.format(cal_str.lower()), calendar)
-            cls.trading_calendars[cal_str] = calendar
-
-        type_to_cal = iteritems(cls.TRADING_CALENDAR_FOR_ASSET_TYPE)
-        for asset_type, cal_str in type_to_cal:
-            calendar = get_calendar(cal_str)
-            cls.trading_calendars[asset_type] = calendar
+            type_to_cal = iteritems(cls.TRADING_CALENDAR_FOR_ASSET_TYPE)
+            for asset_type, cal_str in type_to_cal:
+                calendar = get_calendar(cal_str)
+                cls.trading_calendars[asset_type] = calendar
 
         cls.trading_calendar = (
             cls.trading_calendars[cls.TRADING_CALENDAR_PRIMARY_CAL]
@@ -671,7 +676,7 @@ class WithTradingSessions(WithDefaultDateBounds, WithTradingCalendars):
     (DATA_MAX_DAY - (cls.TRADING_DAY_COUNT) -> DATA_MAX_DAY)
 
     `cls.trading_days`, for compatibility with existing tests which make the
-    assumption that trading days are equity only, defaults to the XSHG trading
+    assumption that trading days are equity only, defaults to the nyse trading
     sessions.
 
     Attributes
@@ -687,7 +692,7 @@ class WithTradingSessions(WithDefaultDateBounds, WithTradingCalendars):
     DATA_MAX_DAY = alias('END_DATE')
 
     # For backwards compatibility, exisitng tests and fixtures refer to
-    # `trading_days` with the assumption that the value is days of the XSHG
+    # `trading_days` with the assumption that the value is days of the NYSE
     # calendar.
     trading_days = alias('nyse_sessions')
 
@@ -1688,12 +1693,16 @@ class WithAdjustmentReader(WithBcolzEquityDailyBarReader):
     def init_class_fixtures(cls):
         super(WithAdjustmentReader, cls).init_class_fixtures()
         conn = sqlite3.connect(cls.make_adjustment_db_conn_str())
-        cls.make_adjustment_writer(conn).write(
-            splits=cls.make_splits_data(),
-            mergers=cls.make_mergers_data(),
-            dividends=cls.make_dividends_data(),
-            stock_dividends=cls.make_stock_dividends_data(),
-        )
+        # Silence numpy DeprecationWarnings which cause nosetest to fail
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", DeprecationWarning)
+
+            cls.make_adjustment_writer(conn).write(
+                splits=cls.make_splits_data(),
+                mergers=cls.make_mergers_data(),
+                dividends=cls.make_dividends_data(),
+                stock_dividends=cls.make_stock_dividends_data(),
+            )
         cls.adjustment_reader = SQLiteAdjustmentReader(conn)
 
 
@@ -2064,7 +2073,7 @@ class WithWerror(object):
         super(WithWerror, cls).init_class_fixtures()
 
 
-register_calendar_alias("TEST", "XSHG")
+register_calendar_alias("TEST", "NYSE")
 
 
 class WithSeededRandomState(object):

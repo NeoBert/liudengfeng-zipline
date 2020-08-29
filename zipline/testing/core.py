@@ -701,7 +701,7 @@ class FakeDataPortal(DataPortal):
     def __init__(self, asset_finder, trading_calendar=None,
                  first_trading_day=None):
         if trading_calendar is None:
-            trading_calendar = get_calendar("XSHG")
+            trading_calendar = get_calendar("NYSE")
 
         super(FakeDataPortal, self).__init__(asset_finder,
                                              trading_calendar,
@@ -1063,7 +1063,7 @@ def gen_calendars(start, stop, critical_dates):
         yield (all_dates.drop(to_drop),)
 
     # Also test with the trading calendar.
-    trading_days = get_calendar("XSHG").all_days
+    trading_days = get_calendar("NYSE").all_days
     yield (trading_days[trading_days.slice_indexer(start, stop)],)
 
 
