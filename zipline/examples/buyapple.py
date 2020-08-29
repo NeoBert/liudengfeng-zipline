@@ -13,18 +13,13 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""运行方法
 
-激活环境
-转移至文件所在的目录
-zipline run -f ../../zipline/examples/buyapple.py --start 2016-1-1 --end 2018-1-1 -o buyapple_out.pickle
-"""
 from zipline.api import order, record, symbol
 from zipline.finance import commission, slippage
 
 
 def initialize(context):
-    context.asset = symbol('000333')
+    context.asset = symbol('AAPL')
 
     # Explicitly set the commission/slippage to the "old" value until we can
     # rebuild example data.
@@ -36,7 +31,7 @@ def initialize(context):
 
 def handle_data(context, data):
     order(context.asset, 10)
-    record(MDJT=data.current(context.asset, 'price'))
+    record(AAPL=data.current(context.asset, 'price'))
 
 
 # Note: this function can be removed if running
@@ -46,10 +41,10 @@ def analyze(context=None, results=None):
     # Plot the portfolio and asset data.
     ax1 = plt.subplot(211)
     results.portfolio_value.plot(ax=ax1)
-    ax1.set_ylabel('value')
+    ax1.set_ylabel('Portfolio value (USD)')
     ax2 = plt.subplot(212, sharex=ax1)
-    results.MDJT.plot(ax=ax2)
-    ax2.set_ylabel('MDJT prices')
+    results.AAPL.plot(ax=ax2)
+    ax2.set_ylabel('AAPL price (USD)')
 
     # Show the plot.
     plt.gcf().set_size_inches(18, 8)
