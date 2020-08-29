@@ -551,8 +551,8 @@ class BlazeToPipelineTestCase(WithAssetFinder, ZiplineTestCase):
             index=pd.MultiIndex.from_product(
                 (self.dates.tz_localize('UTC'), self.asset_finder.retrieve_all(
                     self.ASSET_FINDER_EQUITY_SIDS
-                )), names=['datetime', 'asset']
-        )
+                ))
+            )
         )
 
         self._test_id(
@@ -697,7 +697,7 @@ class BlazeToPipelineTestCase(WithAssetFinder, ZiplineTestCase):
             index=pd.MultiIndex.from_product((
                 self.dates.tz_localize('UTC'),
                 self.asset_finder.retrieve_all(self.ASSET_FINDER_EQUITY_SIDS),
-            ), names=['datetime', 'asset']),
+            )),
         )
 
         self._test_id(
@@ -874,9 +874,7 @@ class BlazeToPipelineTestCase(WithAssetFinder, ZiplineTestCase):
             pd.DatetimeIndex(df['timestamp'], tz='EST') +
             timedelta(hours=8, minutes=44)
         ).tz_convert('utc').tz_localize(None)
-        # df.ix[3:5, 'timestamp'] = pd.Timestamp('2014-01-01 13:45')
-        loc = [True if i in range(3,6) else False for i in range(len(df))]
-        df.loc[loc, 'timestamp'] = pd.Timestamp('2014-01-01 13:45')
+        df.ix[3:5, 'timestamp'] = pd.Timestamp('2014-01-01 13:45')
         expr = bz.data(df, name='expr', dshape=self.dshape)
         loader = BlazeLoader()
         ds = from_blaze(
@@ -902,14 +900,12 @@ class BlazeToPipelineTestCase(WithAssetFinder, ZiplineTestCase):
         expected['timestamp'] = expected['timestamp'].dt.normalize().astype(
             'datetime64[ns]',
         ).dt.tz_localize('utc')
-        # expected.ix[3:5, 'timestamp'] += timedelta(days=1)
-        loc = [True if i in range(3,6) else False for i in range(len(expected))]
-        expected.loc[loc, 'timestamp'] += timedelta(days=1)
+        expected.ix[3:5, 'timestamp'] += timedelta(days=1)
         expected.set_index(['timestamp', 'sid'], inplace=True)
         expected.index = pd.MultiIndex.from_product((
             expected.index.levels[0],
             self.asset_finder.retrieve_all(expected.index.levels[1]),
-        ), names=['datetime', 'asset'])
+        ))
         assert_frame_equal(result, expected, check_dtype=False)
 
     def test_id(self):
@@ -942,7 +938,7 @@ class BlazeToPipelineTestCase(WithAssetFinder, ZiplineTestCase):
         expected.index = pd.MultiIndex.from_product((
             self.dates.tz_localize('UTC'),
             self.asset_finder.retrieve_all(self.asset_finder.sids),
-        ), names=['datetime', 'asset'])
+        ))
         self._test_id(
             self.df,
             self.dshape,
@@ -984,7 +980,7 @@ class BlazeToPipelineTestCase(WithAssetFinder, ZiplineTestCase):
         expected.index = pd.MultiIndex.from_product((
             self.dates.tz_localize('UTC'),
             self.asset_finder.retrieve_all(self.asset_finder.sids),
-        ), names=['datetime', 'asset'])
+        ))
         self._test_id(
             self.df,
             self.dshape,
@@ -1045,7 +1041,7 @@ class BlazeToPipelineTestCase(WithAssetFinder, ZiplineTestCase):
             index=pd.MultiIndex.from_product(
                 (self.dates.tz_localize('UTC'), self.asset_finder.retrieve_all(
                     self.ASSET_FINDER_EQUITY_SIDS
-                )), names=['datetime', 'asset']
+                )),
             ),
         )
         self._test_id(
@@ -1091,7 +1087,7 @@ class BlazeToPipelineTestCase(WithAssetFinder, ZiplineTestCase):
         expected.index = pd.MultiIndex.from_product((
             self.dates.tz_localize('UTC'),
             self.asset_finder.retrieve_all(self.asset_finder.sids),
-        ), names=['datetime', 'asset'])
+        ))
         self._test_id(
             df,
             var * Record(fields),
@@ -1248,7 +1244,7 @@ class BlazeToPipelineTestCase(WithAssetFinder, ZiplineTestCase):
             index=pd.MultiIndex.from_product(
                 (self.dates.tz_localize('UTC'), self.asset_finder.retrieve_all(
                     self.ASSET_FINDER_EQUITY_SIDS
-                )), names=['datetime', 'asset']
+                )),
             ),
         )
         self._test_id(
@@ -1408,7 +1404,7 @@ class BlazeToPipelineTestCase(WithAssetFinder, ZiplineTestCase):
                 index=pd.MultiIndex.from_product((
                     sorted(expected_views.keys()),
                     finder.retrieve_all(asset_info.index),
-                ), names=['datetime', 'asset']),
+                )),
                 columns=('value',),
             )
             dates = self.dates
@@ -1651,7 +1647,7 @@ class BlazeToPipelineTestCase(WithAssetFinder, ZiplineTestCase):
                 index=pd.MultiIndex.from_product((
                     sorted(expected_views.keys()),
                     finder.retrieve_all(asset_info.index),
-                ), names=['datetime', 'asset']),
+                )),
             )
             dates = self.dates
             dates = dates.insert(len(dates), dates[-1] + timedelta(days=1))
@@ -1696,7 +1692,7 @@ class BlazeToPipelineTestCase(WithAssetFinder, ZiplineTestCase):
                 index=pd.MultiIndex.from_product((
                     sorted(expected_views.keys()),
                     finder.retrieve_all(simple_asset_info.index),
-                ), names=['datetime', 'asset']),
+                )),
                 columns=('value',),
             )
             dates = self.dates
@@ -2009,7 +2005,7 @@ class BlazeToPipelineTestCase(WithAssetFinder, ZiplineTestCase):
                 index=pd.MultiIndex.from_product((
                     sorted(expected_views.keys()),
                     finder.retrieve_all(asset_info.index),
-                ), names=['datetime', 'asset']),
+                )),
                 columns=('value',),
             )
 
@@ -2067,7 +2063,7 @@ class BlazeToPipelineTestCase(WithAssetFinder, ZiplineTestCase):
                 list(concatv(*([value] * nassets for value in values))),
                 index=pd.MultiIndex.from_product(
                     (sorted(expected_views.keys()),
-                     finder.retrieve_all(asset_info.index),), names=['datetime', 'asset']
+                     finder.retrieve_all(asset_info.index),)
                 ), columns=('value',),
             )
 
@@ -2131,7 +2127,7 @@ class BlazeToPipelineTestCase(WithAssetFinder, ZiplineTestCase):
                 index=pd.MultiIndex.from_product((
                     sorted(expected_views.keys()),
                     finder.retrieve_all(simple_asset_info.index),
-                ), names=['datetime', 'asset']),
+                )),
                 columns=('value',),
             )
 
@@ -2259,7 +2255,7 @@ class BlazeToPipelineTestCase(WithAssetFinder, ZiplineTestCase):
                 index=pd.MultiIndex.from_product((
                     sorted(expected_views.keys()),
                     finder.retrieve_all(simple_asset_info.index),
-                ), names=['datetime', 'asset']),
+                )),
                 columns=('value',),
             )
 
@@ -2398,7 +2394,6 @@ class MiscTestCase(ZiplineTestCase):
         class BadRepr(object):
             """A class which cannot be repr'd.
             """
-
             def __init__(self, name):
                 self._name = name
 
