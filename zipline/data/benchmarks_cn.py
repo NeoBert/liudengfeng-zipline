@@ -20,4 +20,4 @@ def get_cn_benchmark_returns(symbol='000300'):
     index = pd.DatetimeIndex(df['日期'].values)
     s = pd.Series(df['涨跌幅'].values / 100.0,
                   index=index)
-    return s.sort_index().tz_localize('UTC').dropna()
+    return s.sort_index().tz_localize('UTC').sort_index().dropna()

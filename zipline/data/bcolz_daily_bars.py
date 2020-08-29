@@ -34,7 +34,7 @@ from six import iteritems, viewkeys
 from toolz import compose
 from trading_calendars import get_calendar
 
-from zipline.data.session_bars import SessionBarReader
+from zipline.data.session_bars import CurrencyAwareSessionBarReader
 from zipline.data.bar_reader import (
     NoDataAfterDate,
     NoDataBeforeDate,
@@ -60,8 +60,9 @@ UINT32_MAX = iinfo(np.uint32).max
 
 def check_uint32_safe(value, colname):
     if value >= UINT32_MAX:
-        raise ValueError("Value %s from column '%s' is too large" %
-                         (value, colname))
+        raise ValueError(
+            "Value %s from column '%s' is too large" % (value, colname)
+        )
 
 
 @expect_element(invalid_data_behavior={'warn', 'raise', 'ignore'})
@@ -82,7 +83,7 @@ def winsorise_uint32(df, invalid_data_behavior, column, *columns):
     truncated : pd.DataFrame
         ``df`` with values that do not fit into a uint32 zeroed out.
     """
-    columns = list((column, ) + columns)
+    columns = list((column,) + columns)
     mask = df[columns] > UINT32_MAX
 
     if invalid_data_behavior != 'ignore':
@@ -97,15 +98,14 @@ def winsorise_uint32(df, invalid_data_behavior, column, *columns):
         if invalid_data_behavior == 'raise':
             raise ValueError(
                 '%d values out of bounds for uint32: %r' % (
-                    mv.sum(),
-                    df[mask.any(axis=1)],
-                ), )
+                    mv.sum(), df[mask.any(axis=1)],
+                ),
+            )
         if invalid_data_behavior == 'warn':
             warnings.warn(
                 'Ignoring %d values because they are out of bounds for'
                 ' uint32: %r' % (
-                    mv.sum(),
-                    df[mask.any(axis=1)],
+                    mv.sum(), df[mask.any(axis=1)],
                 ),
                 stacklevel=3,  # one extra frame for `expect_element`
             )
@@ -147,10 +147,13 @@ class BcolzDailyBarWriter(object):
 
         if start_session != end_session:
             if not calendar.is_session(start_session):
-                raise ValueError("Start session %s is invalid!" %
-                                 start_session)
+                raise ValueError(
+                    "Start session %s is invalid!" % start_session
+                )
             if not calendar.is_session(end_session):
-                raise ValueError("End session %s is invalid!" % end_session)
+                raise ValueError(
+                    "End session %s is invalid!" % end_session
+                )
 
         self._start_session = start_session
         self._end_session = end_session
@@ -257,7 +260,6 @@ class BcolzDailyBarWriter(object):
                                                     self._end_session)
 
         if assets is not None:
-
             @apply
             def iterator(iterator=iterator, assets=set(assets)):
                 for asset_id, table in iterator:
@@ -317,13 +319,15 @@ class BcolzDailyBarWriter(object):
                             np.array(table['day']),
                             unit='s',
                             utc=True,
-                        )).tolist(),
+                        )
+                    ).tolist(),
                     to_datetime(
                         np.array(table['day']),
                         unit='s',
                         utc=True,
                     ).difference(asset_sessions).tolist(),
-                ))
+                )
+            )
 
             # Calculate the number of trading days between the first date
             # in the stored data and the first date of **this** asset. This
@@ -342,7 +346,8 @@ class BcolzDailyBarWriter(object):
         )
 
         full_table.attrs['first_trading_day'] = (
-            earliest_date if earliest_date is not None else iNaT)
+            earliest_date if earliest_date is not None else iNaT
+        )
 
         full_table.attrs['first_row'] = first_row
         full_table.attrs['last_row'] = last_row
@@ -372,7 +377,7 @@ class BcolzDailyBarWriter(object):
         return ctable.fromdataframe(processed)
 
 
-class BcolzDailyBarReader(SessionBarReader):
+class BcolzDailyBarReader(CurrencyAwareSessionBarReader):
     """
     Reader for raw pricing data written by BcolzDailyOHLCVWriter.
 
@@ -443,7 +448,6 @@ class BcolzDailyBarReader(SessionBarReader):
     --------
     zipline.data.bcolz_daily_bars.BcolzDailyBarWriter
     """
-
     def __init__(self, table, read_all_threshold=3000):
         self._maybe_table_rootdir = table
         # Cache of fully read np.array for the carrays in the daily bar table.
@@ -483,31 +487,36 @@ class BcolzDailyBarReader(SessionBarReader):
         return {
             int(asset_id): start_index
             for asset_id, start_index in iteritems(
-                self._table.attrs['first_row'], )
+                self._table.attrs['first_row'],
+            )
         }
 
     @lazyval
     def _last_rows(self):
         return {
             int(asset_id): end_index
-            for asset_id, end_index in iteritems(self._table.attrs['last_row'],
-                                                 )
+            for asset_id, end_index in iteritems(
+                self._table.attrs['last_row'],
+            )
         }
 
     @lazyval
     def _calendar_offsets(self):
         return {
             int(id_): offset
-            for id_, offset in iteritems(self._table.attrs['calendar_offset'],
-                                         )
+            for id_, offset in iteritems(
+                self._table.attrs['calendar_offset'],
+            )
         }
 
     @lazyval
     def first_trading_day(self):
         try:
-            return Timestamp(self._table.attrs['first_trading_day'],
-                             unit='s',
-                             tz='UTC')
+            return Timestamp(
+                self._table.attrs['first_trading_day'],
+                unit='s',
+                tz='UTC'
+            )
         except KeyError:
             return None
 
@@ -666,17 +675,19 @@ class BcolzDailyBarReader(SessionBarReader):
         """
         try:
             day_loc = self.sessions.get_loc(day)
-        except:
+        except Exception:
             raise NoDataOnDate("day={0} is outside of calendar={1}".format(
                 day, self.sessions))
         offset = day_loc - self._calendar_offsets[sid]
         if offset < 0:
             raise NoDataBeforeDate(
-                "No data on or before day={0} for sid={1}".format(day, sid))
+                "No data on or before day={0} for sid={1}".format(
+                    day, sid))
         ix = self._first_rows[sid] + offset
         if ix > self._last_rows[sid]:
             raise NoDataAfterDate(
-                "No data on or after day={0} for sid={1}".format(day, sid))
+                "No data on or after day={0} for sid={1}".format(
+                    day, sid))
         return ix
 
     def get_value(self, sid, dt, field):

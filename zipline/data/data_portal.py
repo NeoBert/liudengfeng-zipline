@@ -84,7 +84,6 @@ OHLCV_FIELDS = frozenset([
     "open", "high", "low", "close", "volume"
 ])
 
-
 OHLCVP_FIELDS = frozenset([
     "open", "high", "low", "close", "volume", "price"
 ] + list(ADJUST_FACTOR.keys()))

@@ -240,7 +240,7 @@ class BcolzMinuteBarMetadata(object):
             else:
                 # No calendar info included in older versions, so
                 # default to XSHG.
-                calendar = get_calendar('XNYS')
+                calendar = get_calendar('XSHG')
 
                 start_session = pd.Timestamp(
                     raw_data['first_trading_day'], tz='UTC')
@@ -650,7 +650,7 @@ class BcolzMinuteBarWriter(object):
             # No need to pad.
             return
         # 🆗 不得使用相等判断
-        if last_date is pd.NaT:
+        if pd.isnull(last_date):
             # If there is no data, determine how many days to add so that
             # desired days are written to the correct slots.
             days_to_zerofill = tds[tds.slice_indexer(end=date)]
