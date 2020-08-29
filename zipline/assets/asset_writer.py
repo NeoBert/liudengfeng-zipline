@@ -15,7 +15,6 @@
 from collections import namedtuple
 import re
 
-from contextlib import ExitStack
 import numpy as np
 import pandas as pd
 import sqlalchemy as sa
@@ -35,7 +34,7 @@ from zipline.assets.asset_db_schema import (
     metadata,
     version_info,
 )
-
+from zipline.utils.compat import ExitStack
 from zipline.utils.preprocess import preprocess
 from zipline.utils.range import from_tuple, intersecting_ranges
 from zipline.utils.sqlite_utils import coerce_string_to_eng
@@ -382,6 +381,8 @@ def _dt_to_epoch_ns(dt_series):
         The index converted to nanoseconds since the epoch.
     """
     # 🆗 指定为utc
+    # 使用`dt_series.values`不带时区信息
+    # 后者转换方式并不成立
     index = pd.to_datetime(dt_series.values, utc=True)
     if index.tzinfo is None:
         index = index.tz_localize('UTC')

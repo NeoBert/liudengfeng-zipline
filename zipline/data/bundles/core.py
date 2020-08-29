@@ -4,8 +4,8 @@ import os
 import shutil
 import warnings
 
-from contextlib import ExitStack
 import click
+from logbook import Logger
 import pandas as pd
 from trading_calendars import get_calendar
 from toolz import curry, complement, take
@@ -23,10 +23,12 @@ from zipline.utils.cache import (
     working_dir,
     working_file,
 )
-from zipline.utils.compat import mappingproxy
+from zipline.utils.compat import ExitStack, mappingproxy
 from zipline.utils.input_validation import ensure_timestamp, optionally
 import zipline.utils.paths as pth
 from zipline.utils.preprocess import preprocess
+
+log = Logger(__name__)
 
 
 def asset_db_path(bundle_name, timestr, environ=None, db_version=None):
@@ -178,7 +180,6 @@ class BadClean(click.ClickException, ValueError):
     --------
     clean
     """
-
     def __init__(self, before, after, keep_last):
         super(BadClean, self).__init__(
             'Cannot pass a combination of `before` and `after` with'
@@ -387,9 +388,7 @@ def _make_bundle_core():
                     pth.data_path([], environ=environ))
                 )
                 daily_bars_path = wd.ensure_dir(
-                    *daily_equity_relative(
-                        name, timestr,
-                    )
+                    *daily_equity_relative(name, timestr)
                 )
                 daily_bar_writer = BcolzDailyBarWriter(
                     daily_bars_path,
@@ -404,23 +403,18 @@ def _make_bundle_core():
 
                 daily_bar_writer.write(())
                 minute_bar_writer = BcolzMinuteBarWriter(
-                    wd.ensure_dir(*minute_equity_relative(
-                        name, timestr)
-                    ),
+                    wd.ensure_dir(*minute_equity_relative(name, timestr)),
                     calendar,
                     start_session,
                     end_session,
                     minutes_per_day=bundle.minutes_per_day,
                 )
-                assets_db_path = wd.getpath(*asset_db_relative(
-                    name, timestr,
-                ))
+                assets_db_path = wd.getpath(*asset_db_relative(name, timestr))
                 asset_db_writer = AssetDBWriter(assets_db_path)
 
                 adjustment_db_writer = stack.enter_context(
                     SQLiteAdjustmentWriter(
-                        wd.getpath(*adjustment_db_relative(
-                            name, timestr)),
+                        wd.getpath(*adjustment_db_relative(name, timestr)),
                         BcolzDailyBarReader(daily_bars_path),
                         overwrite=True,
                     )
@@ -434,6 +428,7 @@ def _make_bundle_core():
                     raise ValueError('Need to ingest a bundle that creates '
                                      'writers in order to downgrade the assets'
                                      ' db.')
+            log.info("Ingesting {}.", name)
             bundle.ingest(
                 environ,
                 asset_db_writer,
@@ -607,6 +602,7 @@ def _make_bundle_core():
         cleaned = set()
         for run in all_runs:
             if should_clean(run):
+                log.info("Cleaning {}.", run)
                 path = pth.data_path([name, run], environ=environ)
                 shutil.rmtree(path)
                 cleaned.add(path)
