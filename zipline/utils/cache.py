@@ -11,7 +11,6 @@ from shutil import move, rmtree
 from tempfile import NamedTemporaryFile, mkdtemp
 
 import pandas as pd
-import pyarrow as pa
 
 from .compat import PY2
 from .context_tricks import nop_context
@@ -55,7 +54,6 @@ class CachedObject(object):
         ...
     Expired: 2014-01-01 00:00:00+00:00
     """
-
     def __init__(self, value, expires):
         self._value = value
         self._expires = expires
@@ -210,12 +208,14 @@ class dataframe_cache(MutableMapping):
                  path=None,
                  lock=None,
                  clean_on_failure=True,
-                 serialization='msgpack'):
+                 # 🆗 指定一个负数就相当于指定 HIGHEST_PROTOCOL
+                 serialization='pickle:-1'):
         self.path = path if path is not None else mkdtemp()
         self.lock = lock if lock is not None else nop_context
         self.clean_on_failure = clean_on_failure
 
         if serialization == 'msgpack':
+            raise NotImplemented("不支持msgpack")
             # self.serialize = pd.DataFrame.to_msgpack
             self.serialize = self._serialize_msgpack
             # self.deserialize = pd.read_msgpack
@@ -236,17 +236,6 @@ class dataframe_cache(MutableMapping):
             )
 
         ensure_directory(self.path)
-
-    def _serialize_msgpack(self, df, path):
-        context = pa.default_serialization_context()
-        df_bytestring = context.serialize(df).to_buffer().to_pybytes()
-        with open(path, 'wb') as f:
-            f.write(df_bytestring)
-
-    def _deserialize_msgpack(self, f):
-        context = pa.default_serialization_context()
-        data = f.read()
-        return context.deserialize(data)
 
     def _serialize_pickle(self, df, path):
         with open(path, 'wb') as f:
@@ -324,7 +313,6 @@ class working_file(object):
     ``working_file`` uses :func:`shutil.move` to move the actual files,
     meaning it has as strong of guarantees as :func:`shutil.move`.
     """
-
     def __init__(self, final_path, *args, **kwargs):
         self._tmpfile = NamedTemporaryFile(delete=False, *args, **kwargs)
         self._final_path = final_path
@@ -368,7 +356,6 @@ class working_dir(object):
     ``working_dir`` uses :func:`dir_util.copy_tree` to move the actual files,
     meaning it has as strong of guarantees as :func:`dir_util.copy_tree`.
     """
-
     def __init__(self, final_path, *args, **kwargs):
         self.path = mkdtemp()
         self._final_path = final_path

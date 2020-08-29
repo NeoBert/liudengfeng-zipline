@@ -10,7 +10,8 @@ from toolz.curried.operator import getitem
 from six import viewkeys, exec_
 from zipline.utils.compat import getargspec, wraps
 
-
+# 🆗 借用trading_calendar 包的处理方式
+# 只处理PY3，不再兼容PY2
 _code_argorder = (
     ('co_argcount',)
 ) + (
