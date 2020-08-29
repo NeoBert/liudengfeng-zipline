@@ -23,14 +23,21 @@ from .finance.asset_restrictions import (
     RESTRICTION_STATES,
 )
 from .finance import commission, execution, slippage, cancel_policy
-from .finance.cancel_policy import (NeverCancel, EODCancel)
+from .finance.cancel_policy import (
+    NeverCancel,
+    EODCancel
+)
 from .finance.slippage import (
     FixedSlippage,
     FixedBasisPointsSlippage,
     VolumeShareSlippage,
 )
 from .utils import math_utils, events
-from .utils.events import (calendars, date_rules, time_rules)
+from .utils.events import (
+    calendars,
+    date_rules,
+    time_rules
+)
 
 __all__ = [
     'EODCancel',

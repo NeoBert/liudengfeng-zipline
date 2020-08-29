@@ -167,7 +167,7 @@ def _filter_requirements(lines_iter, filter_names=None,
 REQ_PATTERN = re.compile(
     r"(?P<name>[^=<>;]+)((?P<comp>[<=>]{1,2})(?P<spec>[^;]+))?"
     r"(?:(;\W*python_version\W*(?P<pycomp>[<=>]{1,2})\W*"
-    r"(?P<pyspec>[0-9\.]+)))?"
+    r"(?P<pyspec>[0-9.]+)))?\W*"
 )
 
 
@@ -257,9 +257,14 @@ conditional_arguments = {
     'setup_requires' if not conda_build else 'build_requires': setup_requires,
 }
 
+if 'sdist' in sys.argv:
+    with open('README.rst') as f:
+        conditional_arguments['long_description'] = f.read()
+
+
 setup(
     name='zipline',
-    url="http://zipline.io",
+    url="https://zipline.io",
     version='1.4.0', #versioneer.get_version(),
     cmdclass=LazyBuildExtCommandClass(versioneer.get_cmdclass()),
     description='A backtester for financial algorithms.',

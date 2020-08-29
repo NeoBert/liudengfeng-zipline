@@ -129,7 +129,7 @@ def ipython_only(option):
     '-D',
     '--define',
     multiple=True,
-    help="定义名称绑定在在执行算法文本前的名称空间。"
+    help="在执行算法文本前，定义绑定在名称空间一个名称。"
     " 例如'-Dname=value'，值可为python表达式。"
     "这些是按顺序评估的，因此它们可以引用以前定义的名称。",
 )
@@ -160,21 +160,20 @@ def ipython_only(option):
     type=Timestamp(),
     default=pd.Timestamp.utcnow(),
     show_default=False,
-    help='查找数据日期或之前的日期。\n'
+    help='指定日期，基于此日期或之前来查找数据。\n'
     '[default: <current-time>]')
 @click.option(
     '-bf',
     '--benchmark-file',
     default=None,
     type=click.Path(exists=True, dir_okay=False, readable=True, path_type=str),
-    help='The csv file that contains the benchmark returns',
+    help='包含基准收益率数据的csv格式文件',
 )
 @click.option(
     '--benchmark-symbol',
     default=None,
     type=click.STRING,
-    help="The symbol of the instrument to be used as a benchmark "
-         "(should exist in the ingested bundle)",
+    help="用于基准收益率的符号(应当存在于数据包中) ",
 )
 @click.option(
     '--benchmark-sid',
@@ -187,7 +186,7 @@ def ipython_only(option):
     '--no-benchmark',
     is_flag=True,
     default=False,
-    help="If passed, use a benchmark of zero returns.",
+    help="如果传入此参数，使用零基准收益率。",
 )
 @click.option(
     '-s',

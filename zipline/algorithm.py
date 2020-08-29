@@ -19,7 +19,6 @@ from datetime import tzinfo, time
 import logbook
 import pytz
 import pandas as pd
-from contextlib import ExitStack
 import numpy as np
 
 from itertools import chain, repeat
@@ -95,6 +94,7 @@ from zipline.utils.api_support import (
     require_not_initialized,
     ZiplineAPI,
     disallowed_in_before_trading_start)
+from zipline.utils.compat import ExitStack
 from zipline.utils.input_validation import (
     coerce_string,
     ensure_upper_case,
@@ -520,13 +520,13 @@ class TradingAlgorithm(object):
 
         # FIXME generalize these values
         before_trading_start_minutes = days_at_time(
-            trading_sessions,
+            self.sim_params.sessions,
             time(9, 30),  # 🆗
             "Asia/Shanghai"  # 🆗
         )
 
         return MinuteSimulationClock(
-            trading_sessions,
+            self.sim_params.sessions,
             execution_opens,
             execution_closes,
             before_trading_start_minutes,
@@ -670,7 +670,11 @@ class TradingAlgorithm(object):
                 daily_perfs.append(perf['daily_perf'])
             else:
                 self.risk_report = perf
-        # dts含tz信息
+        # 🆗 原文如下
+        # daily_dts = pd.DatetimeIndex(
+        #     [p['period_close'] for p in daily_perfs], tz='UTC'
+        # )
+        # 首先判断 dts中是否包含含tz信息
         dts = [p['period_close'] for p in daily_perfs]
         if dts[0].tz is None:
             daily_dts = pd.DatetimeIndex(
