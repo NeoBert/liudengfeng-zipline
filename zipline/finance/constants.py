@@ -40,7 +40,7 @@ FUTURE_EXCHANGE_FEES_BY_SYMBOL = {
     'ED': 1.25,  # Eurodollar
     'EE': 1.50,  # Euro FX e-mini
     'EI': 1.50,  # MSCI Emerging Markets mini
-    'EL': 1.50,  # Eurodollar XSHG LIFFE
+    'EL': 1.50,  # Eurodollar NYSE LIFFE
     'ER': 0.65,  # Russell2000 e-mini
     'ES': 1.18,  # SP500 e-mini
     'ET': 1.50,  # Ethanol
@@ -118,7 +118,7 @@ ROOT_SYMBOL_TO_ETA = {
     'ED': 0.094184297090245755,  # Eurodollar
     'EE': 0.048713151357687556,  # Euro FX e-mini
     'EI': 0.031712708439692663,  # MSCI Emerging Markets mini
-    'EL': 0.044207422018209361,  # Eurodollar XSHG LIFFE
+    'EL': 0.044207422018209361,  # Eurodollar NYSE LIFFE
     'ER': 0.045930567737711307,  # Russell2000 e-mini
     'ES': 0.047304418321993502,  # SP500 e-mini
     'ET': DEFAULT_ETA,           # Ethanol
