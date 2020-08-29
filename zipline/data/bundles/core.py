@@ -222,7 +222,7 @@ def _make_bundle_core():
     @curry
     def register(name,
                  f,
-                 calendar_name='XSHE',
+                 calendar_name='XSHG',
                  # 🆗 减少写入数据量【必须为交易日】
                  start_session=pd.Timestamp('2010-01-04', tz='UTC'),  # None,
                  end_session=None,

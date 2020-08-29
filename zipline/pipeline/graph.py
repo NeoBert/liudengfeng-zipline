@@ -455,6 +455,7 @@ class ExecutionPlan(TermGraph):
         """
         return {
             term: attrs['extra_rows']
+            # 🆗 networkx升级后签名变化
             for term, attrs in iteritems(self.graph.nodes)
         }
 
@@ -462,6 +463,7 @@ class ExecutionPlan(TermGraph):
         """
         Ensure that we're going to compute at least N extra rows of `term`.
         """
+        # 🆗 networkx升级后签名变化
         attrs = self.graph.nodes[term]
         attrs['extra_rows'] = max(N, attrs.get('extra_rows', 0))
 
