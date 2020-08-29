@@ -14,7 +14,7 @@ from numpy import (
 )
 from numexpr import evaluate
 
-from zipline.pipeline.data import EquityPricing
+from zipline.pipeline.data import EquityPricing, CNEquityPricing
 from zipline.pipeline.factors import CustomFactor
 from zipline.pipeline.mixins import SingleInputMixin
 from zipline.utils.input_validation import expect_bounded
@@ -49,7 +49,7 @@ class RSI(SingleInputMixin, CustomFactor):
     **Default Window Length**: 15
     """
     window_length = 15
-    inputs = (EquityPricing.close,)
+    inputs = (CNEquityPricing.close,)
     window_safe = True
 
     def compute(self, today, assets, out, closes):
@@ -83,7 +83,7 @@ class BollingerBands(CustomFactor):
         upper and lower bands.
     """
     params = ('k',)
-    inputs = (EquityPricing.close,)
+    inputs = (CNEquityPricing.close,)
     outputs = 'lower', 'middle', 'upper'
 
     def compute(self, today, assets, out, close, k):
@@ -108,7 +108,7 @@ class Aroon(CustomFactor):
         indicator.
     """ # noqa
 
-    inputs = (EquityPricing.low, EquityPricing.high)
+    inputs = (CNEquityPricing.low, CNEquityPricing.high)
     outputs = ('down', 'up')
 
     def compute(self, today, assets, out, lows, highs):
@@ -152,7 +152,7 @@ class FastStochasticOscillator(CustomFactor):
     -------
     out: %K oscillator
     """
-    inputs = (EquityPricing.close, EquityPricing.low, EquityPricing.high)
+    inputs = (CNEquityPricing.close, CNEquityPricing.low, CNEquityPricing.high)
     window_safe = True
     window_length = 14
 
@@ -201,7 +201,7 @@ class IchimokuKinkoHyo(CustomFactor):
         'kijun_sen_length': 26,
         'chikou_span_length': 26,
     }
-    inputs = (EquityPricing.high, EquityPricing.low, EquityPricing.close)
+    inputs = (CNEquityPricing.high, CNEquityPricing.low, CNEquityPricing.close)
     outputs = (
         'tenkan_sen',
         'kijun_sen',
@@ -282,9 +282,9 @@ class TrueRange(CustomFactor):
     **Default Window Length:** 2
     """
     inputs = (
-        EquityPricing.high,
-        EquityPricing.low,
-        EquityPricing.close,
+        CNEquityPricing.high,
+        CNEquityPricing.low,
+        CNEquityPricing.close,
     )
     window_length = 2
 
@@ -329,7 +329,7 @@ class MovingAverageConvergenceDivergenceSignal(CustomFactor):
     ``window_length`` parameter. ``window_length`` is inferred from
     ``slow_period`` and ``signal_period``.
     """
-    inputs = (EquityPricing.close,)
+    inputs = (CNEquityPricing.close,)
     # We don't use the default form of `params` here because we want to
     # dynamically calculate `window_length` from the period lengths in our
     # __new__.

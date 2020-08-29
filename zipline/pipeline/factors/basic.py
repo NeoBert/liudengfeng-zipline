@@ -17,7 +17,7 @@ from numpy import (
     unique,
 )
 
-from zipline.pipeline.data import EquityPricing
+from zipline.pipeline.data import EquityPricing, CNEquityPricing
 from zipline.utils.input_validation import expect_types
 from zipline.utils.math_utils import (
     nanargmax,
@@ -39,9 +39,9 @@ class Returns(CustomFactor):
     """
     Calculates the percent change in close price over the given window_length.
 
-    **Default Inputs**: [EquityPricing.close]
+    **Default Inputs**: [CNEquityPricing.close]
     """
-    inputs = [EquityPricing.close]
+    inputs = [CNEquityPricing.close]
     window_safe = True
 
     def _validate(self):
@@ -62,7 +62,7 @@ class OpenReturns(CustomFactor):
     Calculate the opening change rate based on the previous closing price
     **Default Inputs**: [CNEquityPricing.close, CNEquityPricing.open]
     """
-    inputs = [EquityPricing.b_close, EquityPricing.b_open]
+    inputs = [CNEquityPricing.b_close, CNEquityPricing.b_open]
     window_safe = True
     window_length = 2
 
@@ -110,9 +110,9 @@ class DailyReturns(Returns):
     """
     Calculates daily percent change in close price.
 
-    **Default Inputs**: [EquityPricing.close]
+    **Default Inputs**: [CNEquityPricing.close]
     """
-    inputs = [EquityPricing.close]
+    inputs = [CNEquityPricing.close]
     window_safe = True
     window_length = 2
 
@@ -187,7 +187,7 @@ class AverageDollarVolume(CustomFactor):
 
     **Default Window Length:** None
     """
-    inputs = [EquityPricing.close, EquityPricing.volume]
+    inputs = [CNEquityPricing.close, CNEquityPricing.volume]
 
     def compute(self, today, assets, out, close, volume):
         out[:] = nansum(close * volume, axis=0) / len(close)
