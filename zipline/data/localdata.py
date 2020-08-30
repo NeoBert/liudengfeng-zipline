@@ -491,11 +491,14 @@ def _single_minutely_equity(one_day, code):
 
 def _fetch_single_minutely_equity(one_day, stock_code, default):
     """
+    Notes:
+    ------
+        每天交易数据长度应为240
     Examples
     --------
     >>> stock_code = '000333'
     >>> one_day = pd.Timestamp('2020-07-31 00:00:00', freq='B')
-    >>> df = _fetch_single_minutely_equity(one_day, stock_code)
+    >>> df = _fetch_single_minutely_equity(one_day, stock_code, {})
     >>> df.tail()
                         close   high    low   open  volume
     2018-04-19 14:56:00  51.55  51.56  51.50  51.55  376400
@@ -507,16 +510,36 @@ def _fetch_single_minutely_equity(one_day, stock_code, default):
     df = _single_minutely_equity(one_day, stock_code)
     if df.empty:
         return default[one_day]
-
-    resampled = df.resample('1T')
+    end_times = [('11:30', '11:31'), ('15:00', '15:01')]
+    resampled = df.resample('1T', label='right')
     ohlc = resampled['price'].ohlc().bfill()
+    for ts in end_times:
+        # 将尾部调整为前一分钟的数据
+        iloc0 = ohlc.index.indexer_at_time(ts[0])
+        iloc1 = ohlc.index.indexer_at_time(ts[1])
+        prev = ohlc.iloc[iloc0, :]
+        end = ohlc.iloc[iloc1, :]
+        high = max(prev['high'].values, end['high'].values)
+        low = min(prev['low'].values, end['low'].values)
+        close = end['close'].values
+        ohlc.loc[ohlc.index[iloc0], 'high'] = high
+        ohlc.loc[ohlc.index[iloc0], 'low'] = low
+        ohlc.loc[ohlc.index[iloc0], 'close'] = close
+        # ohlc.drop(ohlc.index[iloc1], inplace=True)
     # 换算为股
     v = resampled['volume'].sum() * 100
+    for ts in end_times:
+        # 将尾部调整为前一分钟的数据
+        iloc0 = v.index.indexer_at_time(ts[0])
+        iloc1 = v.index.indexer_at_time(ts[1])
+        # 汇总即可
+        volume = sum(v.iloc[iloc0].values, v.iloc[iloc1].values)
+        v.iloc[iloc0] = volume
+
     ohlcv = pd.concat([ohlc, v], axis=1)
-    # TODO:修改时刻
-    ohlcv.index += pd.Timedelta('1T')
-    am = ohlcv.between_time('09:31', '11:31')
-    pm = ohlcv.between_time('13:01', '15:01')
+
+    am = ohlcv.between_time('09:31', '11:30')
+    pm = ohlcv.between_time('13:01', '15:00')
     return pd.concat([am, pm]).sort_index()
 
 

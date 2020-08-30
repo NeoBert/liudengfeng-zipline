@@ -81,7 +81,7 @@ def _calc_minute_index(market_opens, minutes_per_day):
         start = market_open.asm8
         minute_values = start + deltas
         am_minute_values = minute_values[:half]
-        pm_minute_values = minute_values[-half-1:-1]
+        pm_minute_values = minute_values[-half:]
         values = am_minute_values.tolist() + pm_minute_values.tolist()
         start_ix = minutes_per_day * i
         end_ix = start_ix + minutes_per_day
@@ -803,6 +803,7 @@ class BcolzMinuteBarWriter(object):
         num_rec_mins = table.size
 
         all_minutes = self._minute_index
+
         # Get the latest minute we wish to write to the ctable
         last_minute_to_write = pd.Timestamp(dts[-1], tz='UTC')
 

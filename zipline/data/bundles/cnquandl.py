@@ -202,7 +202,7 @@ def cnminutely_bundle(environ, asset_db_writer, minute_bar_writer,
     # metadata = gen_asset_metadata(include_index=False)  # .iloc[:40, :]
     hc = HotDataCache(gen_asset_metadata, hour=9,
                       minute=30, include_index=False)
-    metadata = hc.data
+    metadata = hc.data # .iloc[:10, :]
     metadata['sid'] = metadata.symbol.map(_to_sid)
     symbol_map = metadata.symbol
     # 限定为最近25个交易日的数据
