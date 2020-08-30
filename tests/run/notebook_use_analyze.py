@@ -56,7 +56,7 @@ def handle_data(context, data):
 
 
 def analyze(context, perf):
-    print('总计数', context.i)  # 应为 1210 = 5 * 242 五个交易日 242 bar / per day
+    print('总计数', context.i)  # 应为 1210 = 5 * 240 五个交易日 240 bar / per day
     fig = plt.figure()
     ax1 = fig.add_subplot(211)
     perf.portfolio_value.plot(ax=ax1)

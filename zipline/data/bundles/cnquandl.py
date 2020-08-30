@@ -141,7 +141,7 @@ def gen_symbol_data(symbol_map, sessions, splits, dividends, is_minutely):
 @bundles.register(
     'cndaily',
     calendar_name='XSHG',
-    minutes_per_day=242)
+    minutes_per_day=240)
 def cndaily_bundle(environ, asset_db_writer, minute_bar_writer,
                    daily_bar_writer, adjustment_writer, calendar,
                    start_session, end_session, cache, show_progress,
@@ -190,7 +190,7 @@ def cndaily_bundle(environ, asset_db_writer, minute_bar_writer,
     calendar_name='XSHG',
     start_session=pd.Timestamp('now', tz='UTC').round(
         'D')-pd.Timedelta('45 days'),
-    minutes_per_day=242)
+    minutes_per_day=240)
 def cnminutely_bundle(environ, asset_db_writer, minute_bar_writer,
                       daily_bar_writer, adjustment_writer, calendar,
                       start_session, end_session, cache, show_progress,

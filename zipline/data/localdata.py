@@ -513,7 +513,7 @@ def _fetch_single_minutely_equity(one_day, stock_code, default):
     # 换算为股
     v = resampled['volume'].sum() * 100
     ohlcv = pd.concat([ohlc, v], axis=1)
-    # 调整1分钟
+    # TODO:修改时刻
     ohlcv.index += pd.Timedelta('1T')
     am = ohlcv.between_time('09:31', '11:31')
     pm = ohlcv.between_time('13:01', '15:01')
