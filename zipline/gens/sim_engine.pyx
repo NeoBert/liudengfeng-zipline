@@ -88,30 +88,20 @@ cdef class MinuteSimulationClock:
         minute_emission = self.minute_emission
 
         for idx, session_nano in enumerate(self.sessions_nanos):
-            print("SESSION_START", pd.Timestamp(session_nano, tz='UTC'))
             yield pd.Timestamp(session_nano, tz='UTC'), SESSION_START
 
             bts_minute = pd.Timestamp(self.bts_nanos[idx], tz='UTC')
             regular_minutes = self.minutes_by_session[session_nano]
 
-            print("bts_minute", bts_minute)
-            print("常规分钟", regular_minutes)
-
             if bts_minute > regular_minutes[-1]:
-                print('before_trading_start is after the last close')
-                print("================================")
                 # before_trading_start is after the last close,
                 # so don't emit it
                 for minute, evt in self._get_minutes_for_list(
                     regular_minutes,
                     minute_emission
                 ):
-                    print(minute, repr(evt))
                     yield minute, evt
             else:
-                print("bts_minute <= regular_minutes[-1]")
-                print(bts_minute, regular_minutes[-1])
-                print("================================")
                 # we have to search a new every session, because there is no
                 # guarantee that any two session start on the same minute
                 bts_idx = regular_minutes.searchsorted(bts_minute)
@@ -121,9 +111,7 @@ cdef class MinuteSimulationClock:
                     regular_minutes[0:bts_idx],
                     minute_emission
                 ):
-                    print(minute, repr(evt))
                     yield minute, evt
-                print("BEFORE_TRADING_START_BAR", bts_minute)
                 yield bts_minute, BEFORE_TRADING_START_BAR
 
                 # emit all the minutes after bts_minute
@@ -131,15 +119,11 @@ cdef class MinuteSimulationClock:
                     regular_minutes[bts_idx:],
                     minute_emission
                 ):
-                    print(minute, repr(evt))
                     yield minute, evt
-            print("SESSION_END", regular_minutes[-1])
             yield regular_minutes[-1], SESSION_END
 
     def _get_minutes_for_list(self, minutes, minute_emission):
         for minute in minutes:
-            print("BAR", minute)
             yield minute, BAR
             if minute_emission:
-                print("MINUTE_END", minute)
                 yield minute, MINUTE_END
