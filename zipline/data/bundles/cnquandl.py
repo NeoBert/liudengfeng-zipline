@@ -17,8 +17,10 @@ from ..localdata import (fetch_single_equity, fetch_single_quity_adjustments,
                          fetch_single_minutely_equity, gen_asset_metadata)
 from . import core as bundles
 from .adjusts import ADJUST_FACTOR
+from .tdt_util import search_most_recent_dt
 
 TODAY = pd.Timestamp('today').normalize()
+ONE_AND_HALF_MONTH_AGO = (TODAY - pd.Timedelta(days=45)).tz_localize('UTC')
 log = make_logger('cnquandl', collection='zipline')
 
 
@@ -188,8 +190,7 @@ def cndaily_bundle(environ, asset_db_writer, minute_bar_writer,
 @bundles.register(
     'cnminutely',
     calendar_name='XSHG',
-    start_session=pd.Timestamp('now', tz='UTC').round(
-        'D')-pd.Timedelta('45 days'),
+    start_session=search_most_recent_dt(ONE_AND_HALF_MONTH_AGO),
     minutes_per_day=240)
 def cnminutely_bundle(environ, asset_db_writer, minute_bar_writer,
                       daily_bar_writer, adjustment_writer, calendar,
@@ -199,16 +200,13 @@ def cnminutely_bundle(environ, asset_db_writer, minute_bar_writer,
     """
     t = time.time()
     log.info('读取股票元数据......')
-    # metadata = gen_asset_metadata(include_index=False)  # .iloc[:40, :]
+
     hc = HotDataCache(gen_asset_metadata, hour=9,
                       minute=30, include_index=False)
-    metadata = hc.data # .iloc[:40, :]
+    metadata = hc.data #.iloc[:40, :]
     metadata['sid'] = metadata.symbol.map(_to_sid)
     symbol_map = metadata.symbol
-    # 限定为最近25个交易日的数据
-    # end = calendar.actual_last_session
-    # start = end - 25 * calendar.day
-    # sessions = calendar.sessions_in_range(start, end)
+
     sessions = calendar.sessions_in_range(start_session, end_session)
 
     log.info('分钟级别数据集（股票数量：{}）'.format(len(symbol_map)))
