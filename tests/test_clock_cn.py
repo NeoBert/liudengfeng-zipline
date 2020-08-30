@@ -16,15 +16,16 @@ from zipline.gens.sim_engine import (
 class TestClock(TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.nyse_calendar = get_calendar("XSHG")
+        cls.xshg_calendar = get_calendar("XSHG")
 
-        # 12-31 周二, 1-1 元旦休市，so there are 3 sessions in this range (31, 2, 3)
-        cls.sessions = cls.nyse_calendar.sessions_in_range(
+        # 12-31 周二, 1-1 元旦休市，so there are 3 sessions
+        # 日期分别为 (31, 2, 3)
+        cls.sessions = cls.xshg_calendar.sessions_in_range(
             pd.Timestamp("2019-12-31"),
             pd.Timestamp("2020-01-03")
         )
 
-        trading_o_and_c = cls.nyse_calendar.schedule.loc[cls.sessions]
+        trading_o_and_c = cls.xshg_calendar.schedule.loc[cls.sessions]
         cls.opens = trading_o_and_c['market_open']
         cls.closes = trading_o_and_c['market_close']
 
@@ -40,7 +41,7 @@ class TestClock(TestCase):
         all_events = list(clock)
 
         def _check_session_bts_first(session_label, events, bts_dt):
-            minutes = self.nyse_calendar.minutes_for_session(session_label)
+            minutes = self.xshg_calendar.minutes_for_session(session_label)
 
             self.assertEqual(245, len(events))
 
@@ -100,7 +101,7 @@ class TestClock(TestCase):
 
     def verify_bts_during_session(self, bts_time, bts_session_times, bts_idx):
         def _check_session_bts_during(session_label, events, bts_dt):
-            minutes = self.nyse_calendar.minutes_for_session(session_label)
+            minutes = self.xshg_calendar.minutes_for_session(session_label)
 
             self.assertEqual(245, len(events))
 
@@ -163,7 +164,7 @@ class TestClock(TestCase):
         # 242 BARs, and then SESSION_END
 
         def _check_session_bts_after(session_label, events):
-            minutes = self.nyse_calendar.minutes_for_session(session_label)
+            minutes = self.xshg_calendar.minutes_for_session(session_label)
 
             self.assertEqual(244, len(events))
             self.assertEqual(events[0], (session_label, SESSION_START))
