@@ -253,7 +253,7 @@ def gen_asset_metadata(only_in=True, only_A=True, include_index=True):
     # 股票数量 >3900
     # 设置max_workers=8，用时 67s
     # 设置max_workers=4，用时 54s
-    with ThreadPoolExecutor(4) as pool:
+    with ThreadPoolExecutor(16) as pool:
         r = pool.map(_stock_first_and_last, s_and_e.symbol.values)
     f_and_l = pd.concat(r)
     df = s_and_e.merge(f_and_l, 'left', on='symbol')
@@ -592,7 +592,7 @@ def fetch_single_minutely_equity(stock_code, start, end):
     func = partial(_fetch_single_minutely_equity,
                    stock_code=stock_code, default=default)
     # dfs = list(map(func, dates))
-    with ThreadPoolExecutor(8) as executor:
+    with ThreadPoolExecutor(16) as executor:
         dfs = executor.map(func, dates)
     return pd.concat(dfs)
 

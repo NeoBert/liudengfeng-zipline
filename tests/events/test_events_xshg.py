@@ -12,6 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+# TODO：考虑午休后，对于周开始、结束的处理不正确，需要修正
 from datetime import timedelta
 from unittest import TestCase
 
@@ -19,12 +20,13 @@ import pandas as pd
 import pytest
 from parameterized import parameterized
 
-from test_events import (StatefulRulesTests, StatelessRulesTests,
-                         minutes_for_days)
 from zipline.testing import parameter_space
 from zipline.utils.events import (AfterOpen, BeforeClose,
                                   NDaysBeforeLastTradingDayOfWeek,
                                   NthTradingDayOfWeek)
+
+from .test_events import (StatefulRulesTests, StatelessRulesTests,
+                          minutes_for_days)
 
 
 class TestStatelessRulesXSHG(StatelessRulesTests, TestCase):
@@ -32,7 +34,7 @@ class TestStatelessRulesXSHG(StatelessRulesTests, TestCase):
 
     HALF_SESSION = pd.Timestamp("2019-07-03", tz='UTC')
     FULL_SESSION = pd.Timestamp("2019-09-24", tz='UTC')
-    
+
     # 期望触发未清洗
     @pytest.mark.skip
     @parameter_space(rule_offset=(0, 1, 2, 3, 4),

@@ -372,7 +372,7 @@ class AfterOpen(StatelessRule):
             msg = """
             由于午休关系，使用开盘后2小时，会导致事件无法触发。
             请考虑使用`time_rules.market_close`。
-            如计划在开盘后2h5m执行任务，改用：
+            如计划在开盘后2h5m执行任务，改用`BeforeClose`规则：
             `time_rules.market_close(hours=1, minutes=55)`
             """
             raise ValueError(msg) 
@@ -435,7 +435,7 @@ class BeforeClose(StatelessRule):
             msg = """
             由于午休关系，使用收盘前2小时，会导致事件无法触发。
             请考虑使用`time_rules.market_open`。
-            如计划在收盘前2h5m执行任务，改用：
+            如计划在收盘前2h5m执行任务，改用`AfterOpen`规则：
             `time_rules.market_open(hours=1, minutes=55)`
             """
             raise ValueError(msg) 
