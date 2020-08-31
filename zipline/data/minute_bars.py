@@ -1049,8 +1049,10 @@ class BcolzMinuteBarReader(MinuteBarReader):
                 -
                 1
             )
-            data = (start_pos, end_pos)
-            itree[start_pos:end_pos + 1] = data
+            # 🆗 如果无效切片则无需加入
+            if end_pos >= start_pos:
+                data = (start_pos, end_pos)
+                itree[start_pos:end_pos + 1] = data
         return itree
 
     def _exclusion_indices_for_range(self, start_idx, end_idx):

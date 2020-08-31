@@ -32,8 +32,8 @@ def minute_value(ndarray[long_t, ndim=1] market_opens,
 
     q = cython.cdiv(pos, minutes_per_day)
     r = cython.cmod(pos, minutes_per_day)
-    # # 添加午休时段
-    r = r + 90 - 1 if r >= int(minutes_per_day / 2) else r
+    # 🆗 添加午休时段
+    r = r + 90 if r >= int(minutes_per_day / 2) else r
     return market_opens[q] + r
 
 def find_position_of_minute(ndarray[long_t, ndim=1] market_opens,
@@ -81,13 +81,13 @@ def find_position_of_minute(ndarray[long_t, ndim=1] market_opens,
         searchsorted(market_opens, minute_val, side='right') - 1
     market_open = market_opens[market_open_loc]
     market_close = market_closes[market_open_loc]
-    # # 午休 90 分钟
+    # 🆗 午休 90 分钟
     if not forward_fill and ((minute_val - market_open) >= minutes_per_day + 90):
         raise ValueError("Given minute is not between an open and a close")
 
     delta = int_min(minute_val - market_open, market_close - market_open)
-    # # 需剔除午休时段
-    delta = delta - 90 + 1 if delta >= int(minutes_per_day / 2) else delta
+    # 🆗 需剔除午休时段
+    delta = delta - 90 if delta >= int(minutes_per_day / 2) else delta
 
     return (market_open_loc * minutes_per_day) + delta
 

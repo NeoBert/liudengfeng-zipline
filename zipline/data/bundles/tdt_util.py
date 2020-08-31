@@ -9,7 +9,7 @@ def get_trading_dates():
     return trading_dates
 
 
-def search_most_recent_dt(dt, side='right'):
+def search_most_recent_dt(dt, side='left'):
     """最接近指定方向的交易日期"""
     dts = get_trading_dates()
     loc = dts.searchsorted(dt, side=side)
