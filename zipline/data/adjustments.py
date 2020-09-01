@@ -565,6 +565,7 @@ class SQLiteAdjustmentWriter(object):
             stock_dividend_payouts['pay_date'] = \
                 stock_dividend_payouts['pay_date'].\
                 values.astype('datetime64[s]').astype(int64_dtype)
+
         self.write_stock_dividend_payouts(stock_dividend_payouts)
 
     def write_dividend_data(self, dividends, stock_dividends=None):

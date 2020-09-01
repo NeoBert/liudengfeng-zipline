@@ -15,7 +15,7 @@
 import logbook
 import numpy as np
 import pandas as pd
-from pandas.util.testing import assert_series_equal
+from pandas.testing import assert_series_equal
 
 from zipline.data.data_portal import DataPortal
 from zipline.errors import (
@@ -90,12 +90,29 @@ class TestBenchmark(WithDataPortal, WithSimParams, WithTradingCalendars,
             ),
         )
 
+    # 必须添加dividends
+    @classmethod
+    def make_dividends_data(cls):
+        declared_date = cls.sim_params.sessions[45]
+        ex_date = cls.sim_params.sessions[50]
+        record_date = pay_date = cls.sim_params.sessions[55]
+        df = pd.DataFrame({
+            'sid': np.array([4], dtype=np.uint32),
+            # 'ratio': np.array([2], dtype=np.float64),
+            'amount': np.array([5], dtype=np.float64),
+            'declared_date': np.array([declared_date], dtype='datetime64[ns]'),
+            'ex_date': np.array([ex_date], dtype='datetime64[ns]'),
+            'record_date': np.array([record_date], dtype='datetime64[ns]'),
+            'pay_date': np.array([pay_date], dtype='datetime64[ns]'),
+        })
+        return df
+
     @classmethod
     def make_stock_dividends_data(cls):
         declared_date = cls.sim_params.sessions[45]
         ex_date = cls.sim_params.sessions[50]
         record_date = pay_date = cls.sim_params.sessions[55]
-        return pd.DataFrame({
+        df = pd.DataFrame({
             'sid': np.array([4], dtype=np.uint32),
             'payment_sid': np.array([5], dtype=np.uint32),
             'ratio': np.array([2], dtype=np.float64),
@@ -104,6 +121,7 @@ class TestBenchmark(WithDataPortal, WithSimParams, WithTradingCalendars,
             'record_date': np.array([record_date], dtype='datetime64[ns]'),
             'pay_date': np.array([pay_date], dtype='datetime64[ns]'),
         })
+        return df
 
     def test_normal(self):
         days_to_use = self.sim_params.sessions[1:]
@@ -154,7 +172,7 @@ class TestBenchmark(WithDataPortal, WithSimParams, WithTradingCalendars,
             )
 
         self.assertEqual(
-            'Equity(3 [C]) does not exist on %s. It started trading on %s.' %
+            '(C) does not exist on %s. It started trading on %s.' %
             (self.sim_params.sessions[1], benchmark_start),
             exc.exception.message
         )
@@ -168,7 +186,7 @@ class TestBenchmark(WithDataPortal, WithSimParams, WithTradingCalendars,
             )
 
         self.assertEqual(
-            'Equity(3 [C]) does not exist on %s. It stopped trading on %s.' %
+            '(C) does not exist on %s. It stopped trading on %s.' %
             (self.sim_params.sessions[-1], benchmark_end),
             exc2.exception.message
         )
@@ -233,7 +251,7 @@ class TestBenchmark(WithDataPortal, WithSimParams, WithTradingCalendars,
                 self.data_portal
             )
 
-        self.assertEqual("Equity(4 [D]) cannot be used as the benchmark "
+        self.assertEqual("(D) cannot be used as the benchmark "
                          "because it has a stock dividend on 2006-03-16 "
                          "00:00:00.  Choose another asset to use as the "
                          "benchmark.",

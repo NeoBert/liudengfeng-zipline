@@ -249,10 +249,17 @@ class BcolzDailyBarWriter(object):
         last_row = {}
         calendar_offset = {}
 
+        # 🆗 首先判断使用的列类型
+        USE_COLS = US_EQUITY_PRICING_BCOLZ_COLUMNS
+        for asset_id, table in iterator:
+            if set(ADJUST_FACTOR.keys()).intersection(set(table.names)):
+                USE_COLS = ALL_EQUITY_PRICING_BCOLZ_COLUMNS
+            break
+
         # Maps column name -> output carray.
         columns = {
             k: carray(array([], dtype=uint32_dtype))
-            for k in ALL_EQUITY_PRICING_BCOLZ_COLUMNS
+            for k in USE_COLS
         }
 
         earliest_date = None
@@ -338,9 +345,9 @@ class BcolzDailyBarWriter(object):
         full_table = ctable(
             columns=[
                 columns[colname]
-                for colname in ALL_EQUITY_PRICING_BCOLZ_COLUMNS
+                for colname in USE_COLS
             ],
-            names=ALL_EQUITY_PRICING_BCOLZ_COLUMNS,
+            names=USE_COLS,
             rootdir=self._filename,
             mode='w',
         )
@@ -372,8 +379,9 @@ class BcolzDailyBarWriter(object):
         processed['volume'] = raw_data.volume.astype('uint32')
         # 附加列同样转换为uint32
         for c in ADJUST_FACTOR.keys():
-            processed[c] = (raw_data.loc[:, c] *
-                            ADJUST_FACTOR.get(c, 1)).astype('uint32')
+            if c in raw_data.columns:
+                processed[c] = (raw_data.loc[:, c] *
+                                ADJUST_FACTOR.get(c, 1)).astype('uint32')
         return ctable.fromdataframe(processed)
 
 
@@ -448,6 +456,7 @@ class BcolzDailyBarReader(CurrencyAwareSessionBarReader):
     --------
     zipline.data.bcolz_daily_bars.BcolzDailyBarWriter
     """
+
     def __init__(self, table, read_all_threshold=3000):
         self._maybe_table_rootdir = table
         # Cache of fully read np.array for the carrays in the daily bar table.
@@ -576,7 +585,7 @@ class BcolzDailyBarReader(CurrencyAwareSessionBarReader):
     def load_raw_arrays(self, columns, start_date, end_date, assets):
         start_idx = self._load_raw_arrays_date_to_index(start_date)
         end_idx = self._load_raw_arrays_date_to_index(end_date)
-        
+
         first_rows, last_rows, offsets = self._compute_slices(
             start_idx,
             end_idx,

@@ -39,7 +39,10 @@ def get_benchmark_returns_from_file(filelike):
         filelike,
         index_col=['date'],
         parse_dates=['date'],
-    ).tz_localize('utc')
+    )
+    # 🆗 原始数据已经存在时区信息
+    if df.index.tzinfo is None:
+        df = df.tz_localize('utc')
 
     if 'return' not in df.columns:
         raise ValueError("The column 'return' not found in the "

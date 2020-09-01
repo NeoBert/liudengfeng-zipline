@@ -1215,11 +1215,11 @@ class DataPortal(object):
 
         start_dt = trading_days[0].value / 1e9
         end_dt = trading_days[-1].value / 1e9
-
-        dividends = self._adjustment_reader.conn.execute(
-            "SELECT * FROM stock_dividend_payouts WHERE sid = ? AND "
-            "ex_date > ? AND pay_date < ?", (int(sid), start_dt, end_dt,)).\
-            fetchall()
+        # 🆗 必须指定字段【元组顺序很重要】
+        fields = ", ".join(["sid", "declared_date", "ex_date","pay_date","payment_sid","ratio","record_date"])
+        stmt = f"SELECT {fields} FROM stock_dividend_payouts WHERE sid = {int(sid)} AND "
+        stmt += f"ex_date > {start_dt} AND pay_date < {end_dt}"
+        dividends = self._adjustment_reader.conn.execute(stmt).fetchall()
 
         dividend_info = []
         for dividend_tuple in dividends:
@@ -1230,9 +1230,9 @@ class DataPortal(object):
                 "payment_sid": dividend_tuple[4],
                 "ratio": dividend_tuple[5],
                 "record_date": pd.Timestamp(dividend_tuple[6], unit="s"),
-                "sid": dividend_tuple[7]
+                "sid": dividend_tuple[0]
             })
-
+            
         return dividend_info
 
     def contains(self, asset, field):
