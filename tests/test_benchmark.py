@@ -90,23 +90,6 @@ class TestBenchmark(WithDataPortal, WithSimParams, WithTradingCalendars,
             ),
         )
 
-    # 必须添加dividends
-    @classmethod
-    def make_dividends_data(cls):
-        declared_date = cls.sim_params.sessions[45]
-        ex_date = cls.sim_params.sessions[50]
-        record_date = pay_date = cls.sim_params.sessions[55]
-        df = pd.DataFrame({
-            'sid': np.array([4], dtype=np.uint32),
-            # 'ratio': np.array([2], dtype=np.float64),
-            'amount': np.array([5], dtype=np.float64),
-            'declared_date': np.array([declared_date], dtype='datetime64[ns]'),
-            'ex_date': np.array([ex_date], dtype='datetime64[ns]'),
-            'record_date': np.array([record_date], dtype='datetime64[ns]'),
-            'pay_date': np.array([pay_date], dtype='datetime64[ns]'),
-        })
-        return df
-
     @classmethod
     def make_stock_dividends_data(cls):
         declared_date = cls.sim_params.sessions[45]
@@ -223,7 +206,7 @@ class TestBenchmark(WithDataPortal, WithSimParams, WithTradingCalendars,
             days_to_use = self.sim_params.sessions
 
             # first value should be 0.0, coming from daily data
-            self.assertAlmostEquals(0.0, source.get_value(days_to_use[0]))
+            self.assertAlmostEqual(0.0, source.get_value(days_to_use[0]))
 
             manually_calculated = data_portal.get_history_window(
                 [2], days_to_use[-1],

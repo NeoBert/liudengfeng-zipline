@@ -102,7 +102,7 @@ cpdef _compute_row_slices(dict asset_starts_absolute,
         # Flag to check whether we should raise an error because we don't know
         # about any of the requested sids.
         uint8_t any_hits = 0
-
+        
     for i, asset in enumerate(requested_assets):
         if asset not in asset_starts_absolute:
             # This is an unknown asset, leave its slot empty.
