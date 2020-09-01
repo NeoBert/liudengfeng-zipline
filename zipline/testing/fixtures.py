@@ -2073,7 +2073,7 @@ class WithWerror(object):
         super(WithWerror, cls).init_class_fixtures()
 
 
-register_calendar_alias("TEST", "TEST_XSHG")
+register_calendar_alias("TEST", "XSHG")
 
 
 class WithSeededRandomState(object):

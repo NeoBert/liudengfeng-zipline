@@ -6,7 +6,7 @@ import sqlalchemy as sa
 from toolz import valmap
 import toolz.curried.operator as op
 from trading_calendars import TradingCalendar, get_calendar
-
+from trading_calendars.exchange_calendar_xshg import XSHGExchangeCalendar
 from zipline.assets import ASSET_DB_VERSION
 
 from zipline.assets.asset_writer import check_version_info
@@ -124,7 +124,7 @@ class BundleCoreTestCase(WithInstanceTmpDir,
         assert_true(called[0])
 
     def test_ingest(self):
-        calendar = get_calendar('XNYS')
+        calendar = get_calendar('XSHG')
         sessions = calendar.sessions_in_range(self.START_DATE, self.END_DATE)
         minutes = calendar.minutes_for_sessions_in_range(
             self.START_DATE, self.END_DATE,
@@ -178,7 +178,7 @@ class BundleCoreTestCase(WithInstanceTmpDir,
             daily_bar_writer.write(daily_bar_data)
             adjustment_writer.write(splits=splits)
 
-            assert_is_instance(calendar, TradingCalendar)
+            assert_is_instance(calendar, XSHGExchangeCalendar)
             assert_is_instance(cache, dataframe_cache)
             assert_is_instance(show_progress, bool)
 
@@ -195,7 +195,7 @@ class BundleCoreTestCase(WithInstanceTmpDir,
             minutes[-1],
             sids,
         )
-
+        
         for actual_column, colname in zip(actual, columns):
             assert_equal(
                 actual_column,

@@ -31,16 +31,16 @@ class TestBeforeTradingStartTiming(zf.WithMakeAlgo,
 
     ASSET_FINDER_EQUITY_SIDS = (1,)
     BENCHMARK_SID = 1
-    # These dates are chosen to cross a DST transition.
-    #      March 2016
+    # 国庆期间
+    #      2019 10
     # Su Mo Tu We Th Fr Sa
     #        1  2  3  4  5
     #  6  7  8  9 10 11 12
     # 13 14 15 16 17 18 19
     # 20 21 22 23 24 25 26
     # 27 28 29 30 31
-    START_DATE = pd.Timestamp('2016-03-10', tz='UTC')
-    END_DATE = pd.Timestamp('2016-03-15', tz='UTC')
+    START_DATE = pd.Timestamp('2019-09-30', tz='UTC')
+    END_DATE = pd.Timestamp('2019-10-09', tz='UTC')
 
     @parameter_space(
         num_sessions=[1, 2, 3],
@@ -63,8 +63,8 @@ class TestBeforeTradingStartTiming(zf.WithMakeAlgo,
         sim_params = SimulationParameters(
             # start at index 1 so we have an extra day to calculate benchmark
             # returns.
-            start_session=self.nyse_sessions[1],
-            end_session=self.nyse_sessions[num_sessions],
+            start_session=self.xshg_sessions[1],
+            end_session=self.xshg_sessions[num_sessions],
             data_frequency=data_frequency,
             emission_rate=emission_rate,
             trading_calendar=self.trading_calendar,
@@ -76,10 +76,11 @@ class TestBeforeTradingStartTiming(zf.WithMakeAlgo,
         )
 
         self.assertEqual(len(bts_times), num_sessions)
+
         expected_times = [
-            pd.Timestamp('2016-03-11 8:45', tz='US/Eastern').tz_convert('UTC'),
-            pd.Timestamp('2016-03-14 8:45', tz='US/Eastern').tz_convert('UTC'),
-            pd.Timestamp('2016-03-15 8:45', tz='US/Eastern').tz_convert('UTC'),
+            pd.Timestamp('2019-09-30 8:45', tz="Asia/Shanghai").tz_convert('UTC'),
+            pd.Timestamp('2019-10-08 8:45', tz="Asia/Shanghai").tz_convert('UTC'),
+            pd.Timestamp('2019-10-09 8:45', tz="Asia/Shanghai").tz_convert('UTC'),
         ]
         self.assertEqual(bts_times, expected_times[:num_sessions])
 
@@ -107,7 +108,7 @@ def initialize(context):
         benchmark_source = algo._create_benchmark_source()
         algo.metrics_tracker.handle_start_of_simulation(benchmark_source)
 
-        dt = pd.Timestamp("2016-08-04 9:13:14", tz='US/Eastern')
+        dt = pd.Timestamp("2016-08-04 9:13:14", tz="Asia/Shanghai")
         algo_simulator = AlgorithmSimulator(
             algo,
             self.sim_params,

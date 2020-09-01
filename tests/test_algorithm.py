@@ -170,8 +170,8 @@ class TestRecord(zf.WithMakeAlgo, zf.ZiplineTestCase):
 
 class TestMiscellaneousAPI(zf.WithMakeAlgo, zf.ZiplineTestCase):
 
-    START_DATE = pd.Timestamp('2006-01-03', tz='UTC')
-    END_DATE = pd.Timestamp('2006-01-04', tz='UTC')
+    START_DATE = pd.Timestamp('2006-01-04', tz='UTC')
+    END_DATE = pd.Timestamp('2006-01-05', tz='UTC')
     SIM_PARAMS_DATA_FREQUENCY = 'minute'
     sids = 1, 2
 
@@ -330,7 +330,7 @@ def handle_data(context, data):
     order(sid(24), 1000)
         """
         sim_params = SimulationParameters(
-            start_session=pd.Timestamp("2006-01-03", tz='UTC'),
+            start_session=pd.Timestamp("2006-01-04", tz='UTC'),
             end_session=pd.Timestamp("2006-01-06", tz='UTC'),
             capital_base=cap_base,
             data_frequency="minute",
@@ -350,8 +350,8 @@ def handle_data(context, data):
         expected_env = {
             'arena': 'backtest',
             'data_frequency': 'minute',
-            'start': pd.Timestamp('2006-01-03 14:31:00+0000', tz='utc'),
-            'end': pd.Timestamp('2006-01-04 21:00:00+0000', tz='utc'),
+            'start': pd.Timestamp('2006-01-04 14:31:00+0000', tz='utc'),
+            'end': pd.Timestamp('2006-01-05 21:00:00+0000', tz='utc'),
             'capital_base': 100000.0,
             'platform': 'zipline'
         }
@@ -758,9 +758,9 @@ class TestSetSymbolLookupDate(zf.WithMakeAlgo, zf.ZiplineTestCase):
     # 15 16 17 18 19 20 21
     # 22 23 24 25 26 27 28
     # 29 30 31
-    START_DATE = pd.Timestamp('2006-01-03', tz='UTC')
+    START_DATE = pd.Timestamp('2006-01-04', tz='UTC')
     END_DATE = pd.Timestamp('2006-01-06', tz='UTC')
-    SIM_PARAMS_START_DATE = pd.Timestamp('2006-01-04', tz='UTC')
+    SIM_PARAMS_START_DATE = pd.Timestamp('2006-01-05', tz='UTC')
     SIM_PARAMS_DATA_FREQUENCY = 'daily'
     DATA_PORTAL_USE_MINUTE_DATA = False
     BENCHMARK_SID = 3
@@ -813,7 +813,7 @@ class TestSetSymbolLookupDate(zf.WithMakeAlgo, zf.ZiplineTestCase):
 
 
 class TestPositions(zf.WithMakeAlgo, zf.ZiplineTestCase):
-    START_DATE = pd.Timestamp('2006-01-03', tz='utc')
+    START_DATE = pd.Timestamp('2006-01-04', tz='utc')
     END_DATE = pd.Timestamp('2006-01-06', tz='utc')
     SIM_PARAMS_CAPITAL_BASE = 1000
 
@@ -1365,7 +1365,7 @@ class TestBeforeTradingStart(zf.WithMakeAlgo, zf.ZiplineTestCase):
 
 
 class TestAlgoScript(zf.WithMakeAlgo, zf.ZiplineTestCase):
-    START_DATE = pd.Timestamp('2006-01-03', tz='utc')
+    START_DATE = pd.Timestamp('2006-01-04', tz='utc')
     END_DATE = pd.Timestamp('2006-12-31', tz='utc')
     SIM_PARAMS_DATA_FREQUENCY = 'daily'
     DATA_PORTAL_USE_MINUTE_DATA = False
@@ -1972,7 +1972,7 @@ def handle_data(context, data):
 
 class TestCapitalChanges(zf.WithMakeAlgo, zf.ZiplineTestCase):
 
-    START_DATE = pd.Timestamp('2006-01-03', tz='UTC')
+    START_DATE = pd.Timestamp('2006-01-04', tz='UTC')
     END_DATE = pd.Timestamp('2006-01-09', tz='UTC')
 
     # XXX: This suite only has daily data for sid 0 and only has minutely data
@@ -2187,18 +2187,18 @@ def order_stuff(context, data):
         )
 
     @parameterized.expand([
-        ('interday_target', [('2006-01-04', 2388.0)]),
-        ('interday_delta', [('2006-01-04', 1000.0)]),
-        ('intraday_target', [('2006-01-04 17:00', 2184.0),
-                             ('2006-01-04 18:00', 2804.0)]),
-        ('intraday_delta', [('2006-01-04 17:00', 500.0),
-                            ('2006-01-04 18:00', 500.0)]),
+        ('interday_target', [('2006-01-05', 2388.0)]),
+        ('interday_delta', [('2006-01-05', 1000.0)]),
+        ('intraday_target', [('2006-01-05 17:00', 2184.0),
+                             ('2006-01-05 18:00', 2804.0)]),
+        ('intraday_delta', [('2006-01-05 17:00', 500.0),
+                            ('2006-01-05 18:00', 500.0)]),
     ])
     def test_capital_changes_minute_mode_daily_emission(self, change, values):
         change_loc, change_type = change.split('_')
 
         sim_params = SimulationParameters(
-            start_session=pd.Timestamp('2006-01-03', tz='UTC'),
+            start_session=pd.Timestamp('2006-01-04', tz='UTC'),
             end_session=pd.Timestamp('2006-01-05', tz='UTC'),
             data_frequency='minute',
             capital_base=1000.0,
@@ -2347,28 +2347,28 @@ def order_stuff(context, data):
         if change_loc == 'interday':
             self.assertEqual(
                 algo.capital_change_deltas,
-                {pd.Timestamp('2006-01-04', tz='UTC'): 1000.0}
+                {pd.Timestamp('2006-01-05', tz='UTC'): 1000.0}
             )
         else:
             self.assertEqual(
                 algo.capital_change_deltas,
-                {pd.Timestamp('2006-01-04 17:00', tz='UTC'): 500.0,
-                 pd.Timestamp('2006-01-04 18:00', tz='UTC'): 500.0}
+                {pd.Timestamp('2006-01-05 17:00', tz='UTC'): 500.0,
+                 pd.Timestamp('2006-01-05 18:00', tz='UTC'): 500.0}
             )
 
     @parameterized.expand([
-        ('interday_target', [('2006-01-04', 2388.0)]),
-        ('interday_delta', [('2006-01-04', 1000.0)]),
-        ('intraday_target', [('2006-01-04 17:00', 2184.0),
-                             ('2006-01-04 18:00', 2804.0)]),
-        ('intraday_delta', [('2006-01-04 17:00', 500.0),
-                            ('2006-01-04 18:00', 500.0)]),
+        ('interday_target', [('2006-01-05', 2388.0)]),
+        ('interday_delta', [('2006-01-05', 1000.0)]),
+        ('intraday_target', [('2006-01-05 17:00', 2184.0),
+                             ('2006-01-05 18:00', 2804.0)]),
+        ('intraday_delta', [('2006-01-05 17:00', 500.0),
+                            ('2006-01-05 18:00', 500.0)]),
     ])
     def test_capital_changes_minute_mode_minute_emission(self, change, values):
         change_loc, change_type = change.split('_')
 
         sim_params = SimulationParameters(
-            start_session=pd.Timestamp('2006-01-03', tz='UTC'),
+            start_session=pd.Timestamp('2006-01-04', tz='UTC'),
             end_session=pd.Timestamp('2006-01-05', tz='UTC'),
             data_frequency='minute',
             emission_rate='minute',
@@ -2587,13 +2587,13 @@ def order_stuff(context, data):
         if change_loc == 'interday':
             self.assertEqual(
                 algo.capital_change_deltas,
-                {pd.Timestamp('2006-01-04', tz='UTC'): 1000.0}
+                {pd.Timestamp('2006-01-05', tz='UTC'): 1000.0}
             )
         else:
             self.assertEqual(
                 algo.capital_change_deltas,
-                {pd.Timestamp('2006-01-04 17:00', tz='UTC'): 500.0,
-                 pd.Timestamp('2006-01-04 18:00', tz='UTC'): 500.0}
+                {pd.Timestamp('2006-01-05 17:00', tz='UTC'): 500.0,
+                 pd.Timestamp('2006-01-05 18:00', tz='UTC'): 500.0}
             )
 
 
@@ -2646,7 +2646,7 @@ class TestGetDatetime(zf.WithMakeAlgo, zf.ZiplineTestCase):
 
 class TestTradingControls(zf.WithMakeAlgo,
                           zf.ZiplineTestCase):
-    START_DATE = pd.Timestamp('2006-01-03', tz='utc')
+    START_DATE = pd.Timestamp('2006-01-04', tz='utc')
     END_DATE = pd.Timestamp('2006-01-06', tz='utc')
 
     sid = 133
@@ -2817,7 +2817,7 @@ class TestTradingControls(zf.WithMakeAlgo,
             self.check_algo_succeeds(algo)
         logs = [r.message for r in log_catcher.records]
         self.assertIn("Order for 100 shares of Equity(133 [A]) at "
-                      "2006-01-03 21:00:00+00:00 violates trading constraint "
+                      "2006-01-04 21:00:00+00:00 violates trading constraint "
                       "RestrictedListOrder({})", logs)
         self.assertFalse(algo.could_trade)
 
@@ -3161,7 +3161,7 @@ class TestAssetDateBounds(zf.WithMakeAlgo, zf.ZiplineTestCase):
 
 class TestAccountControls(zf.WithMakeAlgo,
                           zf.ZiplineTestCase):
-    START_DATE = pd.Timestamp('2006-01-03', tz='utc')
+    START_DATE = pd.Timestamp('2006-01-04', tz='utc')
     END_DATE = pd.Timestamp('2006-01-06', tz='utc')
 
     sidint, = ASSET_FINDER_EQUITY_SIDS = (133,)
@@ -3209,7 +3209,7 @@ class TestAccountControls(zf.WithMakeAlgo,
         self.check_algo_fails(algo)
         self.assertEqual(
             algo.recorded_vars['latest_time'],
-            pd.Timestamp('2006-01-04 21:00:00', tz='UTC'),
+            pd.Timestamp('2006-01-05 21:00:00', tz='UTC'),
         )
 
         # Set max leverage to 1 so buying one share passes
@@ -3256,7 +3256,7 @@ class TestAccountControls(zf.WithMakeAlgo,
         self.check_algo_fails(algo)
         self.assertEqual(
             algo.recorded_vars['latest_time'],
-            pd.Timestamp('2006-01-04 21:00:00', tz='UTC'),
+            pd.Timestamp('2006-01-05 21:00:00', tz='UTC'),
         )
 
         # Increase the offset to 2 days, and the algorithm fails a day later
