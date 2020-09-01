@@ -24,7 +24,7 @@ from zipline.assets import Equity, Future
 from zipline.data.data_portal import HISTORY_FREQUENCIES, OHLCV_FIELDS
 from zipline.data.minute_bars import (
     FUTURES_MINUTES_PER_DAY,
-    US_EQUITIES_MINUTES_PER_DAY,
+    CN_EQUITIES_MINUTES_PER_DAY,
 )
 from zipline.testing import parameter_space
 from zipline.testing.fixtures import (
@@ -535,7 +535,7 @@ class DataPortalTestBase(WithDataPortal,
             data_frequency = 'minute'
         else:
             minute = minutes[0].normalize()
-            expected_equity_volume = 100 * US_EQUITIES_MINUTES_PER_DAY
+            expected_equity_volume = 100 * CN_EQUITIES_MINUTES_PER_DAY
             expected_future_volume = 100 * FUTURES_MINUTES_PER_DAY
             data_frequency = 'daily'
 

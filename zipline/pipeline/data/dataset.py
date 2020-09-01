@@ -594,8 +594,8 @@ class DataSet(with_metaclass(DataSetMeta, object)):
     The built-in USEquityPricing dataset is a specialization of
     EquityPricing. It is defined as::
 
-        from zipline.pipeline.domain import US_EQUITIES
-        USEquityPricing = EquityPricing.specialize(US_EQUITIES)
+        from zipline.pipeline.domain import CN_EQUITIES
+        USEquityPricing = EquityPricing.specialize(CN_EQUITIES)
 
     Columns can have types other than float. A dataset containing assorted
     company metadata might be defined like this::

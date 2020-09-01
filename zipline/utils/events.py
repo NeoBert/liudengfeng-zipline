@@ -786,7 +786,7 @@ class time_rules(object):
 
 
 class calendars(object):
-    US_EQUITIES = sentinel('US_EQUITIES')
+    CN_EQUITIES = sentinel('CN_EQUITIES')
     US_FUTURES = sentinel('US_FUTURES')
 
 

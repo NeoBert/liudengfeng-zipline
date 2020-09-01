@@ -430,14 +430,14 @@ def initialize(context):
         func=log_nyse_open,
         date_rule=date_rules.every_day(),
         time_rule=time_rules.market_open(),
-        calendar=calendars.US_EQUITIES,
+        calendar=calendars.CN_EQUITIES,
     )
 
     schedule_function(
         func=log_nyse_close,
         date_rule=date_rules.every_day(),
         time_rule=time_rules.market_close(),
-        calendar=calendars.US_EQUITIES,
+        calendar=calendars.CN_EQUITIES,
     )
 
     context.nyse_opens = []

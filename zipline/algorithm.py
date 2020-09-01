@@ -951,7 +951,7 @@ class TradingAlgorithm(object):
         # TradingSchedule class, so this is unlikely to be hit
         if calendar is None:
             cal = self.trading_calendar
-        elif calendar is calendars.US_EQUITIES:
+        elif calendar is calendars.CN_EQUITIES:
             cal = get_calendar('XSHG')  # 🆗 修改交易日历名称
         elif calendar is calendars.US_FUTURES:
             cal = get_calendar('us_futures')
@@ -959,7 +959,7 @@ class TradingAlgorithm(object):
             raise ScheduleFunctionInvalidCalendar(
                 given_calendar=calendar,
                 allowed_calendars=(
-                    '[calendars.US_EQUITIES, calendars.US_FUTURES]'
+                    '[calendars.CN_EQUITIES, calendars.US_FUTURES]'
                 ),
             )
 

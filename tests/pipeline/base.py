@@ -9,7 +9,7 @@ from six import iteritems
 from zipline.lib.labelarray import LabelArray
 from zipline.utils.compat import wraps
 from zipline.pipeline import ExecutionPlan
-from zipline.pipeline.domain import US_EQUITIES
+from zipline.pipeline.domain import CN_EQUITIES
 from zipline.pipeline.engine import SimplePipelineEngine
 from zipline.pipeline.hooks import NoHooks
 from zipline.pipeline.term import AssetExists, InputDates
@@ -100,7 +100,7 @@ class BaseUSEquityPipelineTestCase(WithTradingSessions,
         engine = SimplePipelineEngine(
             get_loader,
             self.asset_finder,
-            default_domain=US_EQUITIES,
+            default_domain=CN_EQUITIES,
         )
         if mask is None:
             mask = self.default_asset_exists_mask
@@ -126,7 +126,7 @@ class BaseUSEquityPipelineTestCase(WithTradingSessions,
     def run_terms(self, terms, initial_workspace, mask):
         start_date, end_date = mask.index[[0, -1]]
         graph = ExecutionPlan(
-            domain=US_EQUITIES,
+            domain=CN_EQUITIES,
             terms=terms,
             start_date=start_date,
             end_date=end_date,

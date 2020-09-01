@@ -7,7 +7,7 @@ import toolz
 
 from zipline.pipeline import Pipeline
 from zipline.pipeline.classifiers import Everything
-from zipline.pipeline.domain import US_EQUITIES
+from zipline.pipeline.domain import CN_EQUITIES
 from zipline.pipeline.factors import CustomFactor
 from zipline.pipeline.data import Column, DataSet
 from zipline.pipeline.data.testing import TestingDataSet
@@ -70,7 +70,7 @@ class HooksTestCase(WithSeededRandomPipelineEngine, ZiplineTestCase):
                 'bool_': TestingDataSet.bool_col.latest,
                 'factor_rank': TrivialFactor().rank().zscore(),
             },
-            domain=US_EQUITIES,
+            domain=CN_EQUITIES,
         )
         start_date, end_date = self.trading_days[[-10, -1]]
 
@@ -276,7 +276,7 @@ class ProgressHooksTestCase(WithSeededRandomPipelineEngine, ZiplineTestCase):
                 'factor_rank': TrivialFactor().rank().zscore(),
                 'prepopulated': PREPOPULATED_TERM,
             },
-            domain=US_EQUITIES,
+            domain=CN_EQUITIES,
         )
         start_date, end_date = self.trading_days[[-10, -1]]
         expected_chunks = [
@@ -308,7 +308,7 @@ class ProgressHooksTestCase(WithSeededRandomPipelineEngine, ZiplineTestCase):
     def test_progress_hooks_empty_pipeline(self):
         publisher = TestingProgressPublisher()
         hooks = [ProgressHooks.with_static_publisher(publisher)]
-        pipeline = Pipeline({}, domain=US_EQUITIES)
+        pipeline = Pipeline({}, domain=CN_EQUITIES)
         start_date, end_date = self.trading_days[[-10, -1]]
         expected_chunks = [
             tuple(self.trading_days[[-10, -6]]),
@@ -432,7 +432,7 @@ class ProgressHooksTestCase(WithSeededRandomPipelineEngine, ZiplineTestCase):
             def compute(self, *args, **kwargs):
                 raise SomeError()
 
-        pipeline = Pipeline({'boom': ExplodingFactor()}, domain=US_EQUITIES)
+        pipeline = Pipeline({'boom': ExplodingFactor()}, domain=CN_EQUITIES)
         start_date, end_date = self.trading_days[[-10, -1]]
 
         with self.assertRaises(SomeError):

@@ -27,7 +27,7 @@ from zipline.utils.memoize import classlazyval
 from zipline.pipeline import SimplePipelineEngine
 from zipline.pipeline.data import USEquityPricing
 from zipline.pipeline.data.testing import TestingDataSet
-from zipline.pipeline.domain import GENERIC, US_EQUITIES
+from zipline.pipeline.domain import GENERIC, CN_EQUITIES
 from zipline.pipeline.loaders import USEquityPricingLoader
 from zipline.pipeline.loaders.testing import make_seeded_random_loader
 from zipline.protocol import BarData
@@ -68,7 +68,7 @@ from ..data.hdf5_daily_bars import (
 from ..data.minute_bars import (
     BcolzMinuteBarReader,
     BcolzMinuteBarWriter,
-    US_EQUITIES_MINUTES_PER_DAY,
+    CN_EQUITIES_MINUTES_PER_DAY,
     FUTURES_MINUTES_PER_DAY,
 )
 from ..data.resample import (
@@ -504,7 +504,7 @@ class WithTradingCalendars(object):
     class-level fixture.
 
     After ``init_class_fixtures`` has been called:
-    - `cls.trading_calendar` is populated with a default of the nyse trading
+    - `cls.trading_calendar` is populated with a default of the XSHG trading
     calendar for compatibility with existing tests
     - `cls.all_trading_calendars` is populated with the trading calendars
     keyed by name,
@@ -519,12 +519,12 @@ class WithTradingCalendars(object):
         A dictionary which maps asset type names to the calendar associated
         with that asset type.
     """
-    TRADING_CALENDAR_STRS = ('NYSE',)
-    TRADING_CALENDAR_FOR_ASSET_TYPE = {Equity: 'NYSE', Future: 'us_futures'}
+    TRADING_CALENDAR_STRS = ('XSHG',)
+    TRADING_CALENDAR_FOR_ASSET_TYPE = {Equity: 'XSHG', Future: 'us_futures'}
     # For backwards compatibility, exisitng tests and fixtures refer to
-    # `trading_calendar` with the assumption that the value is the NYSE
+    # `trading_calendar` with the assumption that the value is the XSHG
     # calendar.
-    TRADING_CALENDAR_PRIMARY_CAL = 'NYSE'
+    TRADING_CALENDAR_PRIMARY_CAL = 'XSHG'
 
     @classmethod
     def init_class_fixtures(cls):
@@ -676,7 +676,7 @@ class WithTradingSessions(WithDefaultDateBounds, WithTradingCalendars):
     (DATA_MAX_DAY - (cls.TRADING_DAY_COUNT) -> DATA_MAX_DAY)
 
     `cls.trading_days`, for compatibility with existing tests which make the
-    assumption that trading days are equity only, defaults to the nyse trading
+    assumption that trading days are equity only, defaults to the XSHG trading
     sessions.
 
     Attributes
@@ -692,9 +692,9 @@ class WithTradingSessions(WithDefaultDateBounds, WithTradingCalendars):
     DATA_MAX_DAY = alias('END_DATE')
 
     # For backwards compatibility, exisitng tests and fixtures refer to
-    # `trading_days` with the assumption that the value is days of the NYSE
+    # `trading_days` with the assumption that the value is days of the XSHG
     # calendar.
-    trading_days = alias('nyse_sessions')
+    trading_days = alias('xshg_sessions')
 
     @classmethod
     def init_class_fixtures(cls):
@@ -1484,7 +1484,7 @@ class WithBcolzEquityMinuteBarReader(WithEquityMinuteBarData, WithTmpDir):
             cls.trading_calendars[Equity],
             days[0],
             days[-1],
-            US_EQUITIES_MINUTES_PER_DAY
+            CN_EQUITIES_MINUTES_PER_DAY
         )
         writer.write(cls.make_equity_minute_bar_data())
 
@@ -1737,7 +1737,7 @@ class WithUSEquityPricingPipelineEngine(WithAdjustmentReader,
         cls.pipeline_engine = SimplePipelineEngine(
             get_loader=get_loader,
             asset_finder=cls.asset_finder,
-            default_domain=US_EQUITIES,
+            default_domain=CN_EQUITIES,
         )
 
     @classmethod
@@ -2073,7 +2073,7 @@ class WithWerror(object):
         super(WithWerror, cls).init_class_fixtures()
 
 
-register_calendar_alias("TEST", "NYSE")
+register_calendar_alias("TEST", "TEST_XSHG")
 
 
 class WithSeededRandomState(object):

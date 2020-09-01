@@ -37,7 +37,7 @@ from pandas.testing import assert_frame_equal
 from toolz.curried.operator import getitem
 
 from zipline.lib.adjustment import Float64Multiply
-from zipline.pipeline.domain import US_EQUITIES
+from zipline.pipeline.domain import CN_EQUITIES
 from zipline.pipeline.loaders.synthetic import (
     NullAdjustmentReader,
     make_bar_data,
@@ -515,7 +515,7 @@ class USEquityPricingLoaderTestCase(WithAdjustmentReader,
         )
 
         results = pricing_loader.load_adjusted_array(
-            domain=US_EQUITIES,
+            domain=CN_EQUITIES,
             columns=columns,
             dates=query_days,
             sids=self.sids,
@@ -595,7 +595,7 @@ class USEquityPricingLoaderTestCase(WithAdjustmentReader,
         )
 
         results = pricing_loader.load_adjusted_array(
-            domain=US_EQUITIES,
+            domain=CN_EQUITIES,
             columns=columns,
             dates=query_days,
             sids=Int64Index(arange(1, 7)),

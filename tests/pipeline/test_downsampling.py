@@ -19,7 +19,7 @@ from zipline.pipeline.domain import (
     CA_EQUITIES,
     EquitySessionDomain,
     GB_EQUITIES,
-    US_EQUITIES,
+    CN_EQUITIES,
 )
 from zipline.pipeline.factors import SimpleMovingAverage
 from zipline.pipeline.filters.smoothing import All
@@ -602,7 +602,7 @@ class DownsampledPipelineTestCase(WithSeededRandomPipelineEngine,
     END_DATE = pd.Timestamp('2015-01-06', tz='UTC')
 
     ASSET_FINDER_EQUITY_SIDS = tuple(range(10))
-    DOMAIN = US_EQUITIES
+    DOMAIN = CN_EQUITIES
 
     @classproperty
     def ASSET_FINDER_COUNTRY_CODE(cls):

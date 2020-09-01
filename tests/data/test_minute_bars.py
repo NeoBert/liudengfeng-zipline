@@ -41,7 +41,7 @@ from zipline.data.minute_bars import (
     BcolzMinuteBarWriter,
     BcolzMinuteBarReader,
     BcolzMinuteOverlappingData,
-    US_EQUITIES_MINUTES_PER_DAY,
+    CN_EQUITIES_MINUTES_PER_DAY,
     BcolzMinuteWriterColumnMismatch,
     H5MinuteBarUpdateWriter,
     H5MinuteBarUpdateReader,
@@ -92,7 +92,7 @@ class BcolzMinuteBarTestCase(WithTradingCalendars,
             self.trading_calendar,
             TEST_CALENDAR_START,
             TEST_CALENDAR_STOP,
-            US_EQUITIES_MINUTES_PER_DAY,
+            CN_EQUITIES_MINUTES_PER_DAY,
         )
         self.reader = BcolzMinuteBarReader(self.dest)
 
@@ -194,7 +194,7 @@ class BcolzMinuteBarTestCase(WithTradingCalendars,
             self.trading_calendar,
             TEST_CALENDAR_START,
             TEST_CALENDAR_STOP,
-            US_EQUITIES_MINUTES_PER_DAY,
+            CN_EQUITIES_MINUTES_PER_DAY,
             ohlc_ratios_per_sid={sid: 25},
         )
         writer_with_ratios.write_sid(sid, data)

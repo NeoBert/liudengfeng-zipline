@@ -15,7 +15,7 @@ from zipline.errors import (
 from zipline.pipeline import CustomFactor, Factor, Filter, Classifier, Pipeline
 from zipline.pipeline.data import USEquityPricing
 from zipline.pipeline.data.testing import TestingDataSet
-from zipline.pipeline.domain import US_EQUITIES
+from zipline.pipeline.domain import CN_EQUITIES
 from zipline.pipeline.factors import (
     Returns,
     RollingLinearRegressionOfReturns,
@@ -42,7 +42,7 @@ class SliceTestCase(WithSeededRandomPipelineEngine, ZiplineTestCase):
     START_DATE = Timestamp('2015-01-31', tz='UTC')
     END_DATE = Timestamp('2015-03-01', tz='UTC')
     ASSET_FINDER_COUNTRY_CODE = 'US'
-    SEEDED_RANDOM_PIPELINE_DEFAULT_DOMAIN = US_EQUITIES
+    SEEDED_RANDOM_PIPELINE_DEFAULT_DOMAIN = CN_EQUITIES
 
     @classmethod
     def init_class_fixtures(cls):

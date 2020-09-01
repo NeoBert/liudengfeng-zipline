@@ -34,7 +34,7 @@ from zipline.data.data_portal import DataPortal
 from zipline.data.minute_bars import (
     BcolzMinuteBarReader,
     BcolzMinuteBarWriter,
-    US_EQUITIES_MINUTES_PER_DAY
+    CN_EQUITIES_MINUTES_PER_DAY
 )
 from zipline.data.bcolz_daily_bars import (
     BcolzDailyBarReader,
@@ -520,7 +520,7 @@ def write_bcolz_minute_data(trading_calendar, days, path, data):
         trading_calendar,
         days[0],
         days[-1],
-        US_EQUITIES_MINUTES_PER_DAY
+        CN_EQUITIES_MINUTES_PER_DAY
     ).write(data)
 
 

@@ -13,7 +13,7 @@ from zipline.data.in_memory_daily_bars import InMemoryDailyBarReader
 from zipline.pipeline.domain import (
     CA_EQUITIES,
     GB_EQUITIES,
-    US_EQUITIES,
+    CN_EQUITIES,
 )
 from zipline.pipeline import Pipeline
 from zipline.pipeline.data import EquityPricing, USEquityPricing
@@ -144,7 +144,7 @@ class WithInternationalPricingPipelineEngine(zf.WithFXRates,
                 adjustments,
                 cls.in_memory_fx_rate_reader,
             ),
-            US_EQUITIES: EquityPricingLoader(
+            CN_EQUITIES: EquityPricingLoader(
                 cls.daily_bar_readers['XNYS'],
                 adjustments,
                 cls.in_memory_fx_rate_reader,
@@ -212,7 +212,7 @@ class InternationalEquityTestCase(WithInternationalPricingPipelineEngine,
     def make_exchanges_info(cls, equities, futures, root_symbols):
         return cls.EXCHANGE_INFO
 
-    @parameter_space(domain=[CA_EQUITIES, US_EQUITIES, GB_EQUITIES])
+    @parameter_space(domain=[CA_EQUITIES, CN_EQUITIES, GB_EQUITIES])
     def test_generic_pipeline_with_explicit_domain(self, domain):
         calendar = domain.calendar
         pipe = Pipeline({
@@ -272,7 +272,7 @@ class InternationalEquityTestCase(WithInternationalPricingPipelineEngine,
                     )
 
     @parameterized.expand([
-        ('US', US_EQUITIES, 'XNYS'),
+        ('US', CN_EQUITIES, 'XNYS'),
         ('CA', CA_EQUITIES, 'XTSE'),
         ('GB', GB_EQUITIES, 'XLON'),
     ])
@@ -334,7 +334,7 @@ class InternationalEquityTestCase(WithInternationalPricingPipelineEngine,
             assert_equal(result_2d, expected_result_2d)
 
     @parameterized.expand([
-        ('US', US_EQUITIES, 'XNYS'),
+        ('US', CN_EQUITIES, 'XNYS'),
         ('CA', CA_EQUITIES, 'XTSE'),
         ('GB', GB_EQUITIES, 'XLON'),
     ])
@@ -385,7 +385,7 @@ class InternationalEquityTestCase(WithInternationalPricingPipelineEngine,
             'low': EquityPricing.low.latest,
             'close': EquityPricing.close.latest,
             'volume': EquityPricing.volume.latest,
-        }, domain=US_EQUITIES)
+        }, domain=CN_EQUITIES)
         dataset_specialized = Pipeline({
             'open': USEquityPricing.open.latest,
             'high': USEquityPricing.high.latest,

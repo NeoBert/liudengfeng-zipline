@@ -48,10 +48,10 @@ from zipline.utils.memoize import lazyval
 
 logger = logbook.Logger('MinuteBars')
 
-US_EQUITIES_MINUTES_PER_DAY = 390
+CN_EQUITIES_MINUTES_PER_DAY = 240
 FUTURES_MINUTES_PER_DAY = 1440
 
-DEFAULT_EXPECTEDLEN = US_EQUITIES_MINUTES_PER_DAY * 252 * 15
+DEFAULT_EXPECTEDLEN = CN_EQUITIES_MINUTES_PER_DAY * 252 * 15
 
 OHLC_RATIO = 1000
 
@@ -230,7 +230,7 @@ class BcolzMinuteBarMetadata(object):
                 minutes_per_day = raw_data['minutes_per_day']
             else:
                 # version 0 always assumed US equities.
-                minutes_per_day = US_EQUITIES_MINUTES_PER_DAY
+                minutes_per_day = CN_EQUITIES_MINUTES_PER_DAY
 
             if version >= 2:
                 calendar = get_calendar(raw_data['calendar_name'])

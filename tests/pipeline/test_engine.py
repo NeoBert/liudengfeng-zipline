@@ -51,7 +51,7 @@ from zipline.pipeline.domain import (
     EquitySessionDomain,
     GENERIC,
     JP_EQUITIES,
-    US_EQUITIES,
+    CN_EQUITIES,
 )
 from zipline.pipeline.engine import SimplePipelineEngine
 from zipline.pipeline.factors import (
@@ -817,7 +817,7 @@ class FrameInputTestCase(zf.WithAssetFinder,
             tz='UTC',
         )
         cls.assets = cls.asset_finder.retrieve_all(cls.asset_ids)
-        cls.domain = US_EQUITIES
+        cls.domain = CN_EQUITIES
 
     @lazyval
     def base_mask(self):
@@ -952,7 +952,7 @@ class SyntheticBcolzTestCase(zf.WithAdjustmentReader,
         cls.engine = SimplePipelineEngine(
             lambda c: cls.pipeline_loader,
             cls.asset_finder,
-            default_domain=US_EQUITIES,
+            default_domain=CN_EQUITIES,
         )
 
     def write_nans(self, df):
@@ -1294,7 +1294,7 @@ class ParameterizedFactorTestCase(zf.WithAssetFinder,
 class StringColumnTestCase(zf.WithSeededRandomPipelineEngine,
                            zf.ZiplineTestCase):
     ASSET_FINDER_COUNTRY_CODE = 'US'
-    SEEDED_RANDOM_PIPELINE_DEFAULT_DOMAIN = US_EQUITIES
+    SEEDED_RANDOM_PIPELINE_DEFAULT_DOMAIN = CN_EQUITIES
 
     @skipIf(new_pandas, skip_pipeline_new_pandas)
     def test_string_classifiers_produce_categoricals(self):
@@ -1327,7 +1327,7 @@ class StringColumnTestCase(zf.WithSeededRandomPipelineEngine,
 class WindowSafetyPropagationTestCase(zf.WithSeededRandomPipelineEngine,
                                       zf.ZiplineTestCase):
     ASSET_FINDER_COUNTRY_CODE = 'US'
-    SEEDED_RANDOM_PIPELINE_DEFAULT_DOMAIN = US_EQUITIES
+    SEEDED_RANDOM_PIPELINE_DEFAULT_DOMAIN = CN_EQUITIES
     SEEDED_RANDOM_PIPELINE_SEED = 5
 
     def test_window_safety_propagation(self):
@@ -1523,7 +1523,7 @@ class ChunkedPipelineTestCase(zf.WithSeededRandomPipelineEngine,
                     window_length=10,
                 ),
             },
-            domain=US_EQUITIES,
+            domain=CN_EQUITIES,
         )
 
         if not new_pandas:
@@ -1565,7 +1565,7 @@ class ChunkedPipelineTestCase(zf.WithSeededRandomPipelineEngine,
             # Define a screen that's False for all assets a significant portion
             # of the time.
             screen=FalseOnOddMonths(),
-            domain=US_EQUITIES,
+            domain=CN_EQUITIES,
         )
 
         if not new_pandas:
@@ -1640,13 +1640,13 @@ class ResolveDomainTestCase(zf.ZiplineTestCase):
         )
 
         pipe_generic = Pipeline()
-        pipe_us = Pipeline(domain=US_EQUITIES)
+        pipe_us = Pipeline(domain=CN_EQUITIES)
 
         # the engine should resolve a pipeline that already has a domain
         # to that domain
         self.assertIs(
             engine_jp.resolve_domain(pipe_us),
-            US_EQUITIES
+            CN_EQUITIES
         )
 
         # the engine should resolve a pipeline without a domain to the engine's
@@ -1660,7 +1660,7 @@ class ResolveDomainTestCase(zf.ZiplineTestCase):
         # if it has one
         self.assertIs(
             engine_generic.resolve_domain(pipe_us),
-            US_EQUITIES
+            CN_EQUITIES
         )
 
         # an engine with a default of GENERIC should raise a ValueError when
@@ -1673,5 +1673,5 @@ class ResolveDomainTestCase(zf.ZiplineTestCase):
         pipe = Pipeline({'close': USEquityPricing.close.latest})
         self.assertIs(
             engine_generic.resolve_domain(pipe),
-            US_EQUITIES,
+            CN_EQUITIES,
         )

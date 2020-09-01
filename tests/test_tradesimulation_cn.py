@@ -22,7 +22,7 @@ from zipline.finance import metrics
 from zipline.finance.trading import SimulationParameters
 from zipline.gens.tradesimulation import AlgorithmSimulator
 from zipline.testing.core import parameter_space
-import zipline.testing.fixtures_cn as zf
+import zipline.testing.fixtures as zf
 
 
 class TestBeforeTradingStartTiming(zf.WithMakeAlgo,

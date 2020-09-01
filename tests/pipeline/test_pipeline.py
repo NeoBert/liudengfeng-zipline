@@ -13,7 +13,7 @@ from zipline.pipeline.domain import (
     CA_EQUITIES,
     GENERIC,
     GB_EQUITIES,
-    US_EQUITIES,
+    CN_EQUITIES,
 )
 from zipline.pipeline.graph import display_graph
 from zipline.utils.compat import getargspec
@@ -218,14 +218,14 @@ class PipelineTestCase(TestCase):
 
     def test_infer_domain_no_terms(self):
         self.assertEqual(Pipeline().domain(default=GENERIC), GENERIC)
-        self.assertEqual(Pipeline().domain(default=US_EQUITIES), US_EQUITIES)
+        self.assertEqual(Pipeline().domain(default=CN_EQUITIES), CN_EQUITIES)
 
     def test_infer_domain_screen_only(self):
         class D(DataSet):
             c = Column(bool)
 
         filter_generic = D.c.latest
-        filter_US = D.c.specialize(US_EQUITIES).latest
+        filter_US = D.c.specialize(CN_EQUITIES).latest
         filter_CA = D.c.specialize(CA_EQUITIES).latest
 
         self.assertEqual(
@@ -234,7 +234,7 @@ class PipelineTestCase(TestCase):
         )
         self.assertEqual(
             Pipeline(screen=filter_US).domain(default=GB_EQUITIES),
-            US_EQUITIES,
+            CN_EQUITIES,
         )
         self.assertEqual(
             Pipeline(screen=filter_CA).domain(default=GB_EQUITIES),
@@ -245,11 +245,11 @@ class PipelineTestCase(TestCase):
         class D(DataSet):
             c = Column(float)
 
-        D_US = D.specialize(US_EQUITIES)
+        D_US = D.specialize(CN_EQUITIES)
         D_CA = D.specialize(CA_EQUITIES)
 
         result = Pipeline({"f": D_US.c.latest}).domain(default=GB_EQUITIES)
-        expected = US_EQUITIES
+        expected = CN_EQUITIES
         self.assertEqual(result, expected)
 
         result = Pipeline({"f": D_CA.c.latest}).domain(default=GB_EQUITIES)
@@ -260,25 +260,25 @@ class PipelineTestCase(TestCase):
         class D(DataSet):
             c = Column(float)
 
-        D_US = D.specialize(US_EQUITIES)
+        D_US = D.specialize(CN_EQUITIES)
         D_CA = D.specialize(CA_EQUITIES)
 
         pipe = Pipeline({"f": D_US.c.latest, "g": D_CA.c.latest})
         with self.assertRaises(AmbiguousDomain) as e:
             pipe.domain(default=GENERIC)
 
-        self.assertEqual(e.exception.domains, [CA_EQUITIES, US_EQUITIES])
+        self.assertEqual(e.exception.domains, [CA_EQUITIES, CN_EQUITIES])
 
     def test_conflict_between_output_and_screen(self):
         class D(DataSet):
             c = Column(float)
             b = Column(bool)
 
-        D_US = D.specialize(US_EQUITIES)
+        D_US = D.specialize(CN_EQUITIES)
         D_CA = D.specialize(CA_EQUITIES)
 
         pipe = Pipeline({"f": D_US.c.latest}, screen=D_CA.b.latest)
         with self.assertRaises(AmbiguousDomain) as e:
             pipe.domain(default=GENERIC)
 
-        self.assertEqual(e.exception.domains, [CA_EQUITIES, US_EQUITIES])
+        self.assertEqual(e.exception.domains, [CA_EQUITIES, CN_EQUITIES])
