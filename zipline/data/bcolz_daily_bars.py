@@ -173,7 +173,8 @@ class BcolzDailyBarWriter(object):
               data,
               assets=None,
               show_progress=False,
-              invalid_data_behavior='warn'):
+              invalid_data_behavior='warn',
+              has_additional_cols=False):
         """
         Parameters
         ----------
@@ -189,12 +190,20 @@ class BcolzDailyBarWriter(object):
         invalid_data_behavior : {'warn', 'raise', 'ignore'}, optional
             What to do when data is encountered that is outside the range of
             a uint32.
+        has_additional_cols : bool, optional
+            是否写入附加列。
 
         Returns
         -------
         table : bcolz.ctable
             The newly-written table.
         """
+        # 🆗 如果写入附加列
+        if has_additional_cols:
+            self.USE_COLS = ALL_EQUITY_PRICING_BCOLZ_COLUMNS
+        else:
+            self.USE_COLS = US_EQUITY_PRICING_BCOLZ_COLUMNS
+
         ctx = maybe_show_progress(
             (
                 (sid, self.to_ctable(df, invalid_data_behavior))
@@ -249,17 +258,10 @@ class BcolzDailyBarWriter(object):
         last_row = {}
         calendar_offset = {}
 
-        # 🆗 首先判断使用的列类型
-        USE_COLS = US_EQUITY_PRICING_BCOLZ_COLUMNS
-        for asset_id, table in iterator:
-            if set(ADJUST_FACTOR.keys()).intersection(set(table.names)):
-                USE_COLS = ALL_EQUITY_PRICING_BCOLZ_COLUMNS
-            break
-
         # Maps column name -> output carray.
         columns = {
             k: carray(array([], dtype=uint32_dtype))
-            for k in USE_COLS
+            for k in self.USE_COLS
         }
 
         earliest_date = None
@@ -345,9 +347,9 @@ class BcolzDailyBarWriter(object):
         full_table = ctable(
             columns=[
                 columns[colname]
-                for colname in USE_COLS
+                for colname in self.USE_COLS
             ],
-            names=USE_COLS,
+            names=self.USE_COLS,
             rootdir=self._filename,
             mode='w',
         )
@@ -601,12 +603,9 @@ class BcolzDailyBarReader(CurrencyAwareSessionBarReader):
             offsets,
             read_all,
         )
-        # 🆗 恢复原始单位
+        # 🆗 恢复调整列原始单位
         for i, col in enumerate(list(columns)):
-            if col == 'volume':
-                adj = 100
-            else:
-                adj = 1 / ADJUST_FACTOR.get(col, 1)
+            adj = 1 / ADJUST_FACTOR.get(col, 1)
             raw_arrays[i] = raw_arrays[i] * adj
             # # 🆗 为0值 无效值
             # raw_arrays[i] = np.where(raw_arrays[i] == 0., np.nan,
@@ -722,8 +721,7 @@ class BcolzDailyBarReader(CurrencyAwareSessionBarReader):
         ix = self.sid_day_index(sid, dt)
         price = self._spot_col(field)[ix]
         if field == 'volume':
-            # # 恢复成交量(损失精度)
-            return price * 100
+            return price
         elif field in OHLC:
             if price == 0:
                 return nan

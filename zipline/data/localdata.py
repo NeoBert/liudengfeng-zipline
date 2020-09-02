@@ -526,8 +526,8 @@ def _fetch_single_minutely_equity(one_day, stock_code, default):
         ohlc.loc[ohlc.index[iloc0], 'low'] = low
         ohlc.loc[ohlc.index[iloc0], 'close'] = close
         # ohlc.drop(ohlc.index[iloc1], inplace=True)
-    # 换算为股
-    v = resampled['volume'].sum() * 100
+    # 🆗 以手为单位，否则写入数值产生溢出错误
+    v = resampled['volume'].sum() #* 100
     for ts in end_times:
         # 将尾部调整为前一分钟的数据
         iloc0 = v.index.indexer_at_time(ts[0])

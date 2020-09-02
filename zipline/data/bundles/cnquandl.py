@@ -98,8 +98,8 @@ def gen_symbol_data(symbol_map, sessions, splits, dividends, is_minutely):
             )
             # 新股可能存在日线延迟，会触发异常
             if not raw_data.empty:
-                # 调整成交量的精度
-                raw_data['volume'] = raw_data['volume'] / 100.0
+                # 🆗 除去调整
+                # raw_data['volume'] = raw_data['volume'] / 100.0
 
                 # 以日期、符号为索引
                 raw_data.set_index(['date', 'symbol'], inplace=True)
@@ -176,6 +176,7 @@ def cndaily_bundle(environ, asset_db_writer, minute_bar_writer,
                         dividends,
                         is_minutely=False),
         show_progress=show_progress,
+        has_additional_cols=True,
     )
 
     adjustment_writer.write(
