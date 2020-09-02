@@ -66,8 +66,8 @@ def seconds_to_timestamp(seconds):
 
 
 def to_utc(time_str):
-    """Convert a string in US/Eastern time to UTC"""
-    return pd.Timestamp(time_str, tz='US/Eastern').tz_convert('UTC')
+    """Convert a string in Asia/Shanghai time to UTC"""
+    return pd.Timestamp(time_str, tz='Asia/Shanghai').tz_convert('UTC')
 
 
 def str_to_seconds(s):

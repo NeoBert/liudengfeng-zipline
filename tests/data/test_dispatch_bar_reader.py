@@ -50,32 +50,32 @@ class AssetDispatchSessionBarTestCase(WithBcolzEquityDailyBarReader,
     START_DATE = Timestamp('2016-08-22', tz='UTC')
     END_DATE = Timestamp('2016-08-24', tz='UTC')
 
-    @classmethod
-    def make_future_minute_bar_data(cls):
-        m_opens = [
-            cls.trading_calendar.open_and_close_for_session(session)[0]
-            for session in cls.trading_sessions['us_futures']]
-        yield 10001, DataFrame({
-            'open': [10000.5, 10001.5, nan],
-            'high': [10000.9, 10001.9, nan],
-            'low': [10000.1, 10001.1, nan],
-            'close': [10000.3, 10001.3, nan],
-            'volume': [1000, 1001, 0],
-        }, index=m_opens)
-        yield 10002, DataFrame({
-            'open': [20000.5, nan, 20002.5],
-            'high': [20000.9, nan, 20002.9],
-            'low': [20000.1, nan, 20002.1],
-            'close': [20000.3, nan, 20002.3],
-            'volume': [2000, 0, 2002],
-        }, index=m_opens)
-        yield 10003, DataFrame({
-            'open': [nan, 30001.5, 30002.5],
-            'high': [nan, 30001.9, 30002.9],
-            'low': [nan, 30001.1, 30002.1],
-            'close': [nan, 30001.3, 30002.3],
-            'volume': [0, 3001, 3002],
-        }, index=m_opens)
+    # @classmethod
+    # def make_future_minute_bar_data(cls):
+    #     m_opens = [
+    #         cls.trading_calendar.open_and_close_for_session(session)[0]
+    #         for session in cls.trading_sessions['us_futures']]
+    #     yield 10001, DataFrame({
+    #         'open': [10000.5, 10001.5, nan],
+    #         'high': [10000.9, 10001.9, nan],
+    #         'low': [10000.1, 10001.1, nan],
+    #         'close': [10000.3, 10001.3, nan],
+    #         'volume': [1000, 1001, 0],
+    #     }, index=m_opens)
+    #     yield 10002, DataFrame({
+    #         'open': [20000.5, nan, 20002.5],
+    #         'high': [20000.9, nan, 20002.9],
+    #         'low': [20000.1, nan, 20002.1],
+    #         'close': [20000.3, nan, 20002.3],
+    #         'volume': [2000, 0, 2002],
+    #     }, index=m_opens)
+    #     yield 10003, DataFrame({
+    #         'open': [nan, 30001.5, 30002.5],
+    #         'high': [nan, 30001.9, 30002.9],
+    #         'low': [nan, 30001.1, 30002.1],
+    #         'close': [nan, 30001.3, 30002.3],
+    #         'volume': [0, 3001, 3002],
+    #     }, index=m_opens)
 
     @classmethod
     def make_equity_daily_bar_data(cls, country_code, sids):
@@ -102,20 +102,20 @@ class AssetDispatchSessionBarTestCase(WithBcolzEquityDailyBarReader,
             'volume': [3001, 3002, 0],
         }, index=sessions)
 
-    @classmethod
-    def make_futures_info(cls):
-        return DataFrame({
-            'sid': [10001, 10002, 10003],
-            'root_symbol': ['FOO', 'BAR', 'BAZ'],
-            'symbol': ['FOOA', 'BARA', 'BAZA'],
-            'start_date': [cls.START_DATE] * 3,
-            'end_date': [cls.END_DATE] * 3,
-            # TODO: Make separate from 'end_date'
-            'notice_date': [cls.END_DATE] * 3,
-            'expiration_date': [cls.END_DATE] * 3,
-            'multiplier': [500] * 3,
-            'exchange': ['CMES'] * 3,
-        })
+    # @classmethod
+    # def make_futures_info(cls):
+    #     return DataFrame({
+    #         'sid': [10001, 10002, 10003],
+    #         'root_symbol': ['FOO', 'BAR', 'BAZ'],
+    #         'symbol': ['FOOA', 'BARA', 'BAZA'],
+    #         'start_date': [cls.START_DATE] * 3,
+    #         'end_date': [cls.END_DATE] * 3,
+    #         # TODO: Make separate from 'end_date'
+    #         'notice_date': [cls.END_DATE] * 3,
+    #         'expiration_date': [cls.END_DATE] * 3,
+    #         'multiplier': [500] * 3,
+    #         'exchange': ['CMES'] * 3,
+    #     })
 
     @classmethod
     def init_class_fixtures(cls):
@@ -127,10 +127,10 @@ class AssetDispatchSessionBarTestCase(WithBcolzEquityDailyBarReader,
                 cls.bcolz_equity_daily_bar_reader,
                 cls.START_DATE,
                 cls.END_DATE),
-            Future: MinuteResampleSessionBarReader(
-                cls.trading_calendar,
-                cls.bcolz_future_minute_bar_reader,
-            )
+            # Future: MinuteResampleSessionBarReader(
+            #     cls.trading_calendar,
+            #     cls.bcolz_future_minute_bar_reader,
+            # )
         }
         cls.dispatch_reader = AssetDispatchSessionBarReader(
             cls.trading_calendar,
@@ -144,22 +144,23 @@ class AssetDispatchSessionBarTestCase(WithBcolzEquityDailyBarReader,
 
         results = self.dispatch_reader.load_raw_arrays(
             ['high', 'volume'],
-            sessions[0], sessions[2], [2, 10003, 1, 10001])
+            # sessions[0], sessions[2], [2, 10003, 1, 10001])
+            sessions[0], sessions[2], [2, 1])
 
         expected_per_sid = (
             (2, [array([200.9, nan, 202.9]),
                  array([2000, 0, 2002])],
              "sid=2 should have values on the first and third sessions."),
-            (10003, [array([nan, 30001.9, 30002.9]),
-                     array([0, 3001, 3002])],
-             "sid=10003 should have values on the second and third sessions."),
+            # (10003, [array([nan, 30001.9, 30002.9]),
+            #          array([0, 3001, 3002])],
+            #  "sid=10003 should have values on the second and third sessions."),
             (1, [array([100.9, 101.90, nan]),
                  array([1000, 1001, 0])],
              "sid=1 should have values on the first and second sessions."),
-            (10001, [array([10000.9, 10001.9, nan]),
-                     array([1000, 1001, 0])],
-             "sid=10001 should have a values on the first and second "
-             "sessions."),
+            # (10001, [array([10000.9, 10001.9, nan]),
+            #          array([1000, 1001, 0])],
+            #  "sid=10001 should have a values on the first and second "
+            #  "sessions."),
         )
 
         for i, (sid, expected, msg) in enumerate(expected_per_sid):

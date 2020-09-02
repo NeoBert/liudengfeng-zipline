@@ -57,7 +57,7 @@ class TestSQLiteAdjustmentsWriter(WithTradingCalendars,
         return InMemoryDailyBarReader(
             frames,
             self.trading_calendar,
-            currency_codes=pd.Series(index=sids, data='USD'),
+            currency_codes=pd.Series(index=sids, data='CN'),
         )
 
     def writer_without_pricing(self, dates, sids):
@@ -75,7 +75,7 @@ class TestSQLiteAdjustmentsWriter(WithTradingCalendars,
         return InMemoryDailyBarReader(
             frames,
             self.trading_calendar,
-            currency_codes=pd.Series(index=close.columns, data='USD'),
+            currency_codes=pd.Series(index=close.columns, data='CN'),
         )
 
     def writer_from_close(self, close):
@@ -92,14 +92,14 @@ class TestSQLiteAdjustmentsWriter(WithTradingCalendars,
         ]
 
         before_pricing_data = \
-            (dates[0] - self.trading_calendar.day).tz_convert(None)
+            (dates[0] - self.trading_calendar.day) #.tz_convert(None)
         one_day_past_pricing_data = \
-            (dates[-1] + self.trading_calendar.day).tz_convert(None)
+            (dates[-1] + self.trading_calendar.day) #.tz_convert(None)
         ten_days_past_pricing_data = \
-            (dates[-1] + self.trading_calendar.day * 10).tz_convert(None)
+            (dates[-1] + self.trading_calendar.day * 10) #.tz_convert(None)
 
         def T(n):
-            return dates[n].tz_convert(None)
+            return dates[n] #.tz_convert(None)
 
         close = pd.DataFrame(
             [[10.0, 0.5,   30.0],   # noqa
@@ -175,40 +175,40 @@ class TestSQLiteAdjustmentsWriter(WithTradingCalendars,
         assert_equal(dividend_payouts, expected_dividend_payouts)
 
         expected_dividend_ratios = pd.DataFrame(
-            [[T(1), 0.95, 0],
-             [T(2), 0.90, 1]],
-            columns=['effective_date', 'ratio', 'sid'],
+            [[0, T(1), 0.95],
+             [1, T(2), 0.90]],
+            columns=['sid', 'effective_date', 'ratio'],
         )
         dividend_ratios = dividend_ratios.sort_values(
             ['effective_date', 'sid'],
         )
         dividend_ratios = dividend_ratios.reset_index(drop=True)
         assert_equal(dividend_ratios, expected_dividend_ratios)
-
+        # 更换XSHG日历后，时间发生变化
         self.assertTrue(self.log_handler.has_warning(
-            "Couldn't compute ratio for dividend sid=2, ex_date=1990-10-18,"
+            "Couldn't compute ratio for dividend sid=2, ex_date=1999-11-09,"
             " amount=10.000",
         ))
         self.assertTrue(self.log_handler.has_warning(
-            "Couldn't compute ratio for dividend sid=2, ex_date=1990-10-19,"
+            "Couldn't compute ratio for dividend sid=2, ex_date=1999-11-10,"
             " amount=0.100",
         ))
         self.assertTrue(self.log_handler.has_warning(
-            "Couldn't compute ratio for dividend sid=2, ex_date=1990-11-01,"
+            "Couldn't compute ratio for dividend sid=2, ex_date=1999-11-23,"
             " amount=0.100",
         ))
         self.assertTrue(self.log_handler.has_warning(
-            'Dividend ratio <= 0 for dividend sid=1, ex_date=1990-10-17,'
+            'Dividend ratio <= 0 for dividend sid=1, ex_date=1999-11-08,'
             ' amount=0.510',
         ))
         self.assertTrue(self.log_handler.has_warning(
-            'Dividend ratio <= 0 for dividend sid=1, ex_date=1990-10-18,'
+            'Dividend ratio <= 0 for dividend sid=1, ex_date=1999-11-09,'
             ' amount=0.400',
         ))
 
     def _test_identity(self, name):
         sids = np.arange(5)
-        dates = self.trading_calendar.all_sessions.tz_convert(None)
+        dates = self.trading_calendar.all_sessions #.tz_convert(None)
 
         def T(n):
             return dates[n]
@@ -239,7 +239,7 @@ class TestSQLiteAdjustmentsWriter(WithTradingCalendars,
 
     def test_stock_dividends(self):
         sids = np.arange(5)
-        dates = self.trading_calendar.all_sessions.tz_convert(None)
+        dates = self.trading_calendar.all_sessions #.tz_convert(None)
 
         def T(n):
             return dates[n]
@@ -277,7 +277,7 @@ class TestSQLiteAdjustmentsWriter(WithTradingCalendars,
         """Test that dataframe dtypes are preserved for empty tables.
         """
         sids = np.arange(5)
-        dates = self.trading_calendar.all_sessions.tz_convert(None)
+        dates = self.trading_calendar.all_sessions #.tz_convert(None)
 
         if convert_dates:
             date_dtype = np.dtype('M8[ns]')

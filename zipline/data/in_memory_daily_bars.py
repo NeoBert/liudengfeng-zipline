@@ -4,7 +4,7 @@ import numpy as np
 import pandas as pd
 from pandas import NaT
 
-from trading_calendars import TradingCalendar
+from trading_calendars.trading_calendar_cn import TradingCalendar
 
 from zipline.data.bar_reader import OHLCV, NoDataOnDate, NoDataForSid
 from zipline.data.session_bars import CurrencyAwareSessionBarReader
