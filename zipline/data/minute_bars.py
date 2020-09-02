@@ -371,7 +371,7 @@ class BcolzMinuteBarWriter(object):
         span of minutes in the index, and the market closes that
         correspond with the market opens.
     minutes_per_day : int
-        The number of minutes per each period. Defaults to 390, the mode
+        The number of minutes per each period. Defaults to 240, the mode
         of minutes in XSHG trading days.
     start_session : datetime
         The first trading session in the data set.
@@ -1301,8 +1301,8 @@ class BcolzMinuteBarReader(MinuteBarReader):
                     out[:len(where), i][where] = (
                         values[where] * self._ohlc_ratio_inverse_for_sid(sid))
                 else:
-                    out[:len(where), i][where] = values[where]
-
+                    out[:len(where), i][where] = values[where]  
+            
             results.append(out)
         return results
 

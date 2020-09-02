@@ -1,6 +1,7 @@
 from numpy cimport ndarray, long_t
 from numpy import searchsorted
 from cpython cimport bool
+import pandas as pd
 cimport cython
 
 cdef inline int int_min(int a, int b): return a if a <= b else b
@@ -33,7 +34,7 @@ def minute_value(ndarray[long_t, ndim=1] market_opens,
     q = cython.cdiv(pos, minutes_per_day)
     r = cython.cmod(pos, minutes_per_day)
     # 🆗 添加午休时段
-    r = r + 90 if r >= int(minutes_per_day / 2) else r
+    r = r + 90 if r >= (minutes_per_day // 2) else r
     return market_opens[q] + r
 
 def find_position_of_minute(ndarray[long_t, ndim=1] market_opens,
@@ -81,14 +82,19 @@ def find_position_of_minute(ndarray[long_t, ndim=1] market_opens,
         searchsorted(market_opens, minute_val, side='right') - 1
     market_open = market_opens[market_open_loc]
     market_close = market_closes[market_open_loc]
+    diff = minute_val - market_open
     # 🆗 午休 90 分钟
-    if not forward_fill and ((minute_val - market_open) >= minutes_per_day + 90):
-        raise ValueError("Given minute is not between an open and a close")
+    # 注意下界不得包含 15:00 - 09:31 < 240 + 90
+    if not forward_fill and not (0 <= diff < minutes_per_day + 90):
+        m_m = pd.Timestamp(minute_val, tz='UTC', unit='m')
+        m_o = pd.Timestamp(market_open, tz='UTC', unit='m')
+        m_c = pd.Timestamp(market_close, tz='UTC', unit='m')
+        raise ValueError(f"Given minute={m_m} is not between an open={m_o} and a close={m_c}")
 
     delta = int_min(minute_val - market_open, market_close - market_open)
     # 🆗 需剔除午休时段
-    delta = delta - 90 if delta >= int(minutes_per_day / 2) else delta
-
+    delta = delta - 90 if delta >= (minutes_per_day // 2) else delta
+    
     return (market_open_loc * minutes_per_day) + delta
 
 def find_last_traded_position_internal(

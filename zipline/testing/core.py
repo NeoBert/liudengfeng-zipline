@@ -945,7 +945,7 @@ def subtest(iterator, *_names):
     * Have a large parameter space we are testing
       (see tests/utils/test_events.py).
 
-    ``nose_parameterized.expand`` will create a test for each parameter
+    ``parameterized.expand`` will create a test for each parameter
     combination which bloats the test output and makes the travis pages slow.
 
     We cannot use ``unittest2.TestCase.subTest`` because nose, pytest, and
@@ -1674,7 +1674,7 @@ def simulate_minutes_for_day(open_,
                              low,
                              close,
                              volume,
-                             trading_minutes=390,
+                             trading_minutes=240,
                              random_state=None):
     """Generate a random walk of minute returns which meets the given OHLCV
     profile for an asset. The volume will be evenly distributed through the

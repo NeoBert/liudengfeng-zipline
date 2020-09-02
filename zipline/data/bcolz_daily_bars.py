@@ -608,9 +608,9 @@ class BcolzDailyBarReader(CurrencyAwareSessionBarReader):
             else:
                 adj = 1 / ADJUST_FACTOR.get(col, 1)
             raw_arrays[i] = raw_arrays[i] * adj
-            # 🆗 为0值 无效值
-            raw_arrays[i] = np.where(raw_arrays[i] == 0., np.nan,
-                                     raw_arrays[i])
+            # # 🆗 为0值 无效值
+            # raw_arrays[i] = np.where(raw_arrays[i] == 0., np.nan,
+            #                             raw_arrays[i])
         return raw_arrays
 
     def _load_raw_arrays_date_to_index(self, date):

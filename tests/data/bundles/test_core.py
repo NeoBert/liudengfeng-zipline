@@ -1,6 +1,6 @@
 import os
 
-from nose_parameterized import parameterized
+from parameterized import parameterized
 import pandas as pd
 import sqlalchemy as sa
 from toolz import valmap
@@ -42,6 +42,7 @@ import zipline.utils.paths as pth
 
 
 _1_ns = pd.Timedelta(1, unit='ns')
+_multiprocess_can_split_ = False
 
 
 class BundleCoreTestCase(WithInstanceTmpDir,
@@ -139,6 +140,7 @@ class BundleCoreTestCase(WithInstanceTmpDir,
 
         daily_bar_data = make_bar_data(equities, sessions)
         minute_bar_data = make_bar_data(equities, minutes)
+
         first_split_ratio = 0.5
         second_split_ratio = 0.1
         splits = pd.DataFrame.from_records([
@@ -195,7 +197,7 @@ class BundleCoreTestCase(WithInstanceTmpDir,
             minutes[-1],
             sids,
         )
-        
+
         for actual_column, colname in zip(actual, columns):
             assert_equal(
                 actual_column,

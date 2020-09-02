@@ -9,8 +9,9 @@ from zipline.data._minute_bar_internal import (
     find_last_traded_position_internal, find_position_of_minute, minute_value)
 from zipline.gens.sim_engine import NANOS_IN_MINUTE
 
-TEST_CALENDAR_START = pd.Timestamp('2020-08-27', tz='UTC')
-TEST_CALENDAR_STOP = pd.Timestamp('2020-08-28', tz='UTC')
+# 🆗 期间3个交易日 2019-12-31 2020-01-02 2020-01-03
+TEST_CALENDAR_START = pd.Timestamp('2019-12-31', tz='UTC')
+TEST_CALENDAR_STOP = pd.Timestamp('2020-01-03', tz='UTC')
 MINUTES_PER_DAY = 240
 LOCAL_TZ = 'Asia/Shanghai'
 
@@ -103,9 +104,9 @@ def test_NoDataOnDate(calendar):
     market_closes_values = market_closes.values.astype('datetime64[m]').astype(
         np.int64)
     # 午夜时分
-    dt_1 = pd.Timestamp('2020-01-08', tz='UTC')
+    dt_1 = cal.index[0]
 
-    try:
+    with pytest.raises(ValueError):
         find_position_of_minute(
             market_open_values,
             market_closes_values,
@@ -113,12 +114,11 @@ def test_NoDataOnDate(calendar):
             MINUTES_PER_DAY,
             False,
         )
-    except ValueError:
-        pass
-    # `15：00` 为最后交易分钟
-    dt_2 = pd.Timestamp('2020-08-28 15:02', tz=LOCAL_TZ).tz_convert('UTC')
 
-    try:
+    # `15：00` 为最后交易分钟
+    dt_2 = cal.index[-1].replace(hour=7, minute=1)
+
+    with pytest.raises(ValueError):
         find_position_of_minute(
             market_open_values,
             market_closes_values,
@@ -126,5 +126,3 @@ def test_NoDataOnDate(calendar):
             MINUTES_PER_DAY,
             False,
         )
-    except ValueError:
-        pass

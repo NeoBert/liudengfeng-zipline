@@ -226,7 +226,7 @@ def _make_bundle_core():
                  # 🆗 减少写入数据量【必须为交易日】
                  start_session=pd.Timestamp('2010-01-04', tz='UTC'),  # None,
                  end_session=None,
-                 minutes_per_day=390,
+                 minutes_per_day=240,
                  create_writers=True):
         """Register a data bundle ingest function.
 
