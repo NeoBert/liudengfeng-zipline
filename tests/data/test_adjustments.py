@@ -57,7 +57,7 @@ class TestSQLiteAdjustmentsWriter(WithTradingCalendars,
         return InMemoryDailyBarReader(
             frames,
             self.trading_calendar,
-            currency_codes=pd.Series(index=sids, data='CN'),
+            currency_codes=pd.Series(index=sids, data='CNY'),
         )
 
     def writer_without_pricing(self, dates, sids):
@@ -75,7 +75,7 @@ class TestSQLiteAdjustmentsWriter(WithTradingCalendars,
         return InMemoryDailyBarReader(
             frames,
             self.trading_calendar,
-            currency_codes=pd.Series(index=close.columns, data='CN'),
+            currency_codes=pd.Series(index=close.columns, data='CNY'),
         )
 
     def writer_from_close(self, close):
