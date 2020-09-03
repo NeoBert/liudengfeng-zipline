@@ -1,5 +1,6 @@
 """
 Tests for zipline.lib.adjustment
+完成测试 ✔
 """
 from unittest import TestCase
 from parameterized import parameterized

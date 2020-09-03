@@ -186,11 +186,6 @@ class LabelArray(ndarray):
                     sort=sort,
                 )
             )
-            
-        # TODO:检查是否有必要！将None转换为字符
-        missing_value = 'None' if missing_value is None else missing_value
-        categories[categories == None] = 'None'
-        reverse_categories['None'] = reverse_categories.pop(None)
         categories.setflags(write=False)
 
         return cls.from_codes_and_metadata(

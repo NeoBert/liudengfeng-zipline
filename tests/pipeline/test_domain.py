@@ -1,3 +1,8 @@
+"""
+完成测试 ✔
+
+在新版pandas中，如果dt带时区信息，pd.Timestamp(dt, tz='UTC)触发异常。
+"""
 from collections import namedtuple
 import datetime
 from textwrap import dedent
@@ -560,7 +565,7 @@ class RollForwardTestCase(zf.ZiplineTestCase):
             JP_EQUITIES.calendar.first_session - pd.Timedelta(days=20)
 
         self.assertEqual(
-            JP_EQUITIES.roll_forward(before_first_session),
+            JP_EQUITIES.roll_forward(before_first_session.tz_localize(None)),
             JP_EQUITIES.calendar.first_session
         )
 
@@ -569,7 +574,7 @@ class RollForwardTestCase(zf.ZiplineTestCase):
             JP_EQUITIES.calendar.last_session + pd.Timedelta(days=20)
 
         with self.assertRaises(ValueError) as ve:
-            JP_EQUITIES.roll_forward(after_last_session)
+            JP_EQUITIES.roll_forward(after_last_session.tz_localize(None))
 
         self.assertEqual(
             str(ve.exception),

@@ -1,5 +1,7 @@
 """
-Tests for chunked adjustments.
+完成测试 ✔
+
+唯一test_inspect：表达方式可能存在差异，测试未通过。
 """
 from collections import namedtuple
 from itertools import chain, product
