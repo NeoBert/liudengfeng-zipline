@@ -174,8 +174,8 @@ class QuandlBundleTestCase(WithResponses,
 
     def test_bundle(self):
         with open(test_resource_path(
-                    'quandl_samples',
-                    'QUANDL_ARCHIVE.zip'), 'rb') as quandl_response:
+            'quandl_samples',
+                'QUANDL_ARCHIVE.zip'), 'rb') as quandl_response:
 
             self.responses.add(
                 self.responses.GET,

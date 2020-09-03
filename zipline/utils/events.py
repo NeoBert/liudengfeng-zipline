@@ -29,7 +29,8 @@ from zipline.utils.sentinel import sentinel
 
 from .context_tricks import nop_context
 
-TWO_HOURS = 2 * 60 * 60
+ONE_HOUR = 60 * 60
+LUNCH_BREAK = pd.Timedelta(hours=1, minutes=30)
 
 __all__ = [
     'EventManager',
@@ -193,6 +194,7 @@ class EventManager(object):
         An optional callback to produce a context manager to wrap the calls
         to handle_data. This will be passed the current BarData.
     """
+
     def __init__(self, create_context=None):
         self._events = []
         self._create_context = (
@@ -269,6 +271,7 @@ class StatelessRule(EventRule):
     same datetime.
     Because these are pure, they can be composed to create new rules.
     """
+
     def and_(self, rule):
         """
         Logical and of two rules, triggers only when both rules trigger.
@@ -291,6 +294,7 @@ class ComposedRule(StatelessRule):
     operators so that they will have the same short circuit logic that is
     expected.
     """
+
     def __init__(self, first, second, composer):
         if not (isinstance(first, StatelessRule) and
                 isinstance(second, StatelessRule)):
@@ -362,20 +366,13 @@ class AfterOpen(StatelessRule):
     >>> AfterOpen(minutes=30)  # doctest: +ELLIPSIS
     <zipline.utils.events.AfterOpen object at ...>
     """
+
     def __init__(self, offset=None, **kwargs):
         self.offset = _build_offset(
             offset,
             kwargs,
             datetime.timedelta(minutes=1),  # Defaults to the first minute.
         )
-        if self.offset.seconds > TWO_HOURS:
-            msg = """
-            由于午休关系，使用开盘后2小时，会导致事件无法触发。
-            请考虑使用`time_rules.market_close`。
-            如计划在开盘后2h5m执行任务，改用`BeforeClose`规则：
-            `time_rules.market_close(hours=1, minutes=55)`
-            """
-            raise ValueError(msg) 
         self._period_start = None
         self._period_end = None
         self._period_close = None
@@ -395,8 +392,14 @@ class AfterOpen(StatelessRule):
         # trigger at the correct times.
         self._period_start = self.cal.execution_time_from_open(period_start)
         self._period_close = self.cal.execution_time_from_close(period_close)
-
-        self._period_end = self._period_start + self.offset - self._one_minute
+        # 🆗 当超越午休时段时，需要额外调整
+        if self.offset.seconds > ONE_HOUR*2:
+            offset = self.offset + LUNCH_BREAK
+        else:
+            offset = self.offset
+        # 再次检查时间偏移是否正确
+        _td_check(offset)
+        self._period_end = self._period_start + offset - self._one_minute
 
     def should_trigger(self, dt):
         # There are two reasons why we might want to recalculate the dates.
@@ -425,20 +428,13 @@ class BeforeClose(StatelessRule):
     >>> BeforeClose(minutes=30)  # doctest: +ELLIPSIS
     <zipline.utils.events.BeforeClose object at ...>
     """
+
     def __init__(self, offset=None, **kwargs):
         self.offset = _build_offset(
             offset,
             kwargs,
             datetime.timedelta(minutes=1),  # Defaults to the last minute.
         )
-        if self.offset.seconds > TWO_HOURS:
-            msg = """
-            由于午休关系，使用收盘前2小时，会导致事件无法触发。
-            请考虑使用`time_rules.market_open`。
-            如计划在收盘前2h5m执行任务，改用`AfterOpen`规则：
-            `time_rules.market_open(hours=1, minutes=55)`
-            """
-            raise ValueError(msg) 
         self._period_start = None
         self._period_close = None
         self._period_end = None
@@ -457,8 +453,14 @@ class BeforeClose(StatelessRule):
         # simulation clock. This ensures that scheduled functions trigger at
         # the correct times.
         self._period_end = self.cal.execution_time_from_close(period_end)
-
-        self._period_start = self._period_end - self.offset
+        # 🆗 当超越午休时段时，需要额外调整
+        if self.offset.seconds > ONE_HOUR*2:
+            offset = self.offset + LUNCH_BREAK
+        else:
+            offset = self.offset
+        # 再次检查时间偏移是否正确
+        _td_check(offset)
+        self._period_start = self._period_end - offset
         self._period_close = self._period_end
 
     def should_trigger(self, dt):
@@ -481,6 +483,7 @@ class NotHalfDay(StatelessRule):
     """
     A rule that only triggers when it is not a half day.
     """
+
     def should_trigger(self, dt):
         return self.cal.minute_to_session_label(dt) \
             not in self.cal.early_closes
@@ -517,6 +520,7 @@ class NthTradingDayOfWeek(TradingDayOfWeekRule):
     A rule that triggers on the nth trading day of the week.
     This is zero-indexed, n=0 is the first trading day of the week.
     """
+
     def __init__(self, n):
         super(NthTradingDayOfWeek, self).__init__(n, invert=False)
 
@@ -525,6 +529,7 @@ class NDaysBeforeLastTradingDayOfWeek(TradingDayOfWeekRule):
     """
     A rule that triggers n days before the last trading day of the week.
     """
+
     def __init__(self, n):
         super(NDaysBeforeLastTradingDayOfWeek, self).__init__(n, invert=True)
 
@@ -562,6 +567,7 @@ class NthTradingDayOfMonth(TradingDayOfMonthRule):
     A rule that triggers on the nth trading day of the month.
     This is zero-indexed, n=0 is the first trading day of the month.
     """
+
     def __init__(self, n):
         super(NthTradingDayOfMonth, self).__init__(n, invert=False)
 
@@ -570,6 +576,7 @@ class NDaysBeforeLastTradingDayOfMonth(TradingDayOfMonthRule):
     """
     A rule that triggers n days before the last trading day of the month.
     """
+
     def __init__(self, n):
         super(NDaysBeforeLastTradingDayOfMonth, self).__init__(n, invert=True)
 
@@ -584,6 +591,7 @@ class StatefulRule(EventRule):
     on the internal state that this holds.
     StatefulRules wrap other rules as state transformers.
     """
+
     def __init__(self, rule=None):
         self.rule = rule or Always()
 

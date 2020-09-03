@@ -12,10 +12,9 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-# TODO：考虑午休后，对于周开始、结束的处理不正确，需要修正
 from datetime import timedelta
 from unittest import TestCase
-
+import unittest
 import pandas as pd
 import pytest
 from parameterized import parameterized
@@ -113,7 +112,6 @@ class TestStatelessRulesXSHG(StatelessRulesTests, TestCase):
         n_triggered = 0
         for m in feb_minutes:
             if should_trigger(m):
-                print(m)
                 self.assertEqual(m, next(trigger_minutes_iter))
                 n_triggered += 1
 
@@ -159,37 +157,44 @@ class TestStatelessRulesXSHG(StatelessRulesTests, TestCase):
         self.assertEqual(n_triggered, 2)
 
     @parameterized.expand([('week_start', ), ('week_end', )])
-    def test_week_and_time_composed_rule_pm(self, type):
-        week_rule = NthTradingDayOfWeek(0) if type == 'week_start' else \
+    def test_week_and_time_composed_rule_pm(self, type_):
+        """测试包含午休时间的offset"""
+        week_rule = NthTradingDayOfWeek(0) if type_ == 'week_start' else \
             NDaysBeforeLastTradingDayOfWeek(4)
-        # # 下午开盘后一分钟
-        time_rule = AfterOpen(minutes=121)
-
         week_rule.cal = self.cal
-        time_rule.cal = self.cal
 
-        composed_rule = week_rule & time_rule
-
-        should_trigger = composed_rule.should_trigger
+        # # 开盘时间
+        dt = pd.Timestamp('2019-02-11 09:31:00', tz=self.cal.tz)
+        dt = dt.tz_convert('UTC')
+        trigger_day_offset = 0
+        # minute_offset = 121
+        n_triggered = 0
 
         week_minutes = self.cal.minutes_for_sessions_in_range(
             pd.Timestamp("2019-02-11", tz='UTC'),
             pd.Timestamp("2019-02-15", tz='UTC'))
-        # # 开盘时间
-        dt = pd.Timestamp('2019-02-11 09:30:00', tz=self.cal.tz)
-        dt = dt.tz_convert('UTC')
-        trigger_day_offset = 0
-        trigger_minute_offset = 121
-        n_triggered = 0
 
-        for m in week_minutes:
-            if should_trigger(m):
-                self.assertEqual(
-                    m, dt + timedelta(days=trigger_day_offset) +
-                    timedelta(minutes=trigger_minute_offset))
-                n_triggered += 1
+        minutes = [119, 120, 121, 240]
 
-        self.assertEqual(n_triggered, 1)
+        for minute in minutes:
+            # # 分别测试 11:30 13:01 13:02
+            time_rule = AfterOpen(minutes=minute)
+
+            time_rule.cal = self.cal
+
+            composed_rule = week_rule & time_rule
+
+            should_trigger = composed_rule.should_trigger
+
+            for m in week_minutes:
+                if should_trigger(m):
+                    e = dt + timedelta(days=trigger_day_offset) + timedelta(
+                        minutes=minute-1 if minute <= 120 else minute+90-1)
+                    self.assertEqual(m, e)
+
+                    n_triggered += 1
+
+        self.assertEqual(n_triggered, len(minutes))
 
     def test_offset_too_far(self):
         minute_groups = minutes_for_days(self.cal, ordered_days=True)
@@ -203,11 +208,22 @@ class TestStatelessRulesXSHG(StatelessRulesTests, TestCase):
         before_close_rule = BeforeClose(hours=11, minutes=5)
         before_close_rule.cal = self.cal
 
+        # 🆗 随机选择的时间要么触发值异常，要么根本不会触发事件
         for session_minutes in minute_groups:
             for minute in session_minutes:
-                self.assertFalse(after_open_rule.should_trigger(minute))
-                self.assertFalse(before_close_rule.should_trigger(minute))
+                try:
+                    self.assertFalse(after_open_rule.should_trigger(minute))
+                except ValueError:
+                    pass
+                try:
+                    self.assertFalse(before_close_rule.should_trigger(minute))
+                except ValueError:
+                    pass
 
 
 class TestStatefulRulesXSHG(StatefulRulesTests, TestCase):
     CALENDAR_STRING = "XSHG"
+
+
+if __name__ == '__main__':
+    unittest.main()
