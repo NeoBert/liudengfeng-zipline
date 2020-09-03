@@ -337,8 +337,8 @@ def handle_data(context, data):
     data.current("urban", "cpi")
         """
         results = self.run_algo(code.format(usecols=usecols))
-        # 251 trading days in 2006
-        self.assertEqual(len(results), 251)
+        # 241 trading days in 2006
+        self.assertEqual(len(results), 241)
 
     def test_sources_merge_custom_ticker(self):
         requests_kwargs = {}
@@ -377,7 +377,7 @@ def handle_data(context, data):
     record(aapl=data.current(context.stock, "price"))
         """)
 
-            np.testing.assert_array_equal([24] * 251, results["aapl"])
+            np.testing.assert_array_equal([24] * 241, results["aapl"])
             self.assertEqual(337, results["palladium"].iloc[-1])
 
             expected = {

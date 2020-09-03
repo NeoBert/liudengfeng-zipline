@@ -615,15 +615,15 @@ class _ClassicRiskMetrics(object):
                     'max_leverage': 0.0,
                 }
         """
-
+        # 🆗 转换tzinfo -> None
         algorithm_returns = algorithm_returns[
-            (algorithm_returns.index >= start_session) &
-            (algorithm_returns.index <= end_session)
+            (algorithm_returns.index.tz_convert(None) >= start_session) &
+            (algorithm_returns.index.tz_convert(None) <= end_session)
         ]
 
         # Benchmark needs to be masked to the same dates as the algo returns
         benchmark_returns = benchmark_returns[
-            (benchmark_returns.index >= start_session) &
+            (benchmark_returns.index.tz_convert(None) >= start_session) &
             (benchmark_returns.index <= algorithm_returns.index[-1])
         ]
 

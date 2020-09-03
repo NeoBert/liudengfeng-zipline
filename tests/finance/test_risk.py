@@ -25,10 +25,10 @@ import zipline.testing.fixtures as zf
 from zipline.finance.metrics import _ClassicRiskMetrics as ClassicRiskMetrics
 
 RETURNS_BASE = 0.01
-RETURNS = [RETURNS_BASE] * 251
+RETURNS = [RETURNS_BASE] * 241
 
 BENCHMARK_BASE = 0.005
-BENCHMARK = [BENCHMARK_BASE] * 251
+BENCHMARK = [BENCHMARK_BASE] * 241
 DECIMAL_PLACES = 8
 
 PERIODS = [
@@ -93,11 +93,11 @@ class TestRisk(zf.WithBenchmarkReturns, zf.ZiplineTestCase):
     def test_trading_days(self):
         self.assertEqual(
             [x['trading_days'] for x in self.metrics['twelve_month']],
-            [251],
+            [241],
         )
         self.assertEqual(
             [x['trading_days'] for x in self.metrics['one_month']],
-            [20, 19, 23, 19, 22, 22, 20, 23, 20, 22, 21, 20],
+            [16, 17, 23, 20, 18, 22, 21, 23, 21, 17, 22, 21],
         )
 
     def test_benchmark_volatility(self):
@@ -134,7 +134,7 @@ class TestRisk(zf.WithBenchmarkReturns, zf.ZiplineTestCase):
         # numerical. This tests for its existence and format.
         for period in PERIODS:
             self.assertTrue(all(
-                isinstance(x['sharpe'], float)
+                isinstance(x['sharpe'], float) or x['sharpe'] is None
                 for x in self.metrics[period]
             ))
 
@@ -180,8 +180,8 @@ class TestRisk(zf.WithBenchmarkReturns, zf.ZiplineTestCase):
         # out the treasury period returns as they are no longer actually used.
         for period in PERIODS:
             self.assertEqual(
-              [x['treasury_period_return'] for x in metrics[period]],
-              [0.0] * len(metrics[period]),
+                [x['treasury_period_return'] for x in metrics[period]],
+                [0.0] * len(metrics[period]),
             )
 
     def test_benchmarkrange(self):
@@ -215,7 +215,7 @@ class TestRisk(zf.WithBenchmarkReturns, zf.ZiplineTestCase):
             pd.Timestamp("1993-02-01", tz='UTC')
         )
 
-        # 1992 and 1996 were leap years
+        # 1992 and 1996 were leap years 闰年
         total_days = 365 * 5 + 2
         end_session = start_session + datetime.timedelta(days=total_days)
         sim_params90s = SimulationParameters(
@@ -288,8 +288,8 @@ class TestRisk(zf.WithBenchmarkReturns, zf.ZiplineTestCase):
             )
 
         test_period = ClassicRiskMetrics.risk_metric_period(
-            start_session=self.start_session,
-            end_session=self.end_session,
+            start_session=self.start_session.tz_convert(None),
+            end_session=self.end_session.tz_convert(None),
             algorithm_returns=self.algo_returns,
             benchmark_returns=self.benchmark_returns,
             algorithm_leverages=pd.Series([.01, .02, .03])
@@ -302,12 +302,12 @@ class TestRisk(zf.WithBenchmarkReturns, zf.ZiplineTestCase):
     def test_sharpe_value_when_null(self):
         # Sharpe is displayed as '0.0' instead of np.nan
         null_returns = factory.create_returns_from_list(
-            [0.0]*251,
+            [0.0]*241,
             self.sim_params
         )
         test_period = ClassicRiskMetrics.risk_metric_period(
-            start_session=self.start_session,
-            end_session=self.end_session,
+            start_session=self.start_session.tz_convert(None),
+            end_session=self.end_session.tz_convert(None),
             algorithm_returns=null_returns,
             benchmark_returns=self.benchmark_returns,
             algorithm_leverages=pd.Series(
@@ -320,12 +320,12 @@ class TestRisk(zf.WithBenchmarkReturns, zf.ZiplineTestCase):
     def test_sharpe_value_when_benchmark_null(self):
         # Sharpe is displayed as '0.0' instead of np.nan
         null_returns = factory.create_returns_from_list(
-            [0.0]*251,
+            [0.0]*241,
             self.sim_params
         )
         test_period = ClassicRiskMetrics.risk_metric_period(
-            start_session=self.start_session,
-            end_session=self.end_session,
+            start_session=self.start_session.tz_convert(None),
+            end_session=self.end_session.tz_convert(None),
             algorithm_returns=null_returns,
             benchmark_returns=null_returns,
             algorithm_leverages=pd.Series(
@@ -337,8 +337,8 @@ class TestRisk(zf.WithBenchmarkReturns, zf.ZiplineTestCase):
 
     def test_representation(self):
         test_period = ClassicRiskMetrics.risk_metric_period(
-            start_session=self.start_session,
-            end_session=self.end_session,
+            start_session=self.start_session.tz_convert(None),
+            end_session=self.end_session.tz_convert(None),
             algorithm_returns=self.algo_returns,
             benchmark_returns=self.benchmark_returns,
             algorithm_leverages=pd.Series(

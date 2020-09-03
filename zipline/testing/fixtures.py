@@ -559,8 +559,9 @@ class WithTradingCalendars(object):
 STATIC_BENCHMARK_PATH = os.path.join(
     zipline_dir,
     'resources',
+    'cn_stock',
     'market_data',
-    'SPY_benchmark.csv',
+    '000002.csv',
 )
 
 
