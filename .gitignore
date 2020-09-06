@@ -89,3 +89,5 @@ tests/t.py
 report.html
 assets/
 tests/t.ipynb
+.venv/
+whls/

@@ -1,7 +1,9 @@
+https://github.com/liudengfeng/yahooquery/archive/2.2.4.tar.gz
 https://github.com/liudengfeng/cnswd/archive/5.0.0.tar.gz
 https://github.com/liudengfeng/trading_calendars/archive/1.8.0.tar.gz
 https://github.com/liudengfeng/datashape/archive/0.5.4.tar.gz
 https://github.com/liudengfeng/odo/archive/0.5.2.tar.gz
+https://github.com/liudengfeng/blaze/archive/0.11.3.tar.gz
 https://github.com/liudengfeng/empyrical/archive/0.6.0.tar.gz
 https://github.com/liudengfeng/pyfolio/archive/0.9.0.tar.gz
 https://github.com/liudengfeng/alphalens/archive/0.4.0.tar.gz
