@@ -22,7 +22,7 @@ def minute_value(ndarray[long_t, ndim=1] market_opens,
         The index of the desired minute.
 
     minutes_per_day: int
-        The number of minutes per day (e.g. 390 for NYSE).
+        The number of minutes per day (e.g. 240 for XSHG).
 
     Returns
     -------
@@ -32,7 +32,8 @@ def minute_value(ndarray[long_t, ndim=1] market_opens,
 
     q = cython.cdiv(pos, minutes_per_day)
     r = cython.cmod(pos, minutes_per_day)
-
+    # 🆗 添加午休时段
+    r = r + 90 if r >= int(minutes_per_day / 2) else r
     return market_opens[q] + r
 
 def find_position_of_minute(ndarray[long_t, ndim=1] market_opens,
@@ -56,7 +57,7 @@ def find_position_of_minute(ndarray[long_t, ndim=1] market_opens,
         The desired minute, as a minute epoch.
 
     minutes_per_day: int
-        The number of minutes per day (e.g. 390 for NYSE).
+        The number of minutes per day (e.g. 240 for XSHG).
 
     forward_fill: bool
         Whether to use the previous market minute if the given minute does
@@ -80,11 +81,13 @@ def find_position_of_minute(ndarray[long_t, ndim=1] market_opens,
         searchsorted(market_opens, minute_val, side='right') - 1
     market_open = market_opens[market_open_loc]
     market_close = market_closes[market_open_loc]
-
-    if not forward_fill and ((minute_val - market_open) >= minutes_per_day):
+    # 🆗 午休 90 分钟
+    if not forward_fill and ((minute_val - market_open) >= minutes_per_day + 90):
         raise ValueError("Given minute is not between an open and a close")
 
     delta = int_min(minute_val - market_open, market_close - market_open)
+    # 🆗 需剔除午休时段
+    delta = delta - 90 if delta >= int(minutes_per_day / 2) else delta
 
     return (market_open_loc * minutes_per_day) + delta
 
@@ -118,7 +121,7 @@ def find_last_traded_position_internal(
         The volume history for the given asset.
 
     minutes_per_day: int
-        The number of minutes per day (e.g. 390 for NYSE).
+        The number of minutes per day (e.g. 240 for XSHG).
 
     Returns
     -------
