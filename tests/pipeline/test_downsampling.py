@@ -1,5 +1,7 @@
 """
 Tests for Downsampled Filters/Factors/Classifiers
+
+完成测试 ✔
 """
 from functools import partial
 
@@ -60,7 +62,7 @@ class ComputeExtraRowsTestCase(WithTradingSessions, ZiplineTestCase):
 
     DATA_MIN_DAY = pd.Timestamp('2012-06', tz='UTC')
     DATA_MAX_DAY = pd.Timestamp('2015', tz='UTC')
-    TRADING_CALENDAR_STRS = ('NYSE', 'LSE', 'TSX')
+    TRADING_CALENDAR_STRS = ('XSHG', 'LSE', 'TSX')
 
     # Test with different window_lengths to ensure that window length is not
     # used when calculating exra rows for the top-level term.
@@ -649,19 +651,19 @@ class DownsampledPipelineTestCase(WithSeededRandomPipelineEngine,
 
         expected_results = {
             'year': (raw_term_results
-                     .groupby(pd.TimeGrouper('AS'))
+                     .groupby(pd.Grouper(freq='AS'))
                      .first()
                      .reindex(compute_dates, method='ffill')),
             'quarter': (raw_term_results
-                        .groupby(pd.TimeGrouper('QS'))
+                        .groupby(pd.Grouper(freq='QS'))
                         .first()
                         .reindex(compute_dates, method='ffill')),
             'month': (raw_term_results
-                      .groupby(pd.TimeGrouper('MS'))
+                      .groupby(pd.Grouper(freq='MS'))
                       .first()
                       .reindex(compute_dates, method='ffill')),
             'week': (raw_term_results
-                     .groupby(pd.TimeGrouper('W', label='left'))
+                     .groupby(pd.Grouper(freq='W', label='left'))
                      .first()
                      .reindex(compute_dates, method='ffill')),
         }
@@ -671,6 +673,7 @@ class DownsampledPipelineTestCase(WithSeededRandomPipelineEngine,
         for frequency in expected_results:
             result = results[frequency].unstack()
             expected = expected_results[frequency]
+            expected.index.set_names(['datetime'], inplace=True)
             assert_frame_equal(result, expected)
 
     def test_downsample_windowed_factor(self):
@@ -737,24 +740,26 @@ class DownsampledPipelineTestCase(WithSeededRandomPipelineEngine,
         self.assertEqual(str(e.exception), expected)
 
 
-class DownsampledGBPipelineTestCase(DownsampledPipelineTestCase):
-    DOMAIN = GB_EQUITIES
+# class DownsampledGBPipelineTestCase(DownsampledPipelineTestCase):
+#     DOMAIN = GB_EQUITIES
 
 
-class DownsampledCAPipelineTestCase(DownsampledPipelineTestCase):
-    DOMAIN = CA_EQUITIES
+# class DownsampledCAPipelineTestCase(DownsampledPipelineTestCase):
+#     DOMAIN = CA_EQUITIES
 
 
 class TestDownsampledRowwiseOperation(WithAssetFinder, ZiplineTestCase):
 
     T = partial(pd.Timestamp, tz='utc')
-    START_DATE = T('2014-01-01')
-    END_DATE = T('2014-02-01')
+    # 确保二者都是交易日
+    START_DATE = T('2014-01-02')
+    END_DATE = T('2014-02-10')
+    # 模拟提前收市
     HALF_WAY_POINT = T('2014-01-15')
 
     dates = pd.date_range(START_DATE, END_DATE)
 
-    ASSET_FINDER_COUNTRY_CODE = '??'
+    ASSET_FINDER_COUNTRY_CODE = 'CN'
 
     class SidFactor(CustomFactor):
         inputs = ()

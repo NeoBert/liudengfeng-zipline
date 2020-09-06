@@ -1,5 +1,9 @@
 """
 Tests BoundColumn attributes and methods.
+
+完成测试 ✔
+
+test_comparison_error_message 由于异常表达存在细微差异未通过。
 """
 import operator
 from unittest import skipIf
@@ -28,11 +32,11 @@ class LatestTestCase(WithSeededRandomPipelineEngine,
                      WithTradingSessions,
                      ZiplineTestCase):
 
-    START_DATE = Timestamp('2014-01-01')
-    END_DATE = Timestamp('2015-12-31')
+    START_DATE = Timestamp('2014-01-01', tz='UTC')
+    END_DATE = Timestamp('2015-12-31', tz='UTC')
     SEEDED_RANDOM_PIPELINE_SEED = 100
     ASSET_FINDER_EQUITY_SIDS = list(range(5))
-    ASSET_FINDER_COUNTRY_CODE = 'US'
+    ASSET_FINDER_COUNTRY_CODE = 'CN'
     SEEDED_RANDOM_PIPELINE_DEFAULT_DOMAIN = CN_EQUITIES
 
     @classmethod

@@ -1,5 +1,11 @@
 """
 Tests for the blaze interface to the pipeline api.
+
+完成测试 ❓
+
+基本通过
+1. 由于设置 A股域导致与设计数据冲突，导致大部分项目测试未通过。
+2. 部分结果由于索引名称差异未通过。
 """
 from __future__ import division
 
@@ -552,7 +558,7 @@ class BlazeToPipelineTestCase(WithAssetFinder, ZiplineTestCase):
                 (self.dates.tz_localize('UTC'), self.asset_finder.retrieve_all(
                     self.ASSET_FINDER_EQUITY_SIDS
                 ))
-            )
+        )
         )
 
         self._test_id(
@@ -874,7 +880,7 @@ class BlazeToPipelineTestCase(WithAssetFinder, ZiplineTestCase):
             pd.DatetimeIndex(df['timestamp'], tz='EST') +
             timedelta(hours=8, minutes=44)
         ).tz_convert('utc').tz_localize(None)
-        df.ix[3:5, 'timestamp'] = pd.Timestamp('2014-01-01 13:45')
+        df.iloc[3:5, :]['timestamp'] = pd.Timestamp('2014-01-01 13:45')
         expr = bz.data(df, name='expr', dshape=self.dshape)
         loader = BlazeLoader()
         ds = from_blaze(
@@ -900,12 +906,14 @@ class BlazeToPipelineTestCase(WithAssetFinder, ZiplineTestCase):
         expected['timestamp'] = expected['timestamp'].dt.normalize().astype(
             'datetime64[ns]',
         ).dt.tz_localize('utc')
-        expected.ix[3:5, 'timestamp'] += timedelta(days=1)
+        expected.iloc[3:5, :]['timestamp'] += timedelta(days=1)
         expected.set_index(['timestamp', 'sid'], inplace=True)
         expected.index = pd.MultiIndex.from_product((
             expected.index.levels[0],
             self.asset_finder.retrieve_all(expected.index.levels[1]),
         ))
+        # 🆗 添加索引名称
+        expected.index.set_names(['datetime', 'asset'], inplace=True)
         assert_frame_equal(result, expected, check_dtype=False)
 
     def test_id(self):
@@ -939,6 +947,8 @@ class BlazeToPipelineTestCase(WithAssetFinder, ZiplineTestCase):
             self.dates.tz_localize('UTC'),
             self.asset_finder.retrieve_all(self.asset_finder.sids),
         ))
+        # 🆗 添加索引名称
+        expected.index.set_names(['datetime', 'asset'], inplace=True)
         self._test_id(
             self.df,
             self.dshape,
@@ -981,6 +991,8 @@ class BlazeToPipelineTestCase(WithAssetFinder, ZiplineTestCase):
             self.dates.tz_localize('UTC'),
             self.asset_finder.retrieve_all(self.asset_finder.sids),
         ))
+        # 🆗 添加索引名称
+        expected.index.set_names(['datetime', 'asset'], inplace=True)
         self._test_id(
             self.df,
             self.dshape,
@@ -1088,6 +1100,8 @@ class BlazeToPipelineTestCase(WithAssetFinder, ZiplineTestCase):
             self.dates.tz_localize('UTC'),
             self.asset_finder.retrieve_all(self.asset_finder.sids),
         ))
+        # 🆗 添加索引名称
+        expected.index.set_names(['datetime', 'asset'], inplace=True)
         self._test_id(
             df,
             var * Record(fields),
@@ -1247,6 +1261,8 @@ class BlazeToPipelineTestCase(WithAssetFinder, ZiplineTestCase):
                 )),
             ),
         )
+        # 🆗 添加索引名称
+        expected.index.set_names(['datetime', 'asset'], inplace=True)
         self._test_id(
             df,
             var * Record(fields),
@@ -2394,6 +2410,7 @@ class MiscTestCase(ZiplineTestCase):
         class BadRepr(object):
             """A class which cannot be repr'd.
             """
+
             def __init__(self, name):
                 self._name = name
 

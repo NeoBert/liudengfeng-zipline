@@ -1,5 +1,8 @@
 """
 Tests for setting up an EventsLoader and a BlazeEventsLoader.
+
+完成测试 ✔
+
 """
 from datetime import time
 from itertools import product
@@ -66,7 +69,7 @@ class EventDataSet(DataSet):
     )
 
 
-EventDataSet_US = EventDataSet.specialize(CN_EQUITIES)
+EventDataSet_CN = EventDataSet.specialize(CN_EQUITIES)
 
 
 critical_dates = pd.to_datetime([
@@ -74,7 +77,7 @@ critical_dates = pd.to_datetime([
     '2014-01-10',
     '2014-01-15',
     '2014-01-20',
-])
+], utc=True)
 
 
 def make_events_for_sid(sid, event_dates, event_timestamps):
@@ -85,7 +88,7 @@ def make_events_for_sid(sid, event_dates, event_timestamps):
         'event_date': event_dates,
         'float': np.arange(num_events, dtype=np.float64) + sid,
         'int': np.arange(num_events) + sid,
-        'datetime': pd.date_range('1990-01-01', periods=num_events).shift(sid),
+        'datetime': pd.date_range('1990-01-01', periods=num_events, tz='UTC').shift(sid),
         'string': ['-'.join([str(sid), str(i)]) for i in range(num_events)],
     })
 
@@ -166,17 +169,18 @@ class EventIndexerTestCase(ZiplineTestCase):
         event_dates = events['event_date'].values
         event_timestamps = events['timestamp'].values
 
-        all_dates = pd.date_range('2014', '2014-01-31')
+        all_dates = pd.date_range('2014', '2014-01-31', tz='UTC')
         all_sids = np.unique(event_sids)
 
         domain = EquitySessionDomain(
             all_dates,
-            'US',
-            time(8, 45, tzinfo=pytz.timezone('US/Eastern')),
+            'CN',
+            time(8, 45, tzinfo=pytz.timezone('Asia/Shanghai')),
         )
 
         indexer = previous_event_indexer(
-            domain.data_query_cutoff_for_sessions(all_dates),
+            # -> ndarray[datetime64[ns], ndim=1]
+            domain.data_query_cutoff_for_sessions(all_dates).values,
             all_sids,
             event_dates,
             event_timestamps,
@@ -235,13 +239,13 @@ class EventIndexerTestCase(ZiplineTestCase):
 
         domain = EquitySessionDomain(
             all_dates,
-            'US',
-            time(8, 45, tzinfo=pytz.timezone('US/Eastern')),
+            'CN',
+            time(8, 45, tzinfo=pytz.timezone('Asia/Shanghai')),
         )
 
         indexer = next_event_indexer(
-            all_dates,
-            domain.data_query_cutoff_for_sessions(all_dates),
+            all_dates.values,
+            domain.data_query_cutoff_for_sessions(all_dates).values,
             all_sids,
             event_dates,
             event_timestamps,
@@ -266,8 +270,8 @@ class EventIndexerTestCase(ZiplineTestCase):
         self.assertEqual(len(relevant_events), 2)
 
         ix1, ix2 = relevant_events.index
-        e1, e2 = relevant_events['event_date'].dt.tz_localize('UTC')
-        t1, t2 = relevant_events['timestamp'].dt.tz_localize('UTC')
+        e1, e2 = relevant_events['event_date'].dt.tz_convert('UTC')
+        t1, t2 = relevant_events['timestamp'].dt.tz_convert('UTC')
 
         for date, computed_index in zip(all_dates, indexer):
             # An event is eligible to be the next event if it's between the
@@ -287,9 +291,9 @@ class EventIndexerTestCase(ZiplineTestCase):
 class EventsLoaderEmptyTestCase(WithAssetFinder,
                                 WithTradingSessions,
                                 ZiplineTestCase):
-    START_DATE = pd.Timestamp('2014-01-01')
-    END_DATE = pd.Timestamp('2014-01-30')
-    ASSET_FINDER_COUNTRY_CODE = 'US'
+    START_DATE = pd.Timestamp('2014-01-01', tz='UTC')
+    END_DATE = pd.Timestamp('2014-01-30', tz='UTC')
+    ASSET_FINDER_COUNTRY_CODE = 'CN'
 
     @classmethod
     def init_class_fixtures(cls):
@@ -327,20 +331,20 @@ class EventsLoaderEmptyTestCase(WithAssetFinder,
                      "string"]
         )
         next_value_columns = {
-            EventDataSet_US.next_datetime: 'datetime',
-            EventDataSet_US.next_event_date: 'event_date',
-            EventDataSet_US.next_float: 'float',
-            EventDataSet_US.next_int: 'int',
-            EventDataSet_US.next_string: 'string',
-            EventDataSet_US.next_string_custom_missing: 'string'
+            EventDataSet_CN.next_datetime: 'datetime',
+            EventDataSet_CN.next_event_date: 'event_date',
+            EventDataSet_CN.next_float: 'float',
+            EventDataSet_CN.next_int: 'int',
+            EventDataSet_CN.next_string: 'string',
+            EventDataSet_CN.next_string_custom_missing: 'string'
         }
         previous_value_columns = {
-            EventDataSet_US.previous_datetime: 'datetime',
-            EventDataSet_US.previous_event_date: 'event_date',
-            EventDataSet_US.previous_float: 'float',
-            EventDataSet_US.previous_int: 'int',
-            EventDataSet_US.previous_string: 'string',
-            EventDataSet_US.previous_string_custom_missing: 'string'
+            EventDataSet_CN.previous_datetime: 'datetime',
+            EventDataSet_CN.previous_event_date: 'event_date',
+            EventDataSet_CN.previous_float: 'float',
+            EventDataSet_CN.previous_int: 'int',
+            EventDataSet_CN.previous_string: 'string',
+            EventDataSet_CN.previous_string_custom_missing: 'string'
         }
         loader = EventsLoader(
             raw_events, next_value_columns, previous_value_columns
@@ -352,7 +356,7 @@ class EventsLoaderEmptyTestCase(WithAssetFinder,
 
         results = engine.run_pipeline(
             Pipeline({
-                c.name: c.latest for c in EventDataSet_US.columns
+                c.name: c.latest for c in EventDataSet_CN.columns
             }, domain=CN_EQUITIES),
             start_date=self.trading_days[0],
             end_date=self.trading_days[-1],
@@ -363,7 +367,7 @@ class EventsLoaderEmptyTestCase(WithAssetFinder,
 
         expected = self.frame_containing_all_missing_values(
             index=pd.MultiIndex.from_product([dates, assets]),
-            columns=EventDataSet_US.columns,
+            columns=EventDataSet_CN.columns,
         )
 
         assert_equal(results, expected)
@@ -373,9 +377,9 @@ class EventsLoaderTestCase(WithAssetFinder,
                            WithTradingSessions,
                            ZiplineTestCase):
 
-    START_DATE = pd.Timestamp('2014-01-01')
-    END_DATE = pd.Timestamp('2014-01-30')
-    ASSET_FINDER_COUNTRY_CODE = 'US'
+    START_DATE = pd.Timestamp('2014-01-01', tz='UTC')
+    END_DATE = pd.Timestamp('2014-01-30', tz='UTC')
+    ASSET_FINDER_COUNTRY_CODE = 'CN'
 
     @classmethod
     def init_class_fixtures(cls):
@@ -387,20 +391,20 @@ class EventsLoaderTestCase(WithAssetFinder,
             cls.raw_events['event_date'].notnull()
         ]
         cls.next_value_columns = {
-            EventDataSet_US.next_datetime: 'datetime',
-            EventDataSet_US.next_event_date: 'event_date',
-            EventDataSet_US.next_float: 'float',
-            EventDataSet_US.next_int: 'int',
-            EventDataSet_US.next_string: 'string',
-            EventDataSet_US.next_string_custom_missing: 'string'
+            EventDataSet_CN.next_datetime: 'datetime',
+            EventDataSet_CN.next_event_date: 'event_date',
+            EventDataSet_CN.next_float: 'float',
+            EventDataSet_CN.next_int: 'int',
+            EventDataSet_CN.next_string: 'string',
+            EventDataSet_CN.next_string_custom_missing: 'string'
         }
         cls.previous_value_columns = {
-            EventDataSet_US.previous_datetime: 'datetime',
-            EventDataSet_US.previous_event_date: 'event_date',
-            EventDataSet_US.previous_float: 'float',
-            EventDataSet_US.previous_int: 'int',
-            EventDataSet_US.previous_string: 'string',
-            EventDataSet_US.previous_string_custom_missing: 'string'
+            EventDataSet_CN.previous_datetime: 'datetime',
+            EventDataSet_CN.previous_event_date: 'event_date',
+            EventDataSet_CN.previous_float: 'float',
+            EventDataSet_CN.previous_int: 'int',
+            EventDataSet_CN.previous_string: 'string',
+            EventDataSet_CN.previous_string_custom_missing: 'string'
         }
         cls.loader = cls.make_loader(
             events=cls.raw_events,
@@ -427,12 +431,12 @@ class EventsLoaderTestCase(WithAssetFinder,
     @skipIf(new_pandas, skip_pipeline_new_pandas)
     def test_load_with_trading_calendar(self):
         results = self.engine.run_pipeline(
-            Pipeline({c.name: c.latest for c in EventDataSet_US.columns}),
+            Pipeline({c.name: c.latest for c in EventDataSet_CN.columns}),
             start_date=self.trading_days[0],
             end_date=self.trading_days[-1],
         )
 
-        for c in EventDataSet_US.columns:
+        for c in EventDataSet_CN.columns:
             if c in self.next_value_columns:
                 self.check_next_value_results(
                     c,
@@ -457,12 +461,12 @@ class EventsLoaderTestCase(WithAssetFinder,
         # computation.
         dates = self.trading_days[len(self.trading_days) // 2:]
         results = self.engine.run_pipeline(
-            Pipeline({c.name: c.latest for c in EventDataSet_US.columns}),
+            Pipeline({c.name: c.latest for c in EventDataSet_CN.columns}),
             start_date=dates[0],
             end_date=dates[-1],
         )
 
-        for c in EventDataSet_US.columns:
+        for c in EventDataSet_CN.columns:
             if c in self.next_value_columns:
                 self.check_next_value_results(
                     c,
@@ -571,15 +575,15 @@ class EventsLoaderTestCase(WithAssetFinder,
         events = pd.DataFrame({
             'c': [5],
             SID_FIELD_NAME: [1],
-            TS_FIELD_NAME: [pd.Timestamp('2014')],
-            EVENT_DATE_FIELD_NAME: [pd.Timestamp('2014')],
+            TS_FIELD_NAME: [pd.Timestamp('2014', tz='UTC')],
+            EVENT_DATE_FIELD_NAME: [pd.Timestamp('2014', tz='UTC')],
         })
 
-        EventsLoader(events, {EventDataSet_US.next_float: 'c'}, {})
-        EventsLoader(events, {}, {EventDataSet_US.previous_float: 'c'})
+        EventsLoader(events, {EventDataSet_CN.next_float: 'c'}, {})
+        EventsLoader(events, {}, {EventDataSet_CN.previous_float: 'c'})
 
         with self.assertRaises(ValueError) as e:
-            EventsLoader(events, {EventDataSet_US.next_float: 'd'}, {})
+            EventsLoader(events, {EventDataSet_CN.next_float: 'd'}, {})
 
         msg = str(e.exception)
         expected = (

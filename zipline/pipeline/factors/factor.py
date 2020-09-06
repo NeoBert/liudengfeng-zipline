@@ -6,7 +6,7 @@ from numbers import Number
 from math import ceil
 from textwrap import dedent
 
-from numpy import empty_like, inf, isnan, nan, where
+from numpy import empty_like, inf, isnan, nan, where, divide
 from scipy.stats import rankdata
 
 from zipline.utils.compat import wraps

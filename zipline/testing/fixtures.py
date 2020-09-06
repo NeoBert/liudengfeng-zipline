@@ -25,10 +25,10 @@ from zipline.data.fx import DEFAULT_FX_RATE
 from zipline.finance.asset_restrictions import NoRestrictions
 from zipline.utils.memoize import classlazyval
 from zipline.pipeline import SimplePipelineEngine
-from zipline.pipeline.data import USEquityPricing
+from zipline.pipeline.data import USEquityPricing, CNEquityPricing
 from zipline.pipeline.data.testing import TestingDataSet
 from zipline.pipeline.domain import GENERIC, CN_EQUITIES
-from zipline.pipeline.loaders import USEquityPricingLoader
+from zipline.pipeline.loaders import USEquityPricingLoader, CNEquityPricingLoader
 from zipline.pipeline.loaders.testing import make_seeded_random_loader
 from zipline.protocol import BarData
 from zipline.utils.compat import ExitStack
@@ -849,7 +849,7 @@ class WithEquityDailyBarData(WithAssetFinder, WithTradingCalendars):
     def make_equity_daily_bar_currency_codes(cls, country_code, sids):
         """Create listing currencies.
 
-        Default is to list all assets in USD.
+        Default is to list all assets in CNY.
 
         Parameters
         ----------
@@ -864,7 +864,7 @@ class WithEquityDailyBarData(WithAssetFinder, WithTradingCalendars):
         currency_codes : pd.Series[int, str]
             Map from sids to currency for that sid's prices.
         """
-        return pd.Series(index=list(sids), data='USD')
+        return pd.Series(index=list(sids), data='CNY')
 
     @classmethod
     def init_class_fixtures(cls):
@@ -1729,9 +1729,16 @@ class WithUSEquityPricingPipelineEngine(WithAdjustmentReader,
             SQLiteAdjustmentReader(cls.adjustments_db_path),
         )
 
+        loader_cn = CNEquityPricingLoader.without_fx(
+            cls.bcolz_equity_daily_bar_reader,
+            SQLiteAdjustmentReader(cls.adjustments_db_path),
+        )
+
         def get_loader(column):
             if column in USEquityPricing.columns:
                 return loader
+            elif column in CNEquityPricing.columns:
+                return loader_cn
             else:
                 raise AssertionError("No loader registered for %s" % column)
 
@@ -1960,6 +1967,7 @@ class WithResponses(object):
     a new `responses.RequestsMock` object. Users may add new endpoints to this
     with the `self.responses.add` method.
     """
+
     def init_instance_fixtures(self):
         super(WithResponses, self).init_instance_fixtures()
         self.responses = self.enter_instance_context(
@@ -2098,7 +2106,7 @@ class WithFXRates(object):
     FX_RATES_CALENDAR = '24/5'
 
     # Currencies between which exchange rates can be calculated.
-    FX_RATES_CURRENCIES = ["USD", "CAD", "GBP", "EUR"]
+    FX_RATES_CURRENCIES = ["CNY", "CAD", "GBP", "EUR"]
 
     # Kinds of rates for which exchange rate data is present.
     FX_RATES_RATE_NAMES = ["mid"]

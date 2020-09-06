@@ -63,7 +63,7 @@ class BaseUSEquityPipelineTestCase(WithTradingSessions,
         super(BaseUSEquityPipelineTestCase, cls).init_class_fixtures()
 
         cls.default_asset_exists_mask = cls.asset_finder.lifetimes(
-            cls.nyse_sessions[-30:],
+            cls.xshg_sessions[-30:],
             include_start_date=False,
             country_codes={cls.ASSET_FINDER_COUNTRY_CODE},
         )
@@ -161,7 +161,7 @@ class BaseUSEquityPipelineTestCase(WithTradingSessions,
             array,
             # Use the **last** N dates rather than the first N so that we have
             # space for lookbacks.
-            index=self.nyse_sessions[-ndates:],
+            index=self.xshg_sessions[-ndates:],
             columns=self.ASSET_FINDER_EQUITY_SIDS[:nassets],
             dtype=bool,
         )

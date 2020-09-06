@@ -247,7 +247,7 @@ class EarningsEstimatesLoader(implements(PipelineLoader)):
          requested_qtr_data[FISCAL_QUARTER_FIELD_NAME]) = \
             split_normalized_quarters(
                 requested_qtr_data[SHIFTED_NORMALIZED_QTRS]
-            )
+        )
         # Once we're left with just dates as the index, we can reindex by all
         # dates so that we have a value for each calendar date.
         return requested_qtr_data.unstack(SID_FIELD_NAME).reindex(dates)
@@ -719,8 +719,9 @@ class EarningsEstimatesLoader(implements(PipelineLoader)):
         stacked_last_per_qtr = stacked_last_per_qtr.sort_values(
             EVENT_DATE_FIELD_NAME,
         )
+        # 🆗 必须指定utc
         stacked_last_per_qtr[EVENT_DATE_FIELD_NAME] = pd.to_datetime(
-            stacked_last_per_qtr[EVENT_DATE_FIELD_NAME]
+            stacked_last_per_qtr[EVENT_DATE_FIELD_NAME], utc=True,
         )
         return last_per_qtr, stacked_last_per_qtr
 
@@ -873,6 +874,7 @@ class SplitAdjustedEstimatesLoader(EarningsEstimatesLoader):
         the split_adjusted_asof date. All adjustments occurring during this
         second half are applied sequentially as they appear in the timeline.
     """
+
     def __init__(self,
                  estimates,
                  name_map,
@@ -940,7 +942,7 @@ class SplitAdjustedEstimatesLoader(EarningsEstimatesLoader):
         )
         sid_estimates = self.estimates[
             self.estimates[SID_FIELD_NAME] == sid
-            ]
+        ]
         # We might not have any overwrites but still have
         # adjustments, and we will need to manually add columns if
         # that is the case.

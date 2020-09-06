@@ -176,8 +176,12 @@ def last_in_date_group(df,
         levels of a multiindex of columns.
 
     """
+    # 🆗 当searchsorted参数为序列，直接使用序列搜索，而不是列的值，即不可使用.values方法
+    # idx = [data_query_cutoff_times[data_query_cutoff_times.searchsorted(
+    #     df[TS_FIELD_NAME].values,
+    # )]]
     idx = [data_query_cutoff_times[data_query_cutoff_times.searchsorted(
-        df[TS_FIELD_NAME].values,
+        df[TS_FIELD_NAME],
     )]]
     if have_sids:
         idx += [SID_FIELD_NAME]

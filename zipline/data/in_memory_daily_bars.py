@@ -4,7 +4,7 @@ import numpy as np
 import pandas as pd
 from pandas import NaT
 
-from trading_calendars.trading_calendar_cn import TradingCalendar
+from trading_calendars.trading_calendar import TradingCalendar
 
 from zipline.data.bar_reader import OHLCV, NoDataOnDate, NoDataForSid
 from zipline.data.session_bars import CurrencyAwareSessionBarReader
@@ -53,10 +53,10 @@ class InMemoryDailyBarReader(CurrencyAwareSessionBarReader):
         self._sids = frames['close'].columns
 
     @classmethod
-    def from_panel(cls, panel, calendar, currency_codes):
+    def from_frame_dict(cls, frame_dict, calendar, currency_codes):
         """Helper for construction from a pandas.Panel.
         """
-        return cls(dict(panel.iteritems()), calendar, currency_codes)
+        return cls(frame_dict, calendar, currency_codes)
 
     @property
     def last_available_dt(self):

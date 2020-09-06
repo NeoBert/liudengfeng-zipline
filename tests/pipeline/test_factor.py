@@ -1,5 +1,7 @@
 """
 Tests for Factor terms.
+
+完成测试 ✔
 """
 from functools import partial
 from itertools import product
@@ -1523,7 +1525,7 @@ class TestPostProcessAndToWorkSpaceValue(ZiplineTestCase):
 
 class TestSpecialCases(WithUSEquityPricingPipelineEngine,
                        ZiplineTestCase):
-    ASSET_FINDER_COUNTRY_CODE = 'US'
+    ASSET_FINDER_COUNTRY_CODE = 'CN'
 
     def check_equivalent_terms(self, terms):
         self.assertTrue(len(terms) > 1, "Need at least two terms to compare")

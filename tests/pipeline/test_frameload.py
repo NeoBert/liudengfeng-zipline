@@ -1,5 +1,6 @@
 """
 Tests for zipline.pipeline.loaders.frame.DataFrameLoader.
+完成测试 ✔
 """
 from unittest import TestCase
 
@@ -8,7 +9,7 @@ from numpy import arange, ones
 from numpy.testing import assert_array_equal
 from pandas import (
     DataFrame,
-    DatetimeIndex,
+    date_range,
     Int64Index,
 )
 from trading_calendars import get_calendar
@@ -21,7 +22,7 @@ from zipline.lib.adjustment import (
     MULTIPLY,
     OVERWRITE,
 )
-from zipline.pipeline.data import USEquityPricing
+from zipline.pipeline.data import CNEquityPricing
 from zipline.pipeline.domain import CN_EQUITIES
 from zipline.pipeline.loaders.frame import DataFrameLoader
 
@@ -35,7 +36,7 @@ class DataFrameLoaderTestCase(TestCase):
         self.ndates = 20
 
         self.sids = Int64Index(range(self.nsids))
-        self.dates = DatetimeIndex(
+        self.dates = date_range(
             start='2014-01-02',
             freq=self.trading_day,
             periods=self.ndates,
@@ -50,7 +51,7 @@ class DataFrameLoaderTestCase(TestCase):
         data = arange(100).reshape(self.ndates, self.nsids)
         baseline = DataFrame(data, index=self.dates, columns=self.sids)
         loader = DataFrameLoader(
-            USEquityPricing.close,
+            CNEquityPricing.close,
             baseline,
         )
 
@@ -58,7 +59,7 @@ class DataFrameLoaderTestCase(TestCase):
             # Wrong column.
             loader.load_adjusted_array(
                 CN_EQUITIES,
-                [USEquityPricing.open],
+                [CNEquityPricing.open],
                 self.dates,
                 self.sids,
                 self.mask,
@@ -68,7 +69,7 @@ class DataFrameLoaderTestCase(TestCase):
             # Too many columns.
             loader.load_adjusted_array(
                 CN_EQUITIES,
-                [USEquityPricing.open, USEquityPricing.close],
+                [CNEquityPricing.open, CNEquityPricing.close],
                 self.dates,
                 self.sids,
                 self.mask,
@@ -77,13 +78,13 @@ class DataFrameLoaderTestCase(TestCase):
     def test_baseline(self):
         data = arange(100).reshape(self.ndates, self.nsids)
         baseline = DataFrame(data, index=self.dates, columns=self.sids)
-        loader = DataFrameLoader(USEquityPricing.close, baseline)
+        loader = DataFrameLoader(CNEquityPricing.close, baseline)
 
         dates_slice = slice(None, 10, None)
         sids_slice = slice(1, 3, None)
         [adj_array] = loader.load_adjusted_array(
             CN_EQUITIES,
-            [USEquityPricing.close],
+            [CNEquityPricing.close],
             self.dates[dates_slice],
             self.sids[sids_slice],
             self.mask[dates_slice, sids_slice],
@@ -183,7 +184,7 @@ class DataFrameLoaderTestCase(TestCase):
 
         adjustments = DataFrame(relevant_adjustments + irrelevant_adjustments)
         loader = DataFrameLoader(
-            USEquityPricing.close,
+            CNEquityPricing.close,
             baseline,
             adjustments=adjustments,
         )
@@ -236,7 +237,7 @@ class DataFrameLoaderTestCase(TestCase):
         with patch('zipline.pipeline.loaders.frame.AdjustedArray') as m:
             loader.load_adjusted_array(
                 CN_EQUITIES,
-                columns=[USEquityPricing.close],
+                columns=[CNEquityPricing.close],
                 dates=self.dates[dates_slice],
                 sids=self.sids[sids_slice],
                 mask=mask,

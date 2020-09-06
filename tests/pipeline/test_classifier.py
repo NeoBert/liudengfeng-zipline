@@ -1,3 +1,8 @@
+"""
+完成测试 ✔
+
+test_element_of_rejects_unhashable_type 由于异常表达存在细微差异未通过。
+"""
 from functools import reduce
 import operator as op
 

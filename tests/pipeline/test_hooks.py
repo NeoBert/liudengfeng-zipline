@@ -1,3 +1,4 @@
+# 完成测试 ✔
 import itertools
 from operator import attrgetter
 
@@ -43,7 +44,7 @@ class TrivialFactor(CustomFactor):
 class HooksTestCase(WithSeededRandomPipelineEngine, ZiplineTestCase):
     """Tests for verifying that SimplePipelineEngine calls hooks as expected.
     """
-    ASSET_FINDER_COUNTRY_CODE = 'US'
+    ASSET_FINDER_COUNTRY_CODE = 'CN'
 
     @classmethod
     def make_seeded_random_pipeline_engine_hooks(cls):
@@ -226,7 +227,7 @@ PREPOPULATED_TERM = PrepopulatedFactor()
 class ProgressHooksTestCase(WithSeededRandomPipelineEngine, ZiplineTestCase):
     """Tests for verifying ProgressHooks.
     """
-    ASSET_FINDER_COUNTRY_CODE = 'US'
+    ASSET_FINDER_COUNTRY_CODE = 'CN'
 
     START_DATE = pd.Timestamp('2014-01-02', tz='UTC')
     END_DATE = pd.Timestamp('2014-01-31', tz='UTC')

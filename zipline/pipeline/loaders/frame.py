@@ -72,7 +72,10 @@ class DataFrameLoader(implements(PipelineLoader)):
             )
         else:
             # Ensure that columns are in the correct order.
-            adjustments = adjustments.reindex_axis(ADJUSTMENT_COLUMNS, axis=1)
+            # 🆗 api签名更改
+            # adjustments = adjustments.reindex_axis(ADJUSTMENT_COLUMNS, axis=1)
+            adjustments = adjustments.reindex(
+                ADJUSTMENT_COLUMNS, axis="columns")
             adjustments.sort_values(['apply_date', 'sid'], inplace=True)
 
         self.adjustments = adjustments

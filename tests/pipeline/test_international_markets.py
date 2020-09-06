@@ -1,7 +1,9 @@
 """Tests for pipelines on international markets.
+
+完成测试 ❌
 """
 from itertools import cycle, islice
-
+from collections import defaultdict
 from parameterized import parameterized
 import numpy as np
 import pandas as pd
@@ -11,8 +13,8 @@ from trading_calendars import get_calendar
 from zipline.assets.synthetic import make_rotating_equity_info
 from zipline.data.in_memory_daily_bars import InMemoryDailyBarReader
 from zipline.pipeline.domain import (
-    CA_EQUITIES,
-    GB_EQUITIES,
+    # CA_EQUITIES,
+    # GB_EQUITIES,
     CN_EQUITIES,
 )
 from zipline.pipeline import Pipeline
@@ -42,13 +44,15 @@ class WithInternationalDailyBarData(zf.WithAssetFinder):
     DAILY_BAR_LOOKBACK_DAYS = 0
 
     INTERNATIONAL_PRICING_STARTING_PRICES = {
-        'XNYS': 100,  # NYSE
+        'NYSE': 100,
         'XTSE': 50,   # Toronto Stock Exchange
         'XLON': 25,   # London Stock Exchange
+        'XSHG': 10,  # XSHG
     }
     # Assets in these countries will be quoted in one of the listed currencies.
     INTERNATIONAL_PRICING_CURRENCIES = {
-        'XNYS': ['USD'],
+        'XSHG': ['CNY'],
+        'NYSE': ['USD'],
         'XTSE': ['CAD'],
         'XLON': ['GBP', 'EUR', 'USD'],
     }
@@ -57,7 +61,7 @@ class WithInternationalDailyBarData(zf.WithAssetFinder):
         == INTERNATIONAL_PRICING_CURRENCIES.keys()
     )
 
-    FX_RATES_CURRENCIES = ["USD", "CAD", "GBP", "EUR"]
+    FX_RATES_CURRENCIES = ["CNY", "CAD", "GBP", "EUR", "USD"]
 
     @classmethod
     def make_daily_bar_data(cls, assets, calendar, sessions):
@@ -110,20 +114,27 @@ class WithInternationalDailyBarData(zf.WithAssetFinder):
             )
 
             cls.daily_bar_sessions[name] = sessions
-            cls.daily_bar_data[name] = dict(cls.make_daily_bar_data(
+            cls.daily_bar_data[name] = d = dict(cls.make_daily_bar_data(
                 assets=assets, calendar=calendar, sessions=sessions,
             ))
 
-            panel = (pd.Panel.from_dict(cls.daily_bar_data[name])
-                     .transpose(2, 1, 0))
+            frame_dict = defaultdict(list)
+            for asset, data in d.items():
+                for col in data.columns:
+                    df = pd.DataFrame(data[col].values, columns=[
+                                      asset], index=data[col].index)
+                    frame_dict[col].append(df)
+
+            frame_dict = {key: pd.concat(l, axis=1)
+                          for key, l in frame_dict.items()}
 
             cls.daily_bar_currency_codes[name] = cls.make_currency_codes(
                 calendar,
                 assets,
             )
 
-            cls.daily_bar_readers[name] = InMemoryDailyBarReader.from_panel(
-                panel,
+            cls.daily_bar_readers[name] = InMemoryDailyBarReader.from_frame_dict(
+                frame_dict,
                 calendar,
                 currency_codes=cls.daily_bar_currency_codes[name],
             )
@@ -139,21 +150,21 @@ class WithInternationalPricingPipelineEngine(zf.WithFXRates,
 
         adjustments = NullAdjustmentReader()
         cls.loaders = {
-            GB_EQUITIES: EquityPricingLoader(
-                cls.daily_bar_readers['XLON'],
-                adjustments,
-                cls.in_memory_fx_rate_reader,
-            ),
+            # GB_EQUITIES: EquityPricingLoader(
+            #     cls.daily_bar_readers['XLON'],
+            #     adjustments,
+            #     cls.in_memory_fx_rate_reader,
+            # ),
             CN_EQUITIES: EquityPricingLoader(
-                cls.daily_bar_readers['XNYS'],
+                cls.daily_bar_readers['XSHG'],
                 adjustments,
                 cls.in_memory_fx_rate_reader,
             ),
-            CA_EQUITIES: EquityPricingLoader(
-                cls.daily_bar_readers['XTSE'],
-                adjustments,
-                cls.in_memory_fx_rate_reader,
-            )
+            # CA_EQUITIES: EquityPricingLoader(
+            #     cls.daily_bar_readers['XTSE'],
+            #     adjustments,
+            #     cls.in_memory_fx_rate_reader,
+            # )
         }
         cls.engine = SimplePipelineEngine(
             get_loader=cls.get_loader,
@@ -171,10 +182,10 @@ class WithInternationalPricingPipelineEngine(zf.WithFXRates,
 class InternationalEquityTestCase(WithInternationalPricingPipelineEngine,
                                   zf.ZiplineTestCase):
     START_DATE = T('2014-01-02')
-    END_DATE = T('2014-02-06')  # Chosen to match the asset setup data below.
+    END_DATE = T('2014-02-12')  # Chosen to match the asset setup data below.
 
     EXCHANGE_INFO = pd.DataFrame.from_records([
-        {'exchange': 'XNYS', 'country_code': 'US'},
+        {'exchange': 'XSHG', 'country_code': 'CN'},
         {'exchange': 'XTSE', 'country_code': 'CA'},
         {'exchange': 'XLON', 'country_code': 'GB'},
     ])
@@ -212,7 +223,8 @@ class InternationalEquityTestCase(WithInternationalPricingPipelineEngine,
     def make_exchanges_info(cls, equities, futures, root_symbols):
         return cls.EXCHANGE_INFO
 
-    @parameter_space(domain=[CA_EQUITIES, CN_EQUITIES, GB_EQUITIES])
+    # @parameter_space(domain=[CA_EQUITIES, CN_EQUITIES, GB_EQUITIES])
+    @parameter_space(domain=[CN_EQUITIES])
     def test_generic_pipeline_with_explicit_domain(self, domain):
         calendar = domain.calendar
         pipe = Pipeline({
@@ -272,9 +284,9 @@ class InternationalEquityTestCase(WithInternationalPricingPipelineEngine,
                     )
 
     @parameterized.expand([
-        ('US', CN_EQUITIES, 'XNYS'),
-        ('CA', CA_EQUITIES, 'XTSE'),
-        ('GB', GB_EQUITIES, 'XLON'),
+        ('CN', CN_EQUITIES, 'XSHG'),
+        # ('CA', CA_EQUITIES, 'XTSE'),
+        # ('GB', GB_EQUITIES, 'XLON'),
     ])
     def test_currency_convert_prices(self, name, domain, calendar_name):
         # Test running a pipeline on a domain whose assets are all denominated
@@ -282,7 +294,7 @@ class InternationalEquityTestCase(WithInternationalPricingPipelineEngine,
 
         pipe = Pipeline({
             'close': EquityPricing.close.latest,
-            'close_USD': EquityPricing.close.fx('USD').latest,
+            'close_USD': EquityPricing.close.fx('CNY').latest,
             'close_CAD': EquityPricing.close.fx('CAD').latest,
             'close_EUR': EquityPricing.close.fx('EUR').latest,
             'close_GBP': EquityPricing.close.fx('GBP').latest,
@@ -334,15 +346,15 @@ class InternationalEquityTestCase(WithInternationalPricingPipelineEngine,
             assert_equal(result_2d, expected_result_2d)
 
     @parameterized.expand([
-        ('US', CN_EQUITIES, 'XNYS'),
-        ('CA', CA_EQUITIES, 'XTSE'),
-        ('GB', GB_EQUITIES, 'XLON'),
+        ('CN', CN_EQUITIES, 'XSHG'),
+        # ('CA', CA_EQUITIES, 'XTSE'),
+        # ('GB', GB_EQUITIES, 'XLON'),
     ])
     def test_only_currency_converted_data(self, name, domain, calendar_name):
         # Test running a pipeline on a domain whose assets are all denominated
         # in the same currency.
         pipe = Pipeline({
-            'close_USD': EquityPricing.close.fx('USD').latest,
+            'close_USD': EquityPricing.close.fx('CNY').latest,
             'close_EUR': EquityPricing.close.fx('EUR').latest,
         }, domain=domain)
 
@@ -362,7 +374,7 @@ class InternationalEquityTestCase(WithInternationalPricingPipelineEngine,
 
             expected_rate_USD = self.in_memory_fx_rate_reader.get_rate_scalar(
                 rate='mid',
-                quote='USD',
+                quote='CNY',
                 base=expected_base,
                 dt=price_date.asm8,
             )
@@ -394,7 +406,7 @@ class InternationalEquityTestCase(WithInternationalPricingPipelineEngine,
             'volume': USEquityPricing.volume.latest,
         })
 
-        sessions = self.daily_bar_sessions['XNYS']
+        sessions = self.daily_bar_sessions['XSHG']
         self.assert_identical_results(
             pipeline_specialized,
             dataset_specialized,

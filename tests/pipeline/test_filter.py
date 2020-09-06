@@ -1,5 +1,6 @@
 """
 Tests for filter terms.
+完成测试 ✔
 """
 from functools import partial
 from itertools import product
@@ -1024,7 +1025,7 @@ class SidFactor(CustomFactor):
 class SpecificAssetsTestCase(WithSeededRandomPipelineEngine,
                              ZiplineTestCase):
     ASSET_FINDER_EQUITY_SIDS = tuple(range(10))
-    ASSET_FINDER_COUNTRY_CODE = 'US'
+    ASSET_FINDER_COUNTRY_CODE = 'CN'
     SEEDED_RANDOM_PIPELINE_DEFAULT_DOMAIN = CN_EQUITIES
 
     def _check_filters(self, evens, odds, first_five, last_three):

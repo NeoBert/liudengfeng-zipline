@@ -1,5 +1,6 @@
 """
 Tests for zipline.pipeline.Pipeline
+完成测试 ✔
 """
 from unittest import TestCase
 
@@ -13,6 +14,7 @@ from zipline.pipeline.domain import (
     CA_EQUITIES,
     GENERIC,
     GB_EQUITIES,
+    US_EQUITIES,
     CN_EQUITIES,
 )
 from zipline.pipeline.graph import display_graph
