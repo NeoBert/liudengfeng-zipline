@@ -2,6 +2,7 @@
 Tests for SimplePipelineEngine
 完成测试 ✔
 
+# TODO:目前全部通过，需要再次确认
 有关mask测试未能正确修复测试参数
 """
 from __future__ import division
