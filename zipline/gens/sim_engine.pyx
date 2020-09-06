@@ -13,10 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-########################################################################
-#                   修改后的模拟引擎只适用于A股
-########################################################################
-
 cimport numpy as np
 import numpy as np
 import pandas as pd
@@ -36,7 +32,7 @@ cpdef enum:
 cdef class MinuteSimulationClock:
     cdef bool minute_emission
     cdef np.int64_t[:] market_opens_nanos, market_closes_nanos, bts_nanos, \
-        sessions_nanos, am_end_nanos, pm_start_nanos
+        sessions_nanos
     cdef dict minutes_by_session
 
     def __init__(self,
@@ -48,9 +44,6 @@ cdef class MinuteSimulationClock:
         self.minute_emission = minute_emission
 
         self.market_opens_nanos = market_opens.values.astype(np.int64)
-        # 🆗 传入时间为utc，Asia/Shanghai am_end 11:30 -> 3:30 pm_start 13:01 -> 5:01
-        self.am_end_nanos = market_opens.index.map(lambda x:x.replace(hour=3,minute=30)).values.astype(np.int64)
-        self.pm_start_nanos = market_opens.index.map(lambda x:x.replace(hour=5,minute=1)).values.astype(np.int64)
         self.market_closes_nanos = market_closes.values.astype(np.int64)
         self.sessions_nanos = sessions.values.astype(np.int64)
         self.bts_nanos = before_trading_start_minutes.values.astype(np.int64)
@@ -63,25 +56,18 @@ cdef class MinuteSimulationClock:
         cdef dict minutes_by_session
         cdef int session_idx
         cdef np.int64_t session_nano
-        cdef np.ndarray[np.int64_t, ndim=1] minutes_nanos, am_minutes_nanos, pm_minutes_nanos
+        cdef np.ndarray[np.int64_t, ndim=1] minutes_nanos
 
         minutes_by_session = {}
         for session_idx, session_nano in enumerate(self.sessions_nanos):
-            # 🆗 固定上午结束、下午开始时间，且忽略延迟开盘及提早收盘
-            am_minutes_nanos = np.arange(
+            minutes_nanos = np.arange(
                 self.market_opens_nanos[session_idx],
-                self.am_end_nanos[session_idx] + _nanos_in_minute,
-                _nanos_in_minute
-            )
-            pm_minutes_nanos = np.arange(
-                self.pm_start_nanos[session_idx],
                 self.market_closes_nanos[session_idx] + _nanos_in_minute,
                 _nanos_in_minute
             )
-            minutes_nanos = np.append(am_minutes_nanos, pm_minutes_nanos)
             minutes_by_session[session_nano] = pd.to_datetime(
-                minutes_nanos, utc=True
-            ).sort_values()
+                minutes_nanos, utc=True, box=True
+            )
         return minutes_by_session
 
     def __iter__(self):
@@ -102,7 +88,7 @@ cdef class MinuteSimulationClock:
                 ):
                     yield minute, evt
             else:
-                # we have to search a new every session, because there is no
+                # we have to search anew every session, because there is no
                 # guarantee that any two session start on the same minute
                 bts_idx = regular_minutes.searchsorted(bts_minute)
 
@@ -112,6 +98,7 @@ cdef class MinuteSimulationClock:
                     minute_emission
                 ):
                     yield minute, evt
+
                 yield bts_minute, BEFORE_TRADING_START_BAR
 
                 # emit all the minutes after bts_minute
@@ -120,6 +107,7 @@ cdef class MinuteSimulationClock:
                     minute_emission
                 ):
                     yield minute, evt
+
             yield regular_minutes[-1], SESSION_END
 
     def _get_minutes_for_list(self, minutes, minute_emission):

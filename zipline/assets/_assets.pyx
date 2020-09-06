@@ -56,7 +56,7 @@ cdef class Asset:
         Full name of the asset.
     exchange : str
         Canonical short name of the exchange on which the asset trades (e.g.,
-        'XSHG').
+        'NYSE').
     exchange_full : str
         Full name of the exchange on which the asset trades (e.g., 'NEW YORK
         STOCK EXCHANGE').
@@ -172,8 +172,7 @@ cdef class Asset:
 
     def __repr__(self):
         if self.symbol:
-            # return '%s(%d [%s])' % (type(self).__name__, self.sid, self.symbol)
-            return '%s(%s)' % (self.asset_name, self.symbol)
+            return '%s(%d [%s])' % (type(self).__name__, self.sid, self.symbol)
         else:
             return '%s(%d)' % (type(self).__name__, self.sid)
 

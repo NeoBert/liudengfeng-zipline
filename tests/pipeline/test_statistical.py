@@ -23,7 +23,7 @@ from empyrical.stats import beta_aligned as empyrical_beta
 from zipline.assets import Equity, ExchangeInfo
 from zipline.errors import IncompatibleTerms, NonExistentAssetInTimeFrame
 from zipline.pipeline import CustomFactor, Pipeline
-from zipline.pipeline.data import USEquityPricing
+from zipline.pipeline.data import CNEquityPricing
 from zipline.pipeline.data.testing import TestingDataSet
 from zipline.pipeline.domain import CN_EQUITIES
 from zipline.pipeline.engine import SimplePipelineEngine
@@ -65,7 +65,7 @@ class StatisticalBuiltInsTestCase(zf.WithAssetFinder,
     START_DATE = Timestamp('2015-01-31', tz='UTC')
     END_DATE = Timestamp('2015-03-01', tz='UTC')
     ASSET_FINDER_EQUITY_SYMBOLS = ('A', 'B', 'C')
-    ASSET_FINDER_COUNTRY_CODE = 'US'
+    ASSET_FINDER_COUNTRY_CODE = 'CN'
 
     @classmethod
     def init_class_fixtures(cls):
@@ -73,7 +73,7 @@ class StatisticalBuiltInsTestCase(zf.WithAssetFinder,
 
         day = cls.trading_calendar.day
         cls.dates = dates = date_range(
-            '2015-02-01', '2015-02-28', freq=day, tz='UTC',
+            '2015-02-01', '2015-04-01', freq=day, tz='UTC',
         )
 
         # Using these start and end dates because they are a contigous span of
@@ -100,14 +100,14 @@ class StatisticalBuiltInsTestCase(zf.WithAssetFinder,
         )
 
         # Using mock 'close' data here because the correlation and regression
-        # built-ins use USEquityPricing.close as the input to their `Returns`
+        # built-ins use CNEquityPricing.close as the input to their `Returns`
         # factors. Since there is no way to change that when constructing an
         # instance of these built-ins, we need to test with mock 'close' data
         # to most accurately reflect their true behavior and results.
-        close_loader = DataFrameLoader(USEquityPricing.close, raw_data)
+        close_loader = DataFrameLoader(CNEquityPricing.close, raw_data)
 
         cls.run_pipeline = SimplePipelineEngine(
-            {USEquityPricing.close: close_loader}.__getitem__,
+            {CNEquityPricing.close: close_loader}.__getitem__,
             cls.asset_finder,
             default_domain=CN_EQUITIES,
         ).run_pipeline
@@ -356,7 +356,7 @@ class StatisticalBuiltInsTestCase(zf.WithAssetFinder,
         """
         my_asset = Equity(
             0,
-            exchange_info=ExchangeInfo('TEST', 'TEST FULL', 'US'),
+            exchange_info=ExchangeInfo('TEST', 'TEST FULL', 'CN'),
         )
         start_date = self.pipeline_start_date
         end_date = self.pipeline_end_date
@@ -408,7 +408,7 @@ class StatisticalBuiltInsTestCase(zf.WithAssetFinder,
     def test_require_length_greater_than_one(self):
         my_asset = Equity(
             0,
-            exchange_info=ExchangeInfo('TEST', 'TEST FULL', 'US'),
+            exchange_info=ExchangeInfo('TEST', 'TEST FULL', 'CN'),
         )
 
         with self.assertRaises(ValueError):
@@ -508,8 +508,8 @@ class StatisticalMethodsTestCase(zf.WithSeededRandomPipelineEngine,
                                  zf.ZiplineTestCase):
     sids = ASSET_FINDER_EQUITY_SIDS = Int64Index([1, 2, 3])
     START_DATE = Timestamp('2015-01-31', tz='UTC')
-    END_DATE = Timestamp('2015-03-01', tz='UTC')
-    ASSET_FINDER_COUNTRY_CODE = 'US'
+    END_DATE = Timestamp('2015-04-01', tz='UTC')
+    ASSET_FINDER_COUNTRY_CODE = 'CN'
     SEEDED_RANDOM_PIPELINE_DEFAULT_DOMAIN = CN_EQUITIES
 
     @classmethod
@@ -586,7 +586,7 @@ class StatisticalMethodsTestCase(zf.WithSeededRandomPipelineEngine,
         # so the only way to set our own inputs is to do so after the fact.
         # This should not be done in practice. It is necessary here because we
         # want Returns to use our random data as an input, but by default it is
-        # using USEquityPricing.close.
+        # using CNEquityPricing.close.
         expected_pearson.inputs = [returns, returns_slice]
         expected_spearman.inputs = [returns, returns_slice]
 
@@ -676,7 +676,7 @@ class StatisticalMethodsTestCase(zf.WithSeededRandomPipelineEngine,
         # so the only way to set our own input is to do so after the fact. This
         # should not be done in practice. It is necessary here because we want
         # Returns to use our random data as an input, but by default it is
-        # using USEquityPricing.close.
+        # using CNEquityPricing.close.
         expected_regression.inputs = [returns, returns_slice]
 
         columns = {
@@ -816,14 +816,16 @@ class StatisticalMethodsTestCase(zf.WithSeededRandomPipelineEngine,
             index=dates[start_date_index:end_date_index + 1],
             columns=assets,
         )
-        assert_frame_equal(pearson_results, expected_pearson_results)
+        assert_frame_equal(
+            pearson_results, expected_pearson_results, check_names=False)
 
         expected_spearman_results = DataFrame(
             data=expected_spearman_results,
             index=dates[start_date_index:end_date_index + 1],
             columns=assets,
         )
-        assert_frame_equal(spearman_results, expected_spearman_results)
+        assert_frame_equal(
+            spearman_results, expected_spearman_results, check_names=False)
 
     @parameter_space(regression_length=[2, 3, 4])
     def test_factor_regression_method_two_factors(self, regression_length):
@@ -920,7 +922,8 @@ class StatisticalMethodsTestCase(zf.WithSeededRandomPipelineEngine,
                 index=dates[start_date_index:end_date_index + 1],
                 columns=assets,
             )
-            assert_frame_equal(output_result, expected_output_result)
+            assert_frame_equal(
+                output_result, expected_output_result, check_names=False)
 
 
 class VectorizedBetaTestCase(zf.ZiplineTestCase):

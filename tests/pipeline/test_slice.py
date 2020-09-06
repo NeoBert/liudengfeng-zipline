@@ -1,5 +1,6 @@
 """
 Tests for slicing pipeline terms.
+完成测试 ✔
 """
 from numpy import where
 from pandas import Int64Index, Timestamp
@@ -40,8 +41,9 @@ from zipline.utils.numpy_utils import datetime64ns_dtype
 class SliceTestCase(WithSeededRandomPipelineEngine, ZiplineTestCase):
     sids = ASSET_FINDER_EQUITY_SIDS = Int64Index([1, 2, 3])
     START_DATE = Timestamp('2015-01-31', tz='UTC')
-    END_DATE = Timestamp('2015-03-01', tz='UTC')
-    ASSET_FINDER_COUNTRY_CODE = 'US'
+    # 🆗 春节休市导致交易日不足18日，延长至4月1日
+    END_DATE = Timestamp('2015-04-01', tz='UTC')
+    ASSET_FINDER_COUNTRY_CODE = 'CN'
     SEEDED_RANDOM_PIPELINE_DEFAULT_DOMAIN = CN_EQUITIES
 
     @classmethod
@@ -170,7 +172,7 @@ class SliceTestCase(WithSeededRandomPipelineEngine, ZiplineTestCase):
         """
         my_asset = Asset(
             0,
-            exchange_info=ExchangeInfo('TEST FULL', 'TEST', 'US'),
+            exchange_info=ExchangeInfo('TEST FULL', 'TEST', 'CN'),
         )
         returns = Returns(window_length=2, inputs=[self.col])
         returns_slice = returns[my_asset]
