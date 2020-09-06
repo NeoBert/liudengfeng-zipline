@@ -172,7 +172,9 @@ cdef class Asset:
 
     def __repr__(self):
         if self.symbol:
-            return '%s(%d [%s])' % (type(self).__name__, self.sid, self.symbol)
+            # 🆗 只保留简称与符号
+            # return '%s(%d [%s])' % (type(self).__name__, self.sid, self.symbol)
+            return '%s(%s)' % (self.asset_name, self.symbol)
         else:
             return '%s(%d)' % (type(self).__name__, self.sid)
 
