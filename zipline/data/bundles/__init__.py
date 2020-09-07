@@ -14,6 +14,7 @@ from .core import (
     register,
     to_bundle_ingest_dirname,
     unregister,
+    most_recent_data,
 )
 
 
@@ -28,4 +29,5 @@ __all__ = [
     'register',
     'to_bundle_ingest_dirname',
     'unregister',
+    'most_recent_data'
 ]

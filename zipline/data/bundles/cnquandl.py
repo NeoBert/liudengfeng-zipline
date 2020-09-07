@@ -17,10 +17,9 @@ from ..localdata import (fetch_single_equity, fetch_single_quity_adjustments,
                          fetch_single_minutely_equity, gen_asset_metadata)
 from . import core as bundles
 from .adjusts import ADJUST_FACTOR
-from .tdt_util import search_most_recent_dt
+from .refresh import CALENDAR_START
 
 TODAY = pd.Timestamp('today').normalize()
-ONE_AND_HALF_MONTH_AGO = (TODAY - pd.Timedelta(days=45)).tz_localize('UTC')
 log = make_logger('cnquandl', collection='zipline')
 
 
@@ -191,7 +190,7 @@ def cndaily_bundle(environ, asset_db_writer, minute_bar_writer,
 @bundles.register(
     'cnminutely',
     calendar_name='XSHG',
-    start_session=search_most_recent_dt(ONE_AND_HALF_MONTH_AGO),
+    start_session=CALENDAR_START,
     minutes_per_day=240)
 def cnminutely_bundle(environ, asset_db_writer, minute_bar_writer,
                       daily_bar_writer, adjustment_writer, calendar,
@@ -201,10 +200,16 @@ def cnminutely_bundle(environ, asset_db_writer, minute_bar_writer,
     """
     t = time.time()
     log.info('读取股票元数据......')
+    # 只保留000002A股指数，且日内设定为常数
+    hc = HotDataCache(gen_asset_metadata, hour=9, minute=30, only_in=False)
+    metadata = hc.data
+    log.info("使用`000002【A股指数】`日线数据作为基准收益率")
+    cond = metadata.symbol.str.len() == 6
+    metadata = pd.concat(
+        [metadata[metadata.symbol == '1000002'], metadata[cond]])
+    # 测试切片
+    # metadata = metadata.iloc[:20, :]
 
-    hc = HotDataCache(gen_asset_metadata, hour=9,
-                      minute=30, include_index=False)
-    metadata = hc.data #.iloc[:40, :]
     metadata['sid'] = metadata.symbol.map(_to_sid)
     symbol_map = metadata.symbol
 

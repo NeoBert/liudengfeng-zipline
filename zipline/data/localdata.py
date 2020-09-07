@@ -527,7 +527,7 @@ def _fetch_single_minutely_equity(one_day, stock_code, default):
         ohlc.loc[ohlc.index[iloc0], 'close'] = close
         # ohlc.drop(ohlc.index[iloc1], inplace=True)
     # 🆗 以手为单位，否则写入数值产生溢出错误
-    v = resampled['volume'].sum() #* 100
+    v = resampled['volume'].sum()  # * 100
     for ts in end_times:
         # 将尾部调整为前一分钟的数据
         iloc0 = v.index.indexer_at_time(ts[0])
@@ -589,6 +589,18 @@ def fetch_single_minutely_equity(stock_code, start, end):
 
     default = {d: pd.DataFrame(0, columns=cols, index=to_index(d))
                for d in dates}
+
+    # 指数分钟级别数据
+    if len(stock_code) == 7:
+        df = _fetch_single_index(stock_code, start, end)
+        if df.empty:
+            return default
+        df = df[cols+['date']]
+        df.set_index('date', inplace=True)
+        dfs = [pd.DataFrame(dict(row), index=to_index(d))
+               for d, row in df.iterrows()]
+        return pd.concat(dfs)
+
     func = partial(_fetch_single_minutely_equity,
                    stock_code=stock_code, default=default)
     # dfs = list(map(func, dates))

@@ -148,7 +148,7 @@ BundleData = namedtuple(
 
 BundleCore = namedtuple(
     'BundleCore',
-    'bundles register unregister ingest load clean',
+    'bundles register unregister ingest load clean most_recent_data',
 )
 
 
@@ -180,6 +180,7 @@ class BadClean(click.ClickException, ValueError):
     --------
     clean
     """
+
     def __init__(self, before, after, keep_last):
         super(BadClean, self).__init__(
             'Cannot pass a combination of `before` and `after` with'
@@ -451,7 +452,7 @@ def _make_bundle_core():
                     shutil.copy2(assets_db_path, wf.path)
                     downgrade(wf.path, version)
 
-    def most_recent_data(bundle_name, timestamp, environ=None):
+    def most_recent_data(bundle_name, timestamp=None, environ=None):
         """Get the path to the most recent data after ``date``for the
         given bundle.
 
@@ -464,6 +465,9 @@ def _make_bundle_core():
         environ : dict, optional
             An environment dict to forward to zipline_root.
         """
+        if timestamp is None:
+            timestamp = pd.Timestamp.utcnow()
+
         if bundle_name not in bundles:
             raise UnknownBundle(bundle_name)
 
@@ -508,8 +512,6 @@ def _make_bundle_core():
         bundle_data : BundleData
             The raw data readers for this bundle.
         """
-        if timestamp is None:
-            timestamp = pd.Timestamp.utcnow()
         timestr = most_recent_data(name, timestamp, environ=environ)
         return BundleData(
             asset_finder=AssetFinder(
@@ -609,7 +611,7 @@ def _make_bundle_core():
 
         return cleaned
 
-    return BundleCore(bundles, register, unregister, ingest, load, clean)
+    return BundleCore(bundles, register, unregister, ingest, load, clean, most_recent_data)
 
 
-bundles, register, unregister, ingest, load, clean = _make_bundle_core()
+bundles, register, unregister, ingest, load, clean, most_recent_data = _make_bundle_core()

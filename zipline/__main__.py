@@ -177,7 +177,7 @@ def ipython_only(option):
 )
 @click.option(
     '--benchmark-sid',
-    default=None, # 1000002,🆗 或者 默认使用A股指数
+    default=None,  # 1000002,🆗 或者 默认使用A股指数
     type=int,
     help="The sid of the instrument to be used as a benchmark "
          "(should exist in the ingested bundle)",
@@ -477,6 +477,14 @@ def fm():
     # 提高`import zipline`速度
     from zipline.pipeline.fundamentals.writer import write_data_to_bcolz
     write_data_to_bcolz()
+
+
+@main.command()
+def rfd():
+    """刷新日线及分钟级别数据"""
+    # 提高`import zipline`速度
+    from zipline.data.bundles.refresh import refresh_data
+    refresh_data()
 
 
 if __name__ == '__main__':
