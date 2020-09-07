@@ -1,9 +1,6 @@
 """
 Tests for SimplePipelineEngine
 完成测试 ✔
-
-# TODO:目前全部通过，需要再次确认
-有关mask测试未能正确修复测试参数
 """
 from __future__ import division
 from collections import OrderedDict
@@ -445,7 +442,6 @@ class ConstantInputTestCase(WithConstantInputs,
             expected_avg_df,
         )
 
-    @pytest.mark.skip(reason="TO_FIX")
     def test_masked_factor(self):
         """
         Test that a Custom Factor computes the correct values when passed a
@@ -476,8 +472,8 @@ class ConstantInputTestCase(WithConstantInputs,
         expected_cascading_mask_result = make_cascading_boolean_array(
             shape=(num_dates, num_assets),
         )
-
-        alternating_mask = (AssetIDPlusDay() % 2).eq(0)
+        # 🆗 更改为1
+        alternating_mask = (AssetIDPlusDay() % 2).eq(1)
         expected_alternating_mask_result = make_alternating_boolean_array(
             shape=(num_dates, num_assets), first_value=False,
         )
@@ -487,15 +483,13 @@ class ConstantInputTestCase(WithConstantInputs,
             expected_cascading_mask_result,
             expected_alternating_mask_result,
         )
-        for i, (mask, expected_mask) in enumerate(zip(masks, expected_mask_results)):
+        for mask, expected_mask in zip(masks, expected_mask_results):           
             # Test running a pipeline with a single masked factor.
             columns = {'factor1': OpenPrice(mask=mask), 'mask': mask}
             pipeline = Pipeline(columns=columns)
             results = self.engine.run_pipeline(pipeline, dates[0], dates[-1])
 
             mask_results = results['mask'].unstack()
-            if i % 2 == 1:
-                mask_results = ~mask_results
             check_arrays(mask_results.values, expected_mask)
 
             factor1_results = results['factor1'].unstack()
@@ -629,7 +623,6 @@ class ConstantInputTestCase(WithConstantInputs,
             column_results.columns.name = None
             assert_frame_equal(column_results, expected_results)
 
-    @pytest.mark.skip(reason="TO_FIX")
     def test_factor_with_multiple_outputs(self):
         dates = self.dates[5:12]
         assets = self.assets
@@ -651,7 +644,7 @@ class ConstantInputTestCase(WithConstantInputs,
             shape=(num_dates, num_assets),
         )
 
-        alternating_mask = (AssetIDPlusDay() % 2).eq(0)
+        alternating_mask = (AssetIDPlusDay() % 2).eq(1)
         expected_alternating_mask_result = make_alternating_boolean_array(
             shape=(num_dates, num_assets), first_value=False,
         )
