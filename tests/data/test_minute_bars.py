@@ -1023,6 +1023,7 @@ class BcolzMinuteBarTestCase(WithTradingCalendars, WithAssetFinder,
         # Read the attributes
         for k, v in attrs.items():
             self.assertEqual(self.reader.get_sid_attr(sid, k), v)
+
     @pytest.mark.skip
     def test_truncate_between_data_points(self):
 
@@ -1082,6 +1083,7 @@ class BcolzMinuteBarTestCase(WithTradingCalendars, WithAssetFinder,
         volume_price = self.reader.get_value(sid, minute, 'volume')
 
         self.assertEqual(50.0, volume_price)
+
     @pytest.mark.skip
     def test_truncate_all_data_points(self):
         """无需使用"""
