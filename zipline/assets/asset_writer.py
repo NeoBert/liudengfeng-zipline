@@ -287,8 +287,8 @@ def _check_symbol_mappings(df, exchanges, asset_exchange):
         Raised when there are ambiguous symbol mappings.
     """
     mappings = df.set_index('sid')[list(mapping_columns)].copy()
-    mappings['country_code'] = exchanges['country_code'][
-        asset_exchange.loc[df['sid']]
+    mappings['country_code'] = exchanges.set_index('exchange').loc[
+        asset_exchange.loc[df['sid']], 'country_code'
     ].values
     ambigious = {}
 
