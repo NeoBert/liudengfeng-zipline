@@ -287,8 +287,13 @@ def _check_symbol_mappings(df, exchanges, asset_exchange):
         Raised when there are ambiguous symbol mappings.
     """
     mappings = df.set_index('sid')[list(mapping_columns)].copy()
-    mappings['country_code'] = exchanges.set_index('exchange').loc[
-        asset_exchange.loc[df['sid']], 'country_code'
+    # 🆗 正确查询`country_code`，修正bug
+    exs = asset_exchange.loc[df['sid']]
+    copied = exchanges.copy()
+    if 'exchange' in copied.columns:
+        copied.set_index('exchange', inplace=True)
+    mappings['country_code'] = copied.loc[
+        exs.values, 'country_code'
     ].values
     ambigious = {}
 
