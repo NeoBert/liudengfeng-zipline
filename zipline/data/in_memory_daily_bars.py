@@ -5,6 +5,7 @@ import pandas as pd
 from pandas import NaT
 
 from trading_calendars.trading_calendar import TradingCalendar
+from trading_calendars.trading_calendar_cn import TradingCalendar as CNTradingCalendar
 
 from zipline.data.bar_reader import OHLCV, NoDataOnDate, NoDataForSid
 from zipline.data.session_bars import CurrencyAwareSessionBarReader
@@ -31,7 +32,7 @@ class InMemoryDailyBarReader(CurrencyAwareSessionBarReader):
     """
     @expect_types(
         frames=dict,
-        calendar=TradingCalendar,
+        calendar=(TradingCalendar, CNTradingCalendar),
         verify_indices=bool,
         currency_codes=pd.Series,
     )
