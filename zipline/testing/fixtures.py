@@ -2106,7 +2106,7 @@ class WithFXRates(object):
     FX_RATES_CALENDAR = '24/5'
 
     # Currencies between which exchange rates can be calculated.
-    FX_RATES_CURRENCIES = ["CNY", "CAD", "GBP", "EUR"]
+    FX_RATES_CURRENCIES = ["CNY", "CAD", "GBP", "EUR", "USD"]
 
     # Kinds of rates for which exchange rate data is present.
     FX_RATES_RATE_NAMES = ["mid"]
