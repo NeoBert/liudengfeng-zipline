@@ -31,7 +31,7 @@ log = make_logger('cnquandl', collection='zipline')
 calendar = get_calendar('XSHG')
 # 本地分钟级别数据开始日期
 CALENDAR_START = pd.Timestamp('2020-06-29', tz='UTC')
-CALENDAR_STOP = calendar.last_session
+CALENDAR_STOP = calendar.actual_last_session
 now = pd.Timestamp('now')
 if now.hour >= 15:
     DATA_STOP = calendar.actual_last_session

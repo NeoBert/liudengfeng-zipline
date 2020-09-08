@@ -162,7 +162,7 @@ class TestClock(TestCase):
 
         # since 19:05 Eastern is after the NYSE is closed, we don't emit
         # BEFORE_TRADING_START.  therefore, each day has SESSION_START,
-        # 390 BARs, and then SESSION_END
+        # 240 BARs, and then SESSION_END
 
         def _check_session_bts_after(session_label, events):
             minutes = self.xshg_calendar.minutes_for_session(session_label)

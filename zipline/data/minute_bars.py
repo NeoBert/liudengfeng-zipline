@@ -86,7 +86,8 @@ def _calc_minute_index(market_opens, minutes_per_day):
         start_ix = minutes_per_day * i
         end_ix = start_ix + minutes_per_day
         minutes[start_ix:end_ix] = values
-    return pd.to_datetime(minutes, utc=True)  # , box=True)
+    # 务必排序
+    return pd.to_datetime(minutes, utc=True).sort_values()  # , box=True)
 
 
 def _sid_subdir_path(sid):
@@ -803,6 +804,11 @@ class BcolzMinuteBarWriter(object):
         num_rec_mins = table.size
 
         all_minutes = self._minute_index
+
+        if not all_minutes.is_monotonic:
+            raise ValueError("all_minutes须单调")
+        if all_minutes.has_duplicates:
+            raise ValueError("all_minutes不得包含重复值")
 
         # Get the latest minute we wish to write to the ctable
         # last_minute_to_write = pd.Timestamp(dts[-1], tz='UTC')
