@@ -31,11 +31,12 @@ log = make_logger('cnquandl', collection='zipline')
 calendar = get_calendar('XSHG')
 # 本地分钟级别数据开始日期
 CALENDAR_START = pd.Timestamp('2020-06-29', tz='UTC')
+CALENDAR_STOP = calendar.last_session
 now = pd.Timestamp('now')
 if now.hour >= 15:
-    CALENDAR_STOP = calendar.actual_last_session
+    DATA_STOP = calendar.actual_last_session
 else:
-    CALENDAR_STOP = calendar.actual_last_session - calendar.day
+    DATA_STOP = calendar.actual_last_session - calendar.day
 
 
 def try_run_ingest(name):
@@ -68,7 +69,7 @@ def insert(dest, codes):
         for code in it:
             sid = int(code)
             df = fetch_single_minutely_equity(
-                code, CALENDAR_START, CALENDAR_STOP)
+                code, CALENDAR_START, DATA_STOP)
             # 务必转换为UTC时区
             df = df.tz_localize('Asia/Shanghai').tz_convert('UTC')
             writer.write_sid(sid, df)
@@ -88,8 +89,13 @@ def append(dest, codes):
         for code in it:
             sid = int(code)
             last_dt = writer.last_date_in_output_for_sid(sid)
-            start = last_dt + calendar.day
-            df = fetch_single_minutely_equity(code, start, CALENDAR_STOP)
+            if last_dt is pd.NaT:
+                start = CALENDAR_START
+            else:
+                start = last_dt + calendar.day
+            if start > DATA_STOP:
+                continue
+            df = fetch_single_minutely_equity(code, start, DATA_STOP)
             # 务必转换为UTC时区
             df = df.tz_localize('Asia/Shanghai').tz_convert('UTC')
             writer.write_sid(sid, df)
