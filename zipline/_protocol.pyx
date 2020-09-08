@@ -657,11 +657,13 @@ cdef class BarData:
         - If multiple assets and multiple fields are requested, the returned
           value is a :class:`pd.Panel` with shape
           ``(len(fields), bar_count, len(assets))``. The axes of the returned
-          panel will be:
+                          # returned MultiIndex DataFrame has:
 
-          - ``panel.items`` : ``fields``
-          - ``panel.major_axis`` : :class:`pd.DatetimeIndex` of length ``bar_count``
-          - ``panel.minor_axis`` : ``assets``
+          MultiIndex DataFrame will be:
+
+          - ``DataFrame.columns`` : ``fields``
+          - ``MultiIndex.level 0`` : :class:`pd.DatetimeIndex` of length ``bar_count``
+          - ``MultiIndex.level 1`` : ``assets``
 
         If the current simulation time is not a valid market time, we use the
         last market close instead.
@@ -755,15 +757,19 @@ cdef class BarData:
                             self.simulation_dt_func()
                         ) for field in fields
                     }
-
                     df_dict = {field: df * adjs[field]
                                for field, df in iteritems(df_dict)}
 
-                # returned panel has:
-                # items: fields
-                # major axis: dt
-                # minor axis: assets
-                return pd.Panel(df_dict)
+                # 🆗 MultiIndex level 0 datetime level 1 asset
+                # returned MultiIndex DataFrame has:
+                # columns: fields
+                # MultiIndex level 0 datetime level 1 assets
+                ss = []
+                for k, df in df_dict.items():
+                    s = df.stack()
+                    s.name = k
+                    ss.append(s)
+                return pd.concat(ss, axis=1)
 
     property current_dt:
         def __get__(self):
