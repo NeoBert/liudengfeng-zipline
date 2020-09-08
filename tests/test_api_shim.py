@@ -169,7 +169,7 @@ class TestAPIShim(WithCreateBarData,
     @classmethod
     def make_adjustment_writer_equity_daily_bar_reader(cls):
         return MockDailyBarReader(
-            dates=cls.nyse_calendar.sessions_in_range(
+            dates=cls.xshg_calendar.sessions_in_range(
                 cls.START_DATE,
                 cls.END_DATE,
             ),

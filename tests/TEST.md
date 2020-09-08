@@ -1,0 +1,13 @@
+# 测试及修订记录
+
+## 代码
+
+- `zipline\gens\sim_engine.pyx`
+  - pd.to_datetime 弃用`box`参数
+- `zipline\gens\sim_engine.pyx`
+  - `MinuteSimulationClock`考虑午休时间
+  - 增加测试`tests\data\test_minute_bar_internal.py`
+
+## 测试
+
+- `tests\test_clock.py`
