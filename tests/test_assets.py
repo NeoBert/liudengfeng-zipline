@@ -461,7 +461,7 @@ class TestFuture(WithAssetFinder, ZiplineTestCase):
 
     def test_repr(self):
         reprd = repr(self.future)
-        self.assertEqual("Future(2468 [OMH15])", reprd)
+        self.assertEqual("(OMH15)", reprd)
 
     def test_reduce(self):
         assert_equal(
