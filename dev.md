@@ -1,5 +1,8 @@
 # 测试及修订记录
 
+- `zipline\_protocol.pyx`
+  - 多asset、多字段时，使用MultiIndex DataFrame
+
 ## 代码
 
 - `zipline\gens\sim_engine.pyx`

@@ -58,6 +58,11 @@ strategies.
 
 若图示部分未能正确显示，请使用`nbviewer <https://nbviewer.jupyter.org/>`
 
+修订文档
+========
+
+- 修订文档 <https://github.com/liudengfeng/zipline/tree/master/dev.md>` _
+
 
 Features
 ========
