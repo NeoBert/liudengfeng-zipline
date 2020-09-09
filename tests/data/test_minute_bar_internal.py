@@ -103,6 +103,7 @@ def test_NoDataOnDate(calendar):
         np.int64)
     market_closes_values = market_closes.values.astype('datetime64[m]').astype(
         np.int64)
+
     # 午夜时分
     dt_1 = cal.index[0]
 

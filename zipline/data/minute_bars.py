@@ -826,7 +826,8 @@ class BcolzMinuteBarWriter(object):
                 raise BcolzMinuteOverlappingData(dedent("""
                 Data with last_date={0} already includes input start={1} for
                 sid={2}""".strip()).format(last_date, input_first_day, sid))
-
+        # 如all_minutes非单调或存在重复值，latest_min_count返回切片对象而非整数
+        # latest_min_count + 1 则会触发异常
         latest_min_count = all_minutes.get_loc(last_minute_to_write)
 
         # Get all the minutes we wish to write (all market minutes after the
@@ -1022,7 +1023,8 @@ class BcolzMinuteBarReader(MinuteBarReader):
         """
         market_opens = self._market_opens.values.astype('datetime64[m]')
         market_closes = self._market_closes.values.astype('datetime64[m]')
-        minutes_per_day = (market_closes - market_opens).astype(np.int64)
+        # 🆗 不考虑延迟开盘及提早收市
+        minutes_per_day = (market_closes - market_opens).astype(np.int64) - 90
         early_indices = np.where(
             minutes_per_day != self._minutes_per_day - 1)[0]
         early_opens = self._market_opens[early_indices]

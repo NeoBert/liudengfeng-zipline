@@ -81,8 +81,10 @@ def find_position_of_minute(ndarray[long_t, ndim=1] market_opens,
         searchsorted(market_opens, minute_val, side='right') - 1
     market_open = market_opens[market_open_loc]
     market_close = market_closes[market_open_loc]
+    is_in_range = market_open <= minute_val <= market_close
     # 🆗 午休 90 分钟
-    if not forward_fill and ((minute_val - market_open) >= minutes_per_day + 90):
+    # if not forward_fill and ((minute_val - market_open) >= minutes_per_day + 90):
+    if not forward_fill and not is_in_range:
         raise ValueError("Given minute is not between an open and a close")
 
     delta = int_min(minute_val - market_open, market_close - market_open)

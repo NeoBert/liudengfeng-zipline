@@ -17,31 +17,45 @@
 完成测试 ✔
 
 考虑到午休时间
-交易分钟 09：31~11：30 13：01~15：00
+交易分钟 09:31~11:30 13:01~15:00
 """
 import os
+import unittest
 from datetime import timedelta
 
-import pytest
 from numpy import arange, array, float64, full, int64, nan, transpose, zeros
 from numpy.testing import assert_almost_equal, assert_array_equal
 from pandas import (DataFrame, DatetimeIndex, NaT, Timedelta, Timestamp,
                     date_range)
 
 from zipline.data.bar_reader import NoDataForSid, NoDataOnDate
-from zipline.data.minute_bars import (
-    BcolzMinuteBarMetadata, BcolzMinuteBarReader, BcolzMinuteBarWriter,
-    BcolzMinuteOverlappingData, BcolzMinuteWriterColumnMismatch,
-    H5MinuteBarUpdateReader, H5MinuteBarUpdateWriter)
+from zipline.data.minute_bars import (BcolzMinuteBarMetadata,
+                                      BcolzMinuteBarReader,
+                                      BcolzMinuteBarWriter,
+                                      BcolzMinuteOverlappingData,
+                                      BcolzMinuteWriterColumnMismatch,
+                                      H5MinuteBarUpdateReader,
+                                      H5MinuteBarUpdateWriter,
+                                      CN_EQUITIES_MINUTES_PER_DAY,
+                                      _calc_minute_index)
 from zipline.testing.fixtures import (WithAssetFinder, WithInstanceTmpDir,
                                       WithTradingCalendars, ZiplineTestCase)
+from zipline.testing.core import create_minute_df_for_asset
 
-CN_EQUITIES_MINUTES_PER_DAY = 240
 # Calendar is set to cover several half days, to check a case where half
 # days would be read out of order in cases of windows which spanned over
 # multiple half days.
 TEST_CALENDAR_START = Timestamp('2019-12-31', tz='UTC')
 TEST_CALENDAR_STOP = Timestamp('2020-01-08', tz='UTC')
+
+
+def make_minutely_data(sid, calendar, start_dt, end_dt):
+    ndays = calendar.session_distance(start_dt, end_dt)
+    df = create_minute_df_for_asset(calendar, start_dt, end_dt)
+    assert len(df) == ndays * CN_EQUITIES_MINUTES_PER_DAY
+    df.loc[:, ['open', 'high', 'low', 'close']] += sid
+    df.loc[:, 'volume'] += sid * 100
+    return df
 
 
 class BcolzMinuteBarTestCase(WithTradingCalendars, WithAssetFinder,
@@ -82,6 +96,17 @@ class BcolzMinuteBarTestCase(WithTradingCalendars, WithAssetFinder,
             metadata.version,
             BcolzMinuteBarMetadata.FORMAT_VERSION,
         )
+
+    def test_calc_minute_index(self):
+        actual = _calc_minute_index(
+            self.market_opens, CN_EQUITIES_MINUTES_PER_DAY)
+        self.assertTrue(actual.is_monotonic)
+        self.assertFalse(actual.has_duplicates)
+
+    def test_minutes_to_exclude(self):
+        # 在不考虑延迟开盘及提早收市的情形下，排除分钟列表应该为空
+        reader = self.reader
+        self.assertEqual(reader._minutes_to_exclude(), [])
 
     def test_no_minute_bars_for_sid(self):
         minute = self.market_opens[self.test_calendar_start]
@@ -854,7 +879,38 @@ class BcolzMinuteBarTestCase(WithTradingCalendars, WithAssetFinder,
             for j, sid in enumerate(sids):
                 assert_almost_equal(data[sid][col], arrays[i][j])
 
-    @pytest.mark.skip
+    def test_unadjusted_period_minutes(self):
+        """
+        Test unadjusted period minutes.
+        """
+        calendar = self.trading_calendar
+        start_dt = self.test_calendar_start
+        end_dt = self.test_calendar_stop
+        all_minutes = calendar.minutes_for_sessions_in_range(start_dt, end_dt)
+        sids = [1, 2]
+        expected = {sid: make_minutely_data(
+            sid, calendar, start_dt, end_dt) for sid in sids}
+        for sid, df in expected.items():
+            self.writer.write_sid(sid, df)
+
+        reader = BcolzMinuteBarReader(self.dest)
+
+        columns = ['open', 'high', 'low', 'close', 'volume']
+        arrays = list(
+            map(
+                transpose,
+                reader.load_raw_arrays(
+                    columns,
+                    all_minutes[0],
+                    all_minutes[-1],
+                    sids,
+                )))
+
+        for i, col in enumerate(columns):
+            for j, sid in enumerate(sids):
+                assert_almost_equal(expected[sid][col], arrays[i][j])
+
+    @unittest.skip("不考虑提前收市")
     def test_unadjusted_minutes_early_close(self):
         """
         Test unadjusted minute window, ensuring that early closes are filtered
@@ -961,7 +1017,7 @@ class BcolzMinuteBarTestCase(WithTradingCalendars, WithAssetFinder,
                 'open'
             )
 
-    @pytest.mark.skip
+    @unittest.skip("不考虑半日")
     def test_adjust_non_trading_minutes_half_days(self):
         # half day
         start_day = Timestamp('2015-11-27', tz='UTC')
@@ -1024,7 +1080,7 @@ class BcolzMinuteBarTestCase(WithTradingCalendars, WithAssetFinder,
         for k, v in attrs.items():
             self.assertEqual(self.reader.get_sid_attr(sid, k), v)
 
-    @pytest.mark.skip
+    @unittest.skip("暂时跳过")
     def test_truncate_between_data_points(self):
 
         tds = self.market_opens.index
@@ -1084,9 +1140,8 @@ class BcolzMinuteBarTestCase(WithTradingCalendars, WithAssetFinder,
 
         self.assertEqual(50.0, volume_price)
 
-    @pytest.mark.skip
+    @unittest.skip("无需使用")
     def test_truncate_all_data_points(self):
-        """无需使用"""
         tds = self.market_opens.index
         days = tds[tds.slice_indexer(
             start=self.test_calendar_start + 1 * tds.freq,
@@ -1123,7 +1178,7 @@ class BcolzMinuteBarTestCase(WithTradingCalendars, WithAssetFinder,
             self.test_calendar_start)
         self.assertEqual(self.reader.last_available_dt, last_close)
 
-    @pytest.mark.skip
+    @unittest.skip("跳过提前收市")
     def test_early_market_close(self):
         # Date to test is 2015-11-30 9:31
         # Early close is 2015-11-27 18:00
@@ -1185,7 +1240,7 @@ class BcolzMinuteBarTestCase(WithTradingCalendars, WithAssetFinder,
             "close, even when data is written between the early "
             "close and the next open.")
 
-    @pytest.mark.skip
+    @unittest.skip("不支持HDF5格式")
     def test_minute_updates(self):
         """
         Test minute updates.
