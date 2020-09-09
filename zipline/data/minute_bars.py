@@ -49,7 +49,7 @@ from zipline.utils.memoize import lazyval
 logger = logbook.Logger('MinuteBars')
 
 CN_EQUITIES_MINUTES_PER_DAY = 240
-FUTURES_MINUTES_PER_DAY = 1440
+FUTURES_MINUTES_PER_DAY = 240 # 1440 简化测试使用股票交易日历
 
 DEFAULT_EXPECTEDLEN = CN_EQUITIES_MINUTES_PER_DAY * 252 * 15
 
@@ -806,9 +806,9 @@ class BcolzMinuteBarWriter(object):
         all_minutes = self._minute_index
 
         if not all_minutes.is_monotonic:
-            raise ValueError("all_minutes须单调")
+            raise ValueError("分钟Index未排序")
         if all_minutes.has_duplicates:
-            raise ValueError("all_minutes不得包含重复值")
+            raise ValueError("分钟Index包含重复值")
 
         # Get the latest minute we wish to write to the ctable
         # last_minute_to_write = pd.Timestamp(dts[-1], tz='UTC')

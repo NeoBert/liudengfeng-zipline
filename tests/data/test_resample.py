@@ -11,6 +11,13 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+"""
+完成测试 ✔
+
+测试不再涉及期货部分
+
+取消有关美股感恩节部分测试
+"""
 from collections import OrderedDict
 from numbers import Real
 
@@ -42,43 +49,43 @@ OHLC = ['open', 'high', 'low', 'close']
 OHLCV = OHLC + ['volume']
 
 
-NYSE_MINUTES = OrderedDict((
+XSHG_MINUTES = OrderedDict((
     ('day_0_front', pd.date_range('2016-03-15 9:31',
                                   '2016-03-15 9:33',
                                   freq='min',
-                                  tz='US/Eastern').tz_convert('UTC')),
-    ('day_0_back', pd.date_range('2016-03-15 15:58',
-                                 '2016-03-15 16:00',
+                                  tz='Asia/Shanghai').tz_convert('UTC')),
+    ('day_0_back', pd.date_range('2016-03-15 14:58',
+                                 '2016-03-15 15:00',
                                  freq='min',
-                                 tz='US/Eastern').tz_convert('UTC')),
+                                 tz='Asia/Shanghai').tz_convert('UTC')),
     ('day_1_front', pd.date_range('2016-03-16 9:31',
                                   '2016-03-16 9:33',
                                   freq='min',
-                                  tz='US/Eastern').tz_convert('UTC')),
-    ('day_1_back', pd.date_range('2016-03-16 15:58',
-                                 '2016-03-16 16:00',
+                                  tz='Asia/Shanghai').tz_convert('UTC')),
+    ('day_1_back', pd.date_range('2016-03-16 14:58',
+                                 '2016-03-16 15:00',
                                  freq='min',
-                                 tz='US/Eastern').tz_convert('UTC')),
+                                 tz='Asia/Shanghai').tz_convert('UTC')),
 ))
 
-
+# 🆗 期货不纳入测试范围
 FUT_MINUTES = OrderedDict((
-    ('day_0_front', pd.date_range('2016-03-15 18:01',
-                                  '2016-03-15 18:03',
+    ('day_0_front', pd.date_range('2016-03-15 09:31',
+                                  '2016-03-15 09:33',
                                   freq='min',
-                                  tz='US/Eastern').tz_convert('UTC')),
-    ('day_0_back', pd.date_range('2016-03-16 17:58',
-                                 '2016-03-16 18:00',
+                                  tz='Asia/Shanghai').tz_convert('UTC')),
+    ('day_0_back', pd.date_range('2016-03-16 14:58',
+                                 '2016-03-16 15:00',
                                  freq='min',
-                                 tz='US/Eastern').tz_convert('UTC')),
-    ('day_1_front', pd.date_range('2016-03-16 18:01',
-                                  '2016-03-16 18:03',
+                                 tz='Asia/Shanghai').tz_convert('UTC')),
+    ('day_1_front', pd.date_range('2016-03-16 09:31',
+                                  '2016-03-16 09:33',
                                   freq='min',
-                                  tz='US/Eastern').tz_convert('UTC')),
-    ('day_1_back', pd.date_range('2016-03-17 17:58',
-                                 '2016-03-17 18:00',
+                                  tz='Asia/Shanghai').tz_convert('UTC')),
+    ('day_1_back', pd.date_range('2016-03-17 14:58',
+                                 '2016-03-17 15:00',
                                  freq='min',
-                                 tz='US/Eastern').tz_convert('UTC')),
+                                 tz='Asia/Shanghai').tz_convert('UTC')),
 ))
 
 
@@ -132,7 +139,7 @@ EQUITY_CASES = OrderedDict()
 
 for sid, combos in _EQUITY_CASES:
     frames = [DataFrame(SCENARIOS[s], columns=OHLCV).
-              set_index(NYSE_MINUTES[m])
+              set_index(XSHG_MINUTES[m])
               for s, m in combos]
     EQUITY_CASES[sid] = pd.concat(frames)
 
@@ -271,10 +278,10 @@ class MinuteToDailyAggregationTestCase(WithBcolzEquityMinuteBarReader,
         '2016-03-31', tz='UTC',
     )
 
-    TRADING_CALENDAR_STRS = ('NYSE', 'us_futures')
+    TRADING_CALENDAR_STRS = ('XSHG',)
 
     ASSET_FINDER_EQUITY_SIDS = 1, 2, 3, 4, 5
-    ASSET_FINDER_FUTURE_SIDS = 1001, 1002, 1003, 1004
+    # ASSET_FINDER_FUTURE_SIDS = 1001, 1002, 1003, 1004
 
     @classmethod
     def make_equity_info(cls):
@@ -290,40 +297,40 @@ class MinuteToDailyAggregationTestCase(WithBcolzEquityMinuteBarReader,
             frame = EQUITY_CASES[sid]
             yield sid, frame
 
-    @classmethod
-    def make_futures_info(cls):
-        future_dict = {}
+    # @classmethod
+    # def make_futures_info(cls):
+    #     future_dict = {}
 
-        for future_sid in cls.ASSET_FINDER_FUTURE_SIDS:
-            future_dict[future_sid] = {
-                'multiplier': 1000,
-                'exchange': 'CMES',
-                'root_symbol': "ABC"
-            }
+    #     for future_sid in cls.ASSET_FINDER_FUTURE_SIDS:
+    #         future_dict[future_sid] = {
+    #             'multiplier': 1000,
+    #             'exchange': 'XSHG',
+    #             'root_symbol': "ABC"
+    #         }
 
-        return pd.DataFrame.from_dict(future_dict, orient='index')
+    #     return pd.DataFrame.from_dict(future_dict, orient='index')
 
-    @classmethod
-    def make_future_minute_bar_data(cls):
-        for sid in cls.ASSET_FINDER_FUTURE_SIDS:
-            frame = FUTURE_CASES[sid]
-            yield sid, frame
+    # @classmethod
+    # def make_future_minute_bar_data(cls):
+    #     for sid in cls.ASSET_FINDER_FUTURE_SIDS:
+    #         frame = FUTURE_CASES[sid]
+    #         yield sid, frame
 
     def init_instance_fixtures(self):
         super(MinuteToDailyAggregationTestCase, self).init_instance_fixtures()
         # Set up a fresh data portal for each test, since order of calling
         # needs to be tested.
         self.equity_daily_aggregator = DailyHistoryAggregator(
-            self.nyse_calendar.schedule.market_open,
+            self.xshg_calendar.schedule.market_open,
             self.bcolz_equity_minute_bar_reader,
-            self.nyse_calendar,
+            self.xshg_calendar,
         )
 
-        self.future_daily_aggregator = DailyHistoryAggregator(
-            self.us_futures_calendar.schedule.market_open,
-            self.bcolz_future_minute_bar_reader,
-            self.us_futures_calendar
-        )
+        # self.future_daily_aggregator = DailyHistoryAggregator(
+        #     self.us_futures_calendar.schedule.market_open,
+        #     self.bcolz_future_minute_bar_reader,
+        #     self.us_futures_calendar
+        # )
 
     @parameter_space(
         field=OHLCV,
@@ -341,21 +348,21 @@ class MinuteToDailyAggregationTestCase(WithBcolzEquityMinuteBarReader,
             self.equity_daily_aggregator,
         )
 
-    @parameter_space(
-        field=OHLCV,
-        sid=ASSET_FINDER_FUTURE_SIDS,
-        __fail_fast=True,
-    )
-    def test_future_contiguous_minutes_individual(self, field, sid):
-        asset = self.asset_finder.retrieve_asset(sid)
-        minutes = FUTURE_CASES[asset].index
+    # @parameter_space(
+    #     field=OHLCV,
+    #     sid=ASSET_FINDER_FUTURE_SIDS,
+    #     __fail_fast=True,
+    # )
+    # def test_future_contiguous_minutes_individual(self, field, sid):
+    #     asset = self.asset_finder.retrieve_asset(sid)
+    #     minutes = FUTURE_CASES[asset].index
 
-        self._test_contiguous_minutes_individual(
-            field,
-            asset,
-            minutes,
-            self.future_daily_aggregator,
-        )
+    #     self._test_contiguous_minutes_individual(
+    #         field,
+    #         asset,
+    #         minutes,
+    #         self.future_daily_aggregator,
+    #     )
 
     def _test_contiguous_minutes_individual(
         self,
@@ -558,119 +565,119 @@ class TestMinuteToSession(WithEquityMinuteBarData,
         for sid in self.ASSET_FINDER_EQUITY_SIDS:
             frame = self.equity_frames[sid]
             expected = EXPECTED_SESSIONS[sid]
-            result = minute_frame_to_session_frame(frame, self.nyse_calendar)
+            result = minute_frame_to_session_frame(frame, self.xshg_calendar)
             assert_almost_equal(expected.values,
                                 result.values,
                                 err_msg='sid={0}'.format(sid))
 
 
-class TestResampleSessionBars(WithBcolzFutureMinuteBarReader,
-                              ZiplineTestCase):
+# class TestResampleSessionBars(WithBcolzFutureMinuteBarReader,
+#                               ZiplineTestCase):
 
-    TRADING_CALENDAR_STRS = ('us_futures',)
-    TRADING_CALENDAR_PRIMARY_CAL = 'us_futures'
+#     TRADING_CALENDAR_STRS = ('us_futures',)
+#     TRADING_CALENDAR_PRIMARY_CAL = 'us_futures'
 
-    ASSET_FINDER_FUTURE_SIDS = 1001, 1002, 1003, 1004
+#     ASSET_FINDER_FUTURE_SIDS = 1001, 1002, 1003, 1004
 
-    START_DATE = pd.Timestamp('2016-03-16', tz='UTC')
-    END_DATE = pd.Timestamp('2016-03-17', tz='UTC')
-    NUM_SESSIONS = 2
+#     START_DATE = pd.Timestamp('2016-03-16', tz='UTC')
+#     END_DATE = pd.Timestamp('2016-03-17', tz='UTC')
+#     NUM_SESSIONS = 2
 
-    @classmethod
-    def make_futures_info(cls):
-        future_dict = {}
+#     @classmethod
+#     def make_futures_info(cls):
+#         future_dict = {}
 
-        for future_sid in cls.ASSET_FINDER_FUTURE_SIDS:
-            future_dict[future_sid] = {
-                'multiplier': 1000,
-                'exchange': 'CMES',
-                'root_symbol': "ABC"
-            }
+#         for future_sid in cls.ASSET_FINDER_FUTURE_SIDS:
+#             future_dict[future_sid] = {
+#                 'multiplier': 1000,
+#                 'exchange': 'XSHG',
+#                 'root_symbol': "ABC"
+#             }
 
-        return pd.DataFrame.from_dict(future_dict, orient='index')
+#         return pd.DataFrame.from_dict(future_dict, orient='index')
 
-    @classmethod
-    def make_future_minute_bar_data(cls):
-        for sid in cls.ASSET_FINDER_FUTURE_SIDS:
-            frame = FUTURE_CASES[sid]
-            yield sid, frame
+#     @classmethod
+#     def make_future_minute_bar_data(cls):
+#         for sid in cls.ASSET_FINDER_FUTURE_SIDS:
+#             frame = FUTURE_CASES[sid]
+#             yield sid, frame
 
-    def init_instance_fixtures(self):
-        super(TestResampleSessionBars, self).init_instance_fixtures()
-        self.session_bar_reader = MinuteResampleSessionBarReader(
-            self.trading_calendar,
-            self.bcolz_future_minute_bar_reader
-        )
+#     def init_instance_fixtures(self):
+#         super(TestResampleSessionBars, self).init_instance_fixtures()
+#         self.session_bar_reader = MinuteResampleSessionBarReader(
+#             self.trading_calendar,
+#             self.bcolz_future_minute_bar_reader
+#         )
 
-    def test_resample(self):
-        calendar = self.trading_calendar
-        for sid in self.ASSET_FINDER_FUTURE_SIDS:
-            case_frame = FUTURE_CASES[sid]
-            first = calendar.minute_to_session_label(
-                case_frame.index[0])
-            last = calendar.minute_to_session_label(
-                case_frame.index[-1])
-            result = self.session_bar_reader.load_raw_arrays(
-                OHLCV, first, last, [sid])
-            for i, field in enumerate(OHLCV):
-                assert_almost_equal(
-                    EXPECTED_SESSIONS[sid][[field]],
-                    result[i],
-                    err_msg="sid={0} field={1}".format(sid, field))
+#     def test_resample(self):
+#         calendar = self.trading_calendar
+#         for sid in self.ASSET_FINDER_FUTURE_SIDS:
+#             case_frame = FUTURE_CASES[sid]
+#             first = calendar.minute_to_session_label(
+#                 case_frame.index[0])
+#             last = calendar.minute_to_session_label(
+#                 case_frame.index[-1])
+#             result = self.session_bar_reader.load_raw_arrays(
+#                 OHLCV, first, last, [sid])
+#             for i, field in enumerate(OHLCV):
+#                 assert_almost_equal(
+#                     EXPECTED_SESSIONS[sid][[field]],
+#                     result[i],
+#                     err_msg="sid={0} field={1}".format(sid, field))
 
-    def test_sessions(self):
-        sessions = self.session_bar_reader.sessions
+#     def test_sessions(self):
+#         sessions = self.session_bar_reader.sessions
 
-        self.assertEqual(self.NUM_SESSIONS, len(sessions))
-        self.assertEqual(self.START_DATE, sessions[0])
-        self.assertEqual(self.END_DATE, sessions[-1])
+#         self.assertEqual(self.NUM_SESSIONS, len(sessions))
+#         self.assertEqual(self.START_DATE, sessions[0])
+#         self.assertEqual(self.END_DATE, sessions[-1])
 
-    def test_last_available_dt(self):
-        calendar = self.trading_calendar
-        session_bar_reader = MinuteResampleSessionBarReader(
-            calendar,
-            self.bcolz_future_minute_bar_reader
-        )
+#     def test_last_available_dt(self):
+#         calendar = self.trading_calendar
+#         session_bar_reader = MinuteResampleSessionBarReader(
+#             calendar,
+#             self.bcolz_future_minute_bar_reader
+#         )
 
-        self.assertEqual(self.END_DATE, session_bar_reader.last_available_dt)
+#         self.assertEqual(self.END_DATE, session_bar_reader.last_available_dt)
 
-    def test_get_value(self):
-        calendar = self.trading_calendar
-        session_bar_reader = MinuteResampleSessionBarReader(
-            calendar,
-            self.bcolz_future_minute_bar_reader
-        )
-        for sid in self.ASSET_FINDER_FUTURE_SIDS:
-            expected = EXPECTED_SESSIONS[sid]
-            for dt_str, values in expected.iterrows():
-                dt = pd.Timestamp(dt_str, tz='UTC')
-                for col in OHLCV:
-                    result = session_bar_reader.get_value(sid, dt, col)
-                    assert_almost_equal(result,
-                                        values[col],
-                                        err_msg="sid={0} col={1} dt={2}".
-                                        format(sid, col, dt))
+#     def test_get_value(self):
+#         calendar = self.trading_calendar
+#         session_bar_reader = MinuteResampleSessionBarReader(
+#             calendar,
+#             self.bcolz_future_minute_bar_reader
+#         )
+#         for sid in self.ASSET_FINDER_FUTURE_SIDS:
+#             expected = EXPECTED_SESSIONS[sid]
+#             for dt_str, values in expected.iterrows():
+#                 dt = pd.Timestamp(dt_str, tz='UTC')
+#                 for col in OHLCV:
+#                     result = session_bar_reader.get_value(sid, dt, col)
+#                     assert_almost_equal(result,
+#                                         values[col],
+#                                         err_msg="sid={0} col={1} dt={2}".
+#                                         format(sid, col, dt))
 
-    def test_first_trading_day(self):
-        self.assertEqual(self.START_DATE,
-                         self.session_bar_reader.first_trading_day)
+#     def test_first_trading_day(self):
+#         self.assertEqual(self.START_DATE,
+#                          self.session_bar_reader.first_trading_day)
 
-    def test_get_last_traded_dt(self):
-        future = self.asset_finder.retrieve_asset(
-            self.ASSET_FINDER_FUTURE_SIDS[0]
-        )
+#     def test_get_last_traded_dt(self):
+#         future = self.asset_finder.retrieve_asset(
+#             self.ASSET_FINDER_FUTURE_SIDS[0]
+#         )
 
-        self.assertEqual(
-            self.trading_calendar.previous_session_label(self.END_DATE),
-            self.session_bar_reader.get_last_traded_dt(future, self.END_DATE)
-        )
+#         self.assertEqual(
+#             self.trading_calendar.previous_session_label(self.END_DATE),
+#             self.session_bar_reader.get_last_traded_dt(future, self.END_DATE)
+#         )
 
 
 class TestReindexMinuteBars(WithBcolzEquityMinuteBarReader,
                             ZiplineTestCase):
 
-    TRADING_CALENDAR_STRS = ('us_futures', 'NYSE')
-    TRADING_CALENDAR_PRIMARY_CAL = 'us_futures'
+    TRADING_CALENDAR_STRS = ('XSHG',)
+    TRADING_CALENDAR_PRIMARY_CAL = 'XSHG'
 
     ASSET_FINDER_EQUITY_SIDS = 1, 2, 3
 
@@ -695,26 +702,26 @@ class TestReindexMinuteBars(WithBcolzEquityMinuteBarReader,
         opens_with_price = opens.dropna()
 
         self.assertEqual(
-            1440,
+            240,
             len(opens),
             "The result should have 1440 bars, the number of minutes in a "
             "trading session on the target calendar."
         )
 
         self.assertEqual(
-            390,
+            240,
             len(opens_with_price),
-            "The result, after dropping nans, should have 390 bars, the "
+            "The result, after dropping nans, should have 240 bars, the "
             " number of bars in a trading session in the reader's calendar."
         )
 
         slicer = outer_minutes.slice_indexer(
-            end=pd.Timestamp('2015-12-01 14:30', tz='UTC'))
+            end=pd.Timestamp('2015-12-01 1:30', tz='UTC'))
 
         assert_almost_equal(
             opens[1][slicer],
             full(slicer.stop, nan),
-            err_msg="All values before the NYSE market open should be nan.")
+            err_msg="All values before the XSHG market open should be nan.")
 
         slicer = outer_minutes.slice_indexer(
             start=pd.Timestamp('2015-12-01 21:01', tz='UTC'))
@@ -722,24 +729,24 @@ class TestReindexMinuteBars(WithBcolzEquityMinuteBarReader,
         assert_almost_equal(
             opens[1][slicer],
             full(slicer.stop - slicer.start, nan),
-            err_msg="All values after the NYSE market close should be nan.")
+            err_msg="All values after the XSHG market close should be nan.")
 
         first_minute_loc = outer_minutes.get_loc(pd.Timestamp(
-            '2015-12-01 14:31', tz='UTC'))
+            '2015-12-01 1:31', tz='UTC'))
 
         # Spot check a value.
         # The value is the autogenerated value from test fixtures.
         assert_almost_equal(
             10.0,
             opens[1][first_minute_loc],
-            err_msg="The value for Equity 1, should be 10.0, at NYSE open.")
+            err_msg="The value for Equity 1, should be 10.0, at XSHG open.")
 
 
 class TestReindexSessionBars(WithBcolzEquityDailyBarReader,
                              ZiplineTestCase):
 
-    TRADING_CALENDAR_STRS = ('us_futures', 'NYSE')
-    TRADING_CALENDAR_PRIMARY_CAL = 'us_futures'
+    TRADING_CALENDAR_STRS = ('XSHG',)
+    TRADING_CALENDAR_PRIMARY_CAL = 'XSHG'
 
     ASSET_FINDER_EQUITY_SIDS = 1, 2, 3
 
@@ -782,32 +789,32 @@ class TestReindexSessionBars(WithBcolzEquityDailyBarReader,
             "The reindexed result should have 21 days, which is the number of "
             "business days in 2015-11")
         self.assertEqual(
-            20,
+            21,
             len(opens_with_price),
             "The reindexed result after dropping nans should have 20 days, "
-            "because Thanksgiving is a NYSE holiday.")
+            "because Thanksgiving is a XSHG holiday.")
 
-        tday = pd.Timestamp('2015-11-26', tz='UTC')
+        # tday = pd.Timestamp('2015-11-26', tz='UTC')
 
-        # Thanksgiving, 2015-11-26.
-        # Is a holiday in NYSE, but not in us_futures.
-        tday_loc = outer_sessions.get_loc(tday)
+        # # Thanksgiving, 2015-11-26.
+        # # Is a holiday in XSHG, but not in us_futures.
+        # tday_loc = outer_sessions.get_loc(tday)
 
-        assert_almost_equal(
-            nan,
-            opens[1][tday_loc],
-            err_msg="2015-11-26 should be `nan`, since Thanksgiving is a "
-            "holiday in the reader's calendar.")
+        # assert_almost_equal(
+        #     nan,
+        #     opens[1][tday_loc],
+        #     err_msg="2015-11-26 should be `nan`, since Thanksgiving is a "
+        #     "holiday in the reader's calendar.")
 
-        # Thanksgiving, 2015-11-26.
-        # Is a holiday in NYSE, but not in us_futures.
-        tday_loc = outer_sessions.get_loc(pd.Timestamp('2015-11-26', tz='UTC'))
+        # # 美股 感恩节 Thanksgiving, 2015-11-26. 
+        # # Is a holiday in XSHG, but not in us_futures.
+        # tday_loc = outer_sessions.get_loc(pd.Timestamp('2015-11-26', tz='UTC'))
 
-        assert_almost_equal(
-            nan,
-            opens[1][tday_loc],
-            err_msg="2015-11-26 should be `nan`, since Thanksgiving is a "
-            "holiday in the reader's calendar.")
+        # assert_almost_equal(
+        #     nan,
+        #     opens[1][tday_loc],
+        #     err_msg="2015-11-26 should be `nan`, since Thanksgiving is a "
+        #     "holiday in the reader's calendar.")
 
     def test_load_raw_arrays_holiday_start(self):
         tday = pd.Timestamp('2015-11-26', tz='UTC')
@@ -826,11 +833,12 @@ class TestReindexSessionBars(WithBcolzEquityDailyBarReader,
             len(opens),
             "The reindexed result should have 3 days, which is the number of "
             "business days in from Thanksgiving to end of 2015-11.")
+        # A股
         self.assertEqual(
-            2,
+            3,
             len(opens_with_price),
             "The reindexed result after dropping nans should have 2 days, "
-            "because Thanksgiving is a NYSE holiday.")
+            "because Thanksgiving is a XSHG holiday.")
 
     def test_load_raw_arrays_holiday_end(self):
         tday = pd.Timestamp('2015-11-26', tz='UTC')
@@ -849,11 +857,12 @@ class TestReindexSessionBars(WithBcolzEquityDailyBarReader,
             len(opens),
             "The reindexed result should have 19 days, which is the number of "
             "business days in from start of 2015-11 up to Thanksgiving.")
+        # 正常交易日
         self.assertEqual(
-            18,
+            19,
             len(opens_with_price),
             "The reindexed result after dropping nans should have 18 days, "
-            "because Thanksgiving is a NYSE holiday.")
+            "because Thanksgiving is a XSHG holiday.")
 
     def test_get_value(self):
         assert_almost_equal(self.reader.get_value(1, self.START_DATE, 'open'),
@@ -861,10 +870,10 @@ class TestReindexSessionBars(WithBcolzEquityDailyBarReader,
                             err_msg="The open of the fixture data on the "
                             "first session should be 10.")
         tday = pd.Timestamp('2015-11-26', tz='UTC')
+        # 正常交易日
+        self.assertFalse(isnan(self.reader.get_value(1, tday, 'close')))
 
-        self.assertTrue(isnan(self.reader.get_value(1, tday, 'close')))
-
-        self.assertEqual(self.reader.get_value(1, tday, 'volume'), 0)
+        self.assertEqual(self.reader.get_value(1, tday, 'volume'), 118)
 
     def test_last_availabe_dt(self):
         self.assertEqual(self.reader.last_available_dt, self.END_DATE)
@@ -888,7 +897,7 @@ class TestReindexSessionBars(WithBcolzEquityDailyBarReader,
         self.assertEqual(self.reader.first_trading_day, self.START_DATE)
 
     def test_trading_calendar(self):
-        self.assertEqual('us_futures',
+        self.assertEqual('XSHG',
                          self.reader.trading_calendar.name,
                          "The calendar for the reindex reader should be the "
-                         "specified futures calendar.")
+                         "specified XSHG calendar.")
