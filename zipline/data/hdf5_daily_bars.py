@@ -908,8 +908,8 @@ class MultiCountryDailyBarReader(CurrencyAwareSessionBarReader):
         #     num_countries = len(unique_country_codes)
         # else:
         #     num_countries = 0
-
-        unique_country_codes = [c for c in country_codes if c]
+        # 唯一
+        unique_country_codes = set([c for c in country_codes if c])
         num_countries = len(unique_country_codes)
 
         if num_countries == 0:
