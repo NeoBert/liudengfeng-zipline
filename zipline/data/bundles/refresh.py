@@ -63,7 +63,7 @@ def insert(dest, codes):
         codes,
         show_progress=True,
         item_show_func=lambda e: e,
-        label="插入股票代码分钟级别数据",
+        label="【新增股票】分钟级别数据",
     )
     with ctx as it:
         for code in it:
@@ -83,7 +83,7 @@ def append(dest, codes):
         show_progress=True,
         # 🆗 显示股票代码
         item_show_func=lambda e: e,
-        label="添加股票代码分钟级别数据",
+        label="【更新股票】分钟级别数据",
     )
     with ctx as it:
         for code in it:
