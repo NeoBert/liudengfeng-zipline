@@ -86,7 +86,7 @@ us_info = DataFrame(
         # 1) The equity's trades start and end before query.
         {'start_date': '2015-06-01', 'end_date': '2015-06-05'},
         # 3) The equity's trades start and end after query.
-        {'start_date': '2015-06-22', 'end_date': '2015-06-30'},
+        {'start_date': '2015-06-19', 'end_date': '2015-06-30'},
         # 5) The equity's data covers all dates in range (but we define
         #    a hole for it on 2015-06-17).
         {'start_date': '2015-06-02', 'end_date': '2015-06-30'},
@@ -102,14 +102,14 @@ us_info = DataFrame(
     index=arange(1, 12, step=2),
     columns=['start_date', 'end_date'],
 ).astype('datetime64[ns]')
-us_info['exchange'] = 'NYSE'
+us_info['exchange'] = 'XSHG'
 
 ca_info = DataFrame(
     [
         # 13) The equity's trades start and end before query.
         {'start_date': '2015-06-01', 'end_date': '2015-06-05'},
         # 15) The equity's trades start and end after query.
-        {'start_date': '2015-06-22', 'end_date': '2015-06-30'},
+        {'start_date': '2015-06-19', 'end_date': '2015-06-30'},
         # 17) The equity's data covers all dates in range.
         {'start_date': '2015-06-02', 'end_date': '2015-06-30'},
         # 19) The equity's trades start before the query start, but stop
@@ -133,7 +133,7 @@ TEST_QUERY_ASSETS = EQUITY_INFO.index
 assert (TEST_QUERY_ASSETS % 2 == 1).all(), 'All sids should be odd.'
 
 HOLES = {
-    'US': {5: (Timestamp('2015-06-17', tz='UTC'),)},
+    'CN': {5: (Timestamp('2015-06-17', tz='UTC'),)},
     'CA': {17: (Timestamp('2015-06-17', tz='UTC'),)},
 }
 
@@ -145,12 +145,12 @@ class _DailyBarsTestCase(WithEquityDailyBarData,
     EQUITY_DAILY_BAR_END_DATE = TEST_CALENDAR_STOP
 
     # The country under which these tests should be run.
-    DAILY_BARS_TEST_QUERY_COUNTRY_CODE = 'US'
+    DAILY_BARS_TEST_QUERY_COUNTRY_CODE = 'CN'
 
     # Currencies to use for assets in these tests.
     DAILY_BARS_TEST_CURRENCIES = {
-        'US': ['USD'],
-        'CA': ['USD', 'CAD']
+        'CN': ['CNY'],
+        'CA': ['CNY', 'CAD']
     }
 
     @classmethod
@@ -169,8 +169,8 @@ class _DailyBarsTestCase(WithEquityDailyBarData,
     @classmethod
     def make_exchanges_info(cls, *args, **kwargs):
         return DataFrame({
-            'exchange': ['NYSE', 'TSX'],
-            'country_code': ['US', 'CA']
+            'exchange': ['XSHG', 'TSX'],
+            'country_code': ['CN', 'CA']
         })
 
     @classmethod
@@ -336,9 +336,9 @@ class _DailyBarsTestCase(WithEquityDailyBarData,
         # E.g.
         #   INVALID VALID INVALID VALID ... VALID INVALID
         query_assets = (
-                [self.assets[-1] + 1] +
-                list(range(self.assets[0], self.assets[-1] + 1)) +
-                [self.assets[-1] + 3]
+            [self.assets[-1] + 1] +
+            list(range(self.assets[0], self.assets[-1] + 1)) +
+            [self.assets[-1] + 3]
         )
 
         columns = [CLOSE, VOLUME]
@@ -565,7 +565,7 @@ class _DailyBarsTestCase(WithEquityDailyBarData,
 
 
 class BcolzDailyBarTestCase(WithBcolzEquityDailyBarReader, _DailyBarsTestCase):
-    EQUITY_DAILY_BAR_COUNTRY_CODES = ['US']
+    EQUITY_DAILY_BAR_COUNTRY_CODES = ['CN']
 
     @classmethod
     def init_class_fixtures(cls):
@@ -607,25 +607,26 @@ class BcolzDailyBarTestCase(WithBcolzEquityDailyBarReader, _DailyBarsTestCase):
 
     def test_write_attrs(self):
         result = self.bcolz_daily_bar_ctable
+        # 由于交易日历不同，以下由改动
         expected_first_row = {
             '1': 0,
             '3': 5,  # Asset 1 has 5 trading days.
             '5': 12,  # Asset 3 has 7 trading days.
-            '7': 33,  # Asset 5 has 21 trading days.
-            '9': 44,  # Asset 7 has 11 trading days.
-            '11': 49,  # Asset 9 has 5 trading days.
+            '7': 32,  # Asset 5 has 21 trading days.
+            '9': 43,  # Asset 7 has 11 trading days.
+            '11': 48,  # Asset 9 has 5 trading days.
         }
         expected_last_row = {
             '1': 4,
             '3': 11,
-            '5': 32,
-            '7': 43,
-            '9': 48,
-            '11': 57,  # Asset 11 has 9 trading days.
+            '5': 31,
+            '7': 42,
+            '9': 47,
+            '11': 55,  # Asset 11 has 9 trading days.
         }
         expected_calendar_offset = {
             '1': 0,  # Starts on 6-01, 1st trading day of month.
-            '3': 15,  # Starts on 6-22, 16th trading day of month.
+            '3': 14,  # Starts on 6-22, 16th trading day of month.
             '5': 1,  # Starts on 6-02, 2nd trading day of month.
             '7': 0,  # Starts on 6-01, 1st trading day of month.
             '9': 9,  # Starts on 6-12, 10th trading day of month.
@@ -670,6 +671,7 @@ class BcolzDailyBarWriterMissingDataTestCase(WithAssetFinder,
                                              WithTmpDir,
                                              WithTradingCalendars,
                                              ZiplineTestCase):
+    # 2015-06 共21个交易日，而 sid 5 从2015-06-02开始，只有20个交易日
     # Sid 5 is active from 2015-06-02 to 2015-06-30.
     MISSING_DATA_SID = 5
     # Leave out data for a day in the middle of the query range.
@@ -696,12 +698,13 @@ class BcolzDailyBarWriterMissingDataTestCase(WithAssetFinder,
             sessions[0],
             sessions[-1],
         )
-
+        # 排除2015-06-15，只有19个交易日。期望20个交易日
+        # 通过该项检查，防止数据断层缺失
         # There are 21 sessions between the start and end date for this
         # asset, and we excluded one.
         expected_msg = re.escape(
-            "Got 20 rows for daily bars table with first day=2015-06-02, last "
-            "day=2015-06-30, expected 21 rows.\n"
+            "Got 19 rows for daily bars table with first day=2015-06-02, last "
+            "day=2015-06-30, expected 20 rows.\n"
             "Missing sessions: "
             "[Timestamp('2015-06-15 00:00:00+0000', tz='UTC')]\n"
             "Extra sessions: []"
@@ -776,7 +779,7 @@ class _HDF5DailyBarTestCase(WithHDF5EquityMultiCountryDailyBarReader,
 
 
 class HDF5DailyBarUSTestCase(_HDF5DailyBarTestCase):
-    DAILY_BARS_TEST_QUERY_COUNTRY_CODE = 'US'
+    DAILY_BARS_TEST_QUERY_COUNTRY_CODE = 'CN'
 
 
 class HDF5DailyBarCanadaTestCase(_HDF5DailyBarTestCase):

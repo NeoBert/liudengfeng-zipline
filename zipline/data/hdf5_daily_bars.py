@@ -898,15 +898,19 @@ class MultiCountryDailyBarReader(CurrencyAwareSessionBarReader):
         return viewkeys(self._readers)
 
     def _country_code_for_assets(self, assets):
-        country_codes = self._country_map.get(assets)
-
+        # 🆗 pandas 1.1.1 1.1.2 如果混合已有标签及不存在的标签，结果居然是None
+        # country_codes = self._country_map.get(assets)
+        country_codes = [self._country_map.get(a) for a in assets]
         # In some versions of pandas (observed in 0.22), Series.get()
         # returns None if none of the labels are in the index.
-        if country_codes is not None:
-            unique_country_codes = country_codes.dropna().unique()
-            num_countries = len(unique_country_codes)
-        else:
-            num_countries = 0
+        # if country_codes is not None:
+        #     unique_country_codes = country_codes.dropna().unique()
+        #     num_countries = len(unique_country_codes)
+        # else:
+        #     num_countries = 0
+
+        unique_country_codes = [c for c in country_codes if c]
+        num_countries = len(unique_country_codes)
 
         if num_countries == 0:
             raise ValueError('At least one valid asset id is required.')
@@ -915,10 +919,13 @@ class MultiCountryDailyBarReader(CurrencyAwareSessionBarReader):
                 (
                     'Assets were requested from multiple countries ({}),'
                     ' but multi-country reads are not yet supported.'
-                ).format(list(unique_country_codes))
+                ).format(unique_country_codes)
             )
 
-        return np.asscalar(unique_country_codes)
+        # return np.asscalar(unique_country_codes)
+        # 🆗 numpy > 1.16
+        # return unique_country_codes.item()
+        return unique_country_codes[0]
 
     def load_raw_arrays(self,
                         columns,
