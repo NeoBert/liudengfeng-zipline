@@ -203,7 +203,7 @@ def cnminutely_bundle(environ, asset_db_writer, minute_bar_writer,
     # 只保留000002A股指数，且日内设定为常数
     hc = HotDataCache(gen_asset_metadata, hour=9, minute=30, only_in=False)
     metadata = hc.data
-    log.info("使用`000002【A股指数】`日线数据作为基准收益率")
+    log.info("分钟级别数据，固定使用`000002【A股指数】`日线数据作为基准收益率")
     cond = metadata.symbol.str.len() == 6
     metadata = pd.concat(
         [metadata[metadata.symbol == '1000002'], metadata[cond]])
