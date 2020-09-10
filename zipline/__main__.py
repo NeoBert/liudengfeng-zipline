@@ -480,8 +480,8 @@ def fm():
 
 
 @main.command()
-def rfm():
-    """刷新分钟级别数据"""
+def rfd():
+    """刷新日线、分钟数据包以及基础数据"""
     # 提高`import zipline`速度
     from zipline.data.bundles.refresh import refresh_data
     refresh_data()

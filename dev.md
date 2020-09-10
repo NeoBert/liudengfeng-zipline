@@ -13,4 +13,9 @@
 
 ## 测试
 
+在目标环境下运行
+```python
+python -m pytest -vv <test_file.py>
+```
+
 - `tests\test_clock.py`

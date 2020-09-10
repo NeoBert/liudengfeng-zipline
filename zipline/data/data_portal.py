@@ -137,6 +137,7 @@ class DataPortal(object):
     last_available_minute : pd.Timestamp, optional
         The last minute to make available in minute-level data.
     """
+
     def __init__(self,
                  asset_finder,
                  trading_calendar,
@@ -224,7 +225,7 @@ class DataPortal(object):
                 ContinuousFutureMinuteBarReader(
                     aligned_future_minute_reader,
                     self._roll_finders,
-                )
+            )
 
         if aligned_future_session_reader is not None:
             aligned_session_readers[Future] = aligned_future_session_reader
@@ -237,7 +238,7 @@ class DataPortal(object):
                 ContinuousFutureSessionBarReader(
                     aligned_future_session_reader,
                     self._roll_finders,
-                )
+            )
 
         _dispatch_minute_reader = AssetDispatchMinuteBarReader(
             self.trading_calendar,
@@ -1216,7 +1217,8 @@ class DataPortal(object):
         start_dt = trading_days[0].value / 1e9
         end_dt = trading_days[-1].value / 1e9
         # 🆗 必须指定字段【元组顺序很重要】
-        fields = ", ".join(["sid", "declared_date", "ex_date","pay_date","payment_sid","ratio","record_date"])
+        fields = ", ".join(["sid", "declared_date", "ex_date",
+                            "pay_date", "payment_sid", "ratio", "record_date"])
         stmt = f"SELECT {fields} FROM stock_dividend_payouts WHERE sid = {int(sid)} AND "
         stmt += f"ex_date > {start_dt} AND pay_date < {end_dt}"
         dividends = self._adjustment_reader.conn.execute(stmt).fetchall()
@@ -1232,7 +1234,7 @@ class DataPortal(object):
                 "record_date": pd.Timestamp(dividend_tuple[6], unit="s"),
                 "sid": dividend_tuple[0]
             })
-            
+
         return dividend_info
 
     def contains(self, asset, field):

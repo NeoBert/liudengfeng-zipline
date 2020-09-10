@@ -39,6 +39,7 @@ class AssetDispatchBarReader(with_metaclass(ABCMeta)):
         If not provided, infers it by using the min of the
         last_available_dt values of the underlying readers.
     """
+
     def __init__(
         self,
         trading_calendar,
