@@ -2,6 +2,8 @@
 from . import quandl  # noqa
 from . import csvdir  # noqa
 from . import cnquandl  # noqa
+from . import mwy  # noqa
+
 
 from .core import (
     UnknownBundle,
