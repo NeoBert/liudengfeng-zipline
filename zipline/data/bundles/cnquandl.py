@@ -17,7 +17,7 @@ from ..localdata import (fetch_single_equity, fetch_single_quity_adjustments,
                          fetch_single_minutely_equity, gen_asset_metadata)
 from . import core as bundles
 from .adjusts import ADJUST_FACTOR
-from .refresh import CALENDAR_START
+
 
 TODAY = pd.Timestamp('today').normalize()
 log = make_logger('cnquandl', collection='zipline')
@@ -190,7 +190,7 @@ def cndaily_bundle(environ, asset_db_writer, minute_bar_writer,
 @bundles.register(
     'cnminutely',
     calendar_name='XSHG',
-    start_session=CALENDAR_START,
+    start_session=pd.Timestamp('2020-06-29', tz='UTC'),
     minutes_per_day=240)
 def cnminutely_bundle(environ, asset_db_writer, minute_bar_writer,
                       daily_bar_writer, adjustment_writer, calendar,

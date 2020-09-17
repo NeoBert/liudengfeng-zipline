@@ -36,15 +36,18 @@ from .core import load, most_recent_data
 
 
 log = make_logger('cnquandl', collection='zipline')
-calendar = get_calendar('XSHG')
-# 本地分钟级别数据开始日期
-CALENDAR_START = pd.Timestamp('2020-06-29', tz='UTC')
-CALENDAR_STOP = calendar.actual_last_session
-now = pd.Timestamp('now')
-if now.hour >= 15:
-    DATA_STOP = calendar.actual_last_session
-else:
-    DATA_STOP = calendar.actual_last_session - calendar.day
+
+
+def info_func():
+    calendar = get_calendar('XSHG')
+    # 本地分钟级别数据开始日期
+    CALENDAR_START = pd.Timestamp('2020-06-29', tz='UTC')
+    now = pd.Timestamp('now')
+    if now.hour >= 15:
+        CALENDAR_STOP = calendar.actual_last_session
+    else:
+        CALENDAR_STOP = calendar.actual_last_session - calendar.day
+    return calendar, CALENDAR_START, CALENDAR_STOP
 
 
 def execute(cmd):
@@ -68,11 +71,12 @@ def try_run_ingest(name, force=False):
 
 def insert(dest, codes):
     """插入股票代码分钟级别数据"""
+    c, s, e = info_func()
     writer = BcolzMinuteBarWriter(
         dest,
-        calendar,
-        CALENDAR_START,
-        CALENDAR_STOP,
+        c,
+        s,
+        e,
         CN_EQUITIES_MINUTES_PER_DAY,
     )
     ctx = maybe_show_progress(
@@ -84,8 +88,7 @@ def insert(dest, codes):
     with ctx as it:
         for code in it:
             sid = int(code)
-            df = fetch_single_minutely_equity(
-                code, CALENDAR_START, DATA_STOP)
+            df = fetch_single_minutely_equity(code, s, e)
             # 务必转换为UTC时区
             df = df.tz_localize('Asia/Shanghai').tz_convert('UTC')
             writer.write_sid(sid, df)
@@ -93,7 +96,8 @@ def insert(dest, codes):
 
 def append(dest, codes):
     """添加股票代码分钟级别数据"""
-    writer = BcolzMinuteBarWriter.open(dest, CALENDAR_STOP)
+    c, s, e = info_func()
+    writer = BcolzMinuteBarWriter.open(dest, e)
     ctx = maybe_show_progress(
         codes,
         show_progress=True,
@@ -106,12 +110,12 @@ def append(dest, codes):
             sid = int(code)
             last_dt = writer.last_date_in_output_for_sid(sid)
             if last_dt is pd.NaT:
-                start = CALENDAR_START
+                start = s
             else:
-                start = last_dt + calendar.day
-            if start > DATA_STOP:
+                start = last_dt + c.day
+            if start > e:
                 continue
-            df = fetch_single_minutely_equity(code, start, DATA_STOP)
+            df = fetch_single_minutely_equity(code, start, e)
             # 务必转换为UTC时区
             df = df.tz_localize('Asia/Shanghai').tz_convert('UTC')
             writer.write_sid(sid, df)
@@ -121,12 +125,14 @@ def refresh_data():
     d_path = try_run_ingest('cndaily', True)
     m_path = try_run_ingest('cnminutely')
 
-    # 拷贝日线数据及调整数据库
+    # 拷贝调整数据库
     sql_fs = ['adjustments.sqlite', 'assets-7.sqlite']
     for f in sql_fs:
         src = join(d_path, f)
         dst = join(m_path, f)
         shutil.copy2(src, dst)
+    
+    # 拷贝日线数据
     name = 'daily_equities.bcolz'
     src = join(d_path, name)
     dst = join(m_path, name)
@@ -136,6 +142,8 @@ def refresh_data():
     except:
         pass
     shutil.copytree(src, dst)
+
+    # 处理分钟数据刷新
     dst = join(m_path, 'minute_equities.bcolz')
     m_dir_path = Path(dst)
     log.info("使用`000002【A股指数】`日线数据作为基准收益率")
