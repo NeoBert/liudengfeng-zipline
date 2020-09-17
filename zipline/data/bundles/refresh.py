@@ -18,24 +18,25 @@ zipline ingest 适用于期初全新导入数据
 5. 执行`zipline fm`
 6. 清理保留最新2次的日线数据`zipline clean -k 2`
 """
+import shutil
 import subprocess
 from os.path import join
 from pathlib import Path
-import shutil
 
 import click
 import pandas as pd
-from cnswd.websource.tencent import get_recent_trading_stocks
 from trading_calendars import get_calendar
 
-from zipline.utils.cli import maybe_show_progress
 from cnswd.utils import make_logger
+# from cnswd.websource.tencent import get_recent_trading_stocks
+from cnswd.scripts.base import get_stock_status
+from zipline.utils.cli import maybe_show_progress
+
 from ..localdata import fetch_single_minutely_equity
 from ..minute_bars import CN_EQUITIES_MINUTES_PER_DAY, BcolzMinuteBarWriter
 from .core import load, most_recent_data
 
-
-log = make_logger('cnquandl', collection='zipline')
+log = make_logger('数据包', collection='zipline')
 
 
 def info_func():
@@ -121,9 +122,13 @@ def append(dest, codes):
             writer.write_sid(sid, df)
 
 
-def refresh_data():
-    d_path = try_run_ingest('cndaily', True)
-    m_path = try_run_ingest('cnminutely')
+def refresh_data(bundle):
+    if 'wy' in bundle:
+        d_path = try_run_ingest('dwy', True)
+        m_path = try_run_ingest('mwy')
+    else:
+        d_path = try_run_ingest('cndaily', True)
+        m_path = try_run_ingest('cnminutely')
 
     # 拷贝调整数据库
     sql_fs = ['adjustments.sqlite', 'assets-7.sqlite']
@@ -131,7 +136,7 @@ def refresh_data():
         src = join(d_path, f)
         dst = join(m_path, f)
         shutil.copy2(src, dst)
-    
+
     # 拷贝日线数据
     name = 'daily_equities.bcolz'
     src = join(d_path, name)
@@ -149,7 +154,9 @@ def refresh_data():
     log.info("使用`000002【A股指数】`日线数据作为基准收益率")
     # 代码在其子目录下 ** 代表当前目录的子目录
     db_codes = [p.stem.split('.')[0] for p in m_dir_path.glob("**/*.bcolz")]
-    web_codes = get_recent_trading_stocks()
+    # web_codes = get_recent_trading_stocks()
+    web_codes = [code for code, dt in get_stock_status().items()
+                 if dt is not None]
 
     # 全新股票代码采用插入方式
     to_insert = set(web_codes).difference(db_codes)

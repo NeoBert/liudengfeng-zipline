@@ -480,11 +480,19 @@ def fm():
 
 
 @main.command()
-def rfd():
+@click.option(
+    '-b',
+    '--bundle',
+    default='cndaily',
+    metavar='BUNDLE-NAME',
+    show_default=True,
+    help='The data bundle to ingest.',
+)
+def rfd(bundle):
     """刷新日线、分钟数据包以及基础数据"""
     # 提高`import zipline`速度
     from zipline.data.bundles.refresh import refresh_data
-    refresh_data()
+    refresh_data(bundle)
 
 
 if __name__ == '__main__':
