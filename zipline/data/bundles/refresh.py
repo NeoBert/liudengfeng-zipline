@@ -44,10 +44,10 @@ def info_func():
     # 本地分钟级别数据开始日期
     CALENDAR_START = pd.Timestamp('2020-06-29', tz='UTC')
     now = pd.Timestamp('now')
-    if now.hour >= 15:
-        CALENDAR_STOP = calendar.actual_last_session
-    else:
+    if now.date() == calendar.actual_last_session.date() and now.hour < 15:
         CALENDAR_STOP = calendar.actual_last_session - calendar.day
+    else:
+        CALENDAR_STOP = calendar.actual_last_session
     return calendar, CALENDAR_START, CALENDAR_STOP
 
 
