@@ -34,7 +34,7 @@ def create_domain(sessions,
 
 
 def run_pipeline(pipeline, start_date, end_date):
-    default_bundle = 'cndaily'
+    default_bundle = 'dwy'
 
     return run_pipeline_against_bundle(
         pipeline, start_date, end_date, default_bundle

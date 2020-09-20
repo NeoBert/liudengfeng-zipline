@@ -1,38 +1,29 @@
 """
 An ndarray subclass for working with arrays of strings.
 """
+import re
 from functools import partial, total_ordering
 from operator import eq, ne
-import re
 
 import numpy as np
-from numpy import ndarray
 import pandas as pd
+from numpy import ndarray
 from toolz import compose
+from toolz.dicttoolz import itemmap, valfilter, valmap
 
 from zipline.utils.compat import unicode
 from zipline.utils.functional import instance
+from zipline.utils.input_validation import (
+    coerce, expect_kinds, expect_types, optional)
+from zipline.utils.numpy_utils import (bool_dtype, is_object, object_dtype,
+                                       unsigned_int_dtype_with_size_in_bytes)
+from zipline.utils.pandas_utils import ignore_pandas_nan_categorical_warning
 from zipline.utils.preprocess import preprocess
 from zipline.utils.sentinel import sentinel
-from zipline.utils.input_validation import (
-    coerce,
-    expect_kinds,
-    expect_types,
-    optional,
-)
-from zipline.utils.numpy_utils import (
-    bool_dtype,
-    unsigned_int_dtype_with_size_in_bytes,
-    is_object,
-    object_dtype,
-)
-from zipline.utils.pandas_utils import ignore_pandas_nan_categorical_warning
 
 from ._factorize import (
-    factorize_strings,
-    factorize_strings_known_categories,
-    smallest_uint_that_can_hold,
-)
+    factorize_strings, factorize_strings_known_categories,
+    smallest_uint_that_can_hold)
 
 
 def compare_arrays(left, right):
@@ -58,6 +49,7 @@ class MissingValueMismatch(ValueError):
     Error raised on attempt to perform operations between LabelArrays with
     mismatched missing_values.
     """
+
     def __init__(self, left, right):
         super(MissingValueMismatch, self).__init__(
             "LabelArray missing_values don't match:"
@@ -70,6 +62,7 @@ class CategoryMismatch(ValueError):
     Error raised on attempt to perform operations between LabelArrays with
     mismatched category arrays.
     """
+
     def __init__(self, left, right):
         (mismatches,) = np.where(left != right)
         assert len(mismatches), "Not actually a mismatch!"
@@ -86,6 +79,36 @@ class CategoryMismatch(ValueError):
 
 
 _NotPassed = sentinel('_NotPassed')
+
+# TODO：关注
+# 与pandas不同，类别代码 code 0~len(cates)，而不是 -1 ~ len(cates)-1
+# 以下函数无效
+# 目前修改方法 1. 不可设置字符类别数据缺失默认值为None, 而是 空白字符串 ''
+#             2. 使用新版本方法构造类别对象
+# test_labelarray 通过 🆗
+def _to_pandas_code(reverse_categories, codes, missing_value):
+    """更新字典
+    确保missing_value其代码为-1
+    原始代码 0 ~ len(categories)
+    修改为 -1 ~ len(categories) - 1
+    """
+    zero_d = valfilter(lambda x: x == 0, reverse_categories)
+    zero_d_key = list(zero_d.keys())[0]
+    # 互换 zero <-> missing_value
+    none_first_d = reverse_categories.copy()
+    none_first_d[zero_d_key] = reverse_categories[missing_value]
+    none_first_d[missing_value] = reverse_categories[zero_d_key]
+    def dec_one(x): return x-1
+    none_first_d = valmap(dec_one, none_first_d)
+    new_codes = codes.copy()
+    # 将missing_value直接更改为 -1
+    new_codes = np.where(
+        new_codes == reverse_categories[missing_value], -1, new_codes)
+
+    # 将0键code更改为 missing_value code
+    new_codes = np.where(
+        new_codes == reverse_categories[zero_d_key], reverse_categories[missing_value], new_codes)
+    return new_codes, none_first_d
 
 
 class LabelArray(ndarray):
@@ -186,6 +209,12 @@ class LabelArray(ndarray):
                     sort=sort,
                 )
             )
+        # 确保 code of missing_value = -1
+        # code in [-1, len(categories) - 1]
+        # codes, reverse_categories = _to_pandas_code(
+        #     reverse_categories, codes, missing_value)
+        # categories = np.delete(categories, categories == None, None)
+
         categories.setflags(write=False)
 
         return cls.from_codes_and_metadata(
@@ -332,15 +361,22 @@ class LabelArray(ndarray):
         """
         if len(self.shape) > 1:
             raise ValueError("Can't convert a 2D array to a categorical.")
-
-        with ignore_pandas_nan_categorical_warning():
-            return pd.Categorical.from_codes(
-                self.as_int_array(),
-                # We need to make a copy because pandas >= 0.17 fails if this
-                # buffer isn't writeable.
-                self.categories.copy(),
-                ordered=False,
-            )
+        # with ignore_pandas_nan_categorical_warning():
+        #     return pd.Categorical.from_codes(
+        #         self.as_int_array(),
+        #         # We need to make a copy because pandas >= 0.17 fails if this
+        #         # buffer isn't writeable.
+        #         self.categories.copy(),
+        #         ordered=False,
+        #     )
+        # 🆗 pandas 新版本签名
+        dtype = pd.CategoricalDtype(set(self.categories.copy()), ordered=False)
+        return pd.Categorical.from_codes(
+            self.as_int_array(),
+            # We need to make a copy because pandas >= 0.17 fails if this
+            # buffer isn't writeable.
+            dtype=dtype,
+        )
 
     def as_categorical_frame(self, index, columns, name=None):
         """
@@ -469,6 +505,7 @@ class LabelArray(ndarray):
         Shared code for __eq__ and __ne__, parameterized on the actual
         comparison operator to use.
         """
+
         def method(self, other):
 
             if isinstance(other, LabelArray):
@@ -818,6 +855,7 @@ class LabelArray(ndarray):
 class _sortable_sentinel(object):
     """Dummy object that sorts before any other python object.
     """
+
     def __eq__(self, other):
         return self is other
 

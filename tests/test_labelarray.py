@@ -39,7 +39,7 @@ class LabelArrayTestCase(ZiplineTestCase):
 
         cls.rowvalues = row = ['', 'a', 'b', 'ab', 'a', '', 'b', 'ab', 'z']
         cls.strs = np.array([rotN(row, i) for i in range(3)], dtype=object)
-
+        
     def test_fail_on_direct_construction(self):
         # See https://docs.scipy.org/doc/numpy-1.10.0/user/basics.subclassing.html#simple-example-adding-an-extra-attribute-to-ndarray  # noqa
 
@@ -160,7 +160,6 @@ class LabelArrayTestCase(ZiplineTestCase):
             la.map(f)
 
     def test_map_can_only_return_none_if_missing_value_is_none(self):
-
         # Should work.
         la = LabelArray(self.strs, missing_value=None)
         result = la.map(lambda x: None)
@@ -433,6 +432,7 @@ class LabelArrayTestCase(ZiplineTestCase):
 
         # uint8
         categories = create_categories(8, plus_one=False)
+
         arr = LabelArray(
             categories,
             missing_value=categories[0],

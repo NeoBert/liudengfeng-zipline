@@ -55,7 +55,7 @@ def fillvalue_for_expr(expr):
             elif pd.core.dtypes.common.is_integer_dtype(n_type):
                 ret[name] = fillmissing[int64_dtype]
             elif pd.core.dtypes.common.is_object_dtype(n_type):
-                ret[name] = fillmissing[object_dtype]
+                ret[name] = '' #fillmissing[object_dtype]
             elif pd.core.dtypes.common.is_bool_dtype(n_type):
                 ret[name] = fillmissing[bool_dtype]
     return ret

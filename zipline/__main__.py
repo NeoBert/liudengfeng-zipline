@@ -475,10 +475,9 @@ def bundles():
 @click.option(
     '-b',
     '--bundle',
-    default='mwy',
-    metavar='BUNDLE-NAME',
-    show_default=True,
-    help='数据源',
+    default='wy',
+    type=click.STRING,
+    help="数据包名称",
 )
 def fm(bundle):
     """写入基础数据（查询及写入约400万行数据，耗时<180s）"""
@@ -491,7 +490,7 @@ def fm(bundle):
 @click.option(
     '-b',
     '--bundle',
-    default='cndaily',
+    default='mwy',
     metavar='BUNDLE-NAME',
     show_default=True,
     help='The data bundle to ingest.',

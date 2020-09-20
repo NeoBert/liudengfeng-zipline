@@ -29,17 +29,17 @@ from cnswd.utils import make_logger
 
 from ..common import AD_FIELD_NAME, SID_FIELD_NAME, TS_FIELD_NAME
 from .base import bcolz_table_path
-from .localdata import (get_dividend_data,
-                        get_financial_indicator_ranking_data, get_margin_data,
-                        get_p_balance_data, get_p_cash_flow_data,
-                        get_p_income_data, get_performance_forecaste_data,
-                        get_periodly_financial_indicator_data,
-                        get_q_cash_flow_data, get_q_income_data,
-                        get_quarterly_financial_indicator_data,
-                        get_ttm_cash_flow_data, get_ttm_income_data)
-from .preprocess import (get_investment_rating,
-                         get_short_name_history, get_static_info_table)
-
+# from .localdata import (get_dividend_data,
+#                         get_financial_indicator_ranking_data, get_margin_data,
+#                         get_p_balance_data, get_p_cash_flow_data,
+#                         get_p_income_data, get_performance_forecaste_data,
+#                         get_periodly_financial_indicator_data,
+#                         get_q_cash_flow_data, get_q_income_data,
+#                         get_quarterly_financial_indicator_data,
+#                         get_ttm_cash_flow_data, get_ttm_income_data)
+# from .preprocess import (get_investment_rating,
+#                          get_short_name_history, get_static_info_table)
+from .wy_class import get_sw_industry
 # from .yahoo import YAHOO_ITEMS, read_item_data
 
 # 设置显示日志
@@ -47,27 +47,27 @@ logbook.set_datetime_format('local')
 logbook.StreamHandler(sys.stdout).push_application()
 logger = make_logger('网易数据包')
 
-TAB_MAPS = {
-    # 定期财务报告
-    'periodly_balance_sheets': get_p_balance_data,
-    'periodly_income_statements': get_p_income_data,
-    'periodly_cash_flow_statements': get_p_cash_flow_data,
-    # TTM财务报告
-    'ttm_income_statements': get_ttm_income_data,
-    'ttm_cash_flow_statements': get_ttm_cash_flow_data,
-    # 报告期财务指标
-    'periodly_financial_indicators': get_periodly_financial_indicator_data,
-    # 季度财务指标
-    'quarterly_financial_indicators': get_quarterly_financial_indicator_data,
-    # 财务指标行业排名
-    'financial_indicator_rankings': get_financial_indicator_ranking_data,
-    # 上市公司业绩预告
-    'performance_forecastes': get_performance_forecaste_data,
-    # 季度利润表
-    'quarterly_income_statements': get_q_income_data,
-    # 季度现金流量表
-    'quarterly_cash_flow_statements': get_q_cash_flow_data,
-}
+# TAB_MAPS = {
+#     # 定期财务报告
+#     'periodly_balance_sheets': get_p_balance_data,
+#     'periodly_income_statements': get_p_income_data,
+#     'periodly_cash_flow_statements': get_p_cash_flow_data,
+#     # TTM财务报告
+#     'ttm_income_statements': get_ttm_income_data,
+#     'ttm_cash_flow_statements': get_ttm_cash_flow_data,
+#     # 报告期财务指标
+#     'periodly_financial_indicators': get_periodly_financial_indicator_data,
+#     # 季度财务指标
+#     'quarterly_financial_indicators': get_quarterly_financial_indicator_data,
+#     # 财务指标行业排名
+#     'financial_indicator_rankings': get_financial_indicator_ranking_data,
+#     # 上市公司业绩预告
+#     'performance_forecastes': get_performance_forecaste_data,
+#     # 季度利润表
+#     'quarterly_income_statements': get_q_income_data,
+#     # 季度现金流量表
+#     'quarterly_cash_flow_statements': get_q_cash_flow_data,
+# }
 
 
 def _fix_mixed_type(df):
@@ -75,8 +75,8 @@ def _fix_mixed_type(df):
     # 2. bool 类型含空值
     for col in df.columns:
         if pd.api.types.is_string_dtype(df[col]):
-            # 注意，必须输入字符None，否则会出错
-            df.fillna(value={col: 'None'}, inplace=True)
+            # 注意，字符串为空，一律以 空白字符串 替代
+            df.fillna(value={col: ''}, inplace=True)
         if pd.api.types.is_bool_dtype(df[col]):
             df.fillna(value={col: False}, inplace=True)
         if pd.api.types.is_integer_dtype(df[col]):
@@ -85,10 +85,24 @@ def _fix_mixed_type(df):
             raise ValueError('时间列不得带时区信息')
 
 
+def _fix_tz(df):
+    # 默认为本地时区，转换为UTC后 -> None
+    for c in (AD_FIELD_NAME, TS_FIELD_NAME):
+        if c in df.columns:
+            tz = df[c].dt.tz
+            idx = pd.to_datetime(df[c].values)
+            if tz is None:
+                df[c] = idx.tz_localize(
+                    'Asia/Shanghai').tz_convert('UTC').tz_localize(None)
+            else:
+                df[c] = idx.tz_convert('UTC').tz_localize(None)
+    return df
+
+
 def write_dataframe(df, table_name, attr_dict=None):
     """以bcolz格式写入数据框"""
     # 转换为bcolz格式并存储
-    rootdir = bcolz_table_path(table_name)
+    rootdir = bcolz_table_path(table_name, 'wy')
     if os.path.exists(rootdir):
         rmtree(rootdir)
     for c in (AD_FIELD_NAME, TS_FIELD_NAME, SID_FIELD_NAME):
@@ -101,8 +115,9 @@ def write_dataframe(df, table_name, attr_dict=None):
         cond = df[AD_FIELD_NAME] == df[TS_FIELD_NAME]
         df.loc[cond, AD_FIELD_NAME] = df.loc[cond,
                                              TS_FIELD_NAME] - pd.Timedelta(hours=1)
+    df = _fix_tz(df)
     # 修复混合类型，填充默认值，否则bcolz.ctable.fromdataframe会出错
-    _fix_mixed_type(df)
+    # _fix_mixed_type(df)
     # 丢失tz信息
     ct = bcolz.ctable.fromdataframe(df, rootdir=rootdir)
     if attr_dict:
@@ -111,6 +126,15 @@ def write_dataframe(df, table_name, attr_dict=None):
             ct.attrs[k] = v
     ct.flush()
     logger.info(f'{len(df)} 行 写入：{rootdir}')
+
+
+def write_sw_industry_to_bcolz():
+    """写入申万行业分类静态数据"""
+    logger.info('申万行业分类')
+    table_name = 'sw_industry'
+    df = get_sw_industry()
+    attr_dict = {}
+    write_dataframe(df, table_name, attr_dict)
 
 
 def write_static_info_to_bcolz():
@@ -176,8 +200,9 @@ def write_data_to_bcolz():
     """写入Fundamentals数据"""
     print('准备写入Fundamentals数据......')
     s = time.time()
-    write_static_info_to_bcolz()
-    write_dynamic_data_to_bcolz()
-    write_financial_data_to_bcolz()
+    write_sw_industry_to_bcolz()
+    # write_static_info_to_bcolz()
+    # write_dynamic_data_to_bcolz()
+    # write_financial_data_to_bcolz()
     # write_yahoo()
     print(f"用时{time.time() - s:.2f}秒")
