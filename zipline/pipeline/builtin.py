@@ -147,7 +147,7 @@ class Sector(CustomClassifier):
     INDUSTRIALS = 310
     TECHNOLOGY = 311
 
-    inputs = (Fundamentals.info.sector_code,)
+    inputs = (Fundamentals.sector_code,)
     window_length = 1
     dtype = int64_dtype
     missing_value = -1
@@ -216,11 +216,10 @@ class SWSector(CustomClassifier):
         801790: '非银金融',  # NONBANK_FINANCIALS
         801880: '汽车',  # AUTO
         801890: '机械设备',  # MACHINERY
-        # -1:  '未知',
     }
 
     window_length = 1
-    inputs = (Fundamentals.info.sw_sector,)
+    inputs = (Fundamentals.sw_sector,)
     dtype = int64_dtype
     missing_value = -1
 

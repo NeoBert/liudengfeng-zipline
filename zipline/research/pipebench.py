@@ -19,6 +19,9 @@ publisher = IPythonWidgetProgressPublisher()
 hooks = [ProgressHooks.with_static_publisher(publisher)]
 
 
+TZ = 'Asia/Shanghai'
+
+
 def create_domain(sessions,
                   data_query_time=time(0, 0, tzinfo=pytz.utc),
                   data_query_date_offset=0):
@@ -33,11 +36,12 @@ def create_domain(sessions,
     )
 
 
-def run_pipeline(pipeline, start_date, end_date):
-    default_bundle = 'dwy'
+def run_pipeline(pipeline, start_date, end_date, bundle=None):
+    if bundle is None:
+        bundle = 'dwy'
 
     return run_pipeline_against_bundle(
-        pipeline, start_date, end_date, default_bundle
+        pipeline, start_date, end_date, bundle
     )
 
 
@@ -56,6 +60,20 @@ def _tdate(calendar, d, direction):
         else:
             raise ValueError(f'方向只能为`next或者previous`，输入：{direction}')
     return d
+
+# TODO:解决分钟级别
+def _tminute(calendar, dt, direction):
+    if isinstance(dt, str):
+        dt = pd.Timestamp(dt, tz=TZ).tz_convert('UTC')
+    sessions = calendar.all_sessions
+    loc = sessions.get_loc(dt)
+
+    if direction == 'next':
+        return calendar.all_sessions
+    elif direction == 'previous':
+        return calendar.previous_close(dt)
+    else:
+        raise ValueError(f'方向只能为`next或者previous`，输入：{direction}')
 
 
 def run_pipeline_against_bundle(pipeline, start_date, end_date, bundle):
@@ -88,13 +106,17 @@ def run_pipeline_against_bundle(pipeline, start_date, end_date, bundle):
     #     d2 = _tdate(calendar, end_date, 'previous').normalize()
     #     if d1 > d2:
     #         d1 = d2
-
-    dts = pd.date_range(start_date, end_date, tz='UTC')
-    trading_sessions = calendar.schedule.index.intersection(dts)
+    if bundle == 'dwy':
+        dts = pd.date_range(start_date, end_date, tz='UTC')
+        trading_sessions = calendar.schedule.index.intersection(dts)
+        start, end = trading_sessions[0], trading_sessions[-1]
+    else:
+        start = _tminute(calendar, start_date, 'previous')
+        end = _tminute(calendar, end_date, 'next')
 
     if pipeline._domain is GENERIC:
         pipeline._domain = CN_EQUITIES
-    return engine.run_pipeline(pipeline, trading_sessions[0], trading_sessions[-1], hooks=hooks)
+    return engine.run_pipeline(pipeline, start, end, hooks=hooks)
 
 
 @remember_last
@@ -114,11 +136,17 @@ def _pipeline_engine_and_calendar_for_bundle(bundle):
         The trading calendar for the bundle.
     """
     bundle_data = bundles.load(bundle)
-
-    pipeline_loader = EquityPricingLoader.without_fx(
-        bundle_data.equity_daily_bar_reader,
-        bundle_data.adjustment_reader,
-    )
+    if bundle == 'dwy':
+        pipeline_loader = EquityPricingLoader.without_fx(
+            bundle_data.equity_daily_bar_reader,
+            bundle_data.adjustment_reader,
+        )
+    else:
+        # 分钟级别数据
+        pipeline_loader = EquityPricingLoader.without_fx(
+            bundle_data.equity_minute_bar_reader,
+            bundle_data.adjustment_reader,
+        )
 
     def choose_loader(column):
         if column.unspecialize() in EquityPricing.columns:

@@ -19,3 +19,8 @@ python -m pytest -vv <test_file.py>
 ```
 
 - `tests\test_clock.py`
+
+## 数据
+
+- 同花顺股票概念 大类提取应该存在问题 ✅
+- 以概念生效日期作为 asof_date

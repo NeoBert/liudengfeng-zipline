@@ -6,7 +6,7 @@
     dt_value     NaT
     float_value  NaN
     int_value    0
-    str_value    None
+    str_value    ''
 
 替代方案：
     以附加属性写入信息
@@ -29,45 +29,17 @@ from cnswd.utils import make_logger
 
 from ..common import AD_FIELD_NAME, SID_FIELD_NAME, TS_FIELD_NAME
 from .base import bcolz_table_path
-# from .localdata import (get_dividend_data,
-#                         get_financial_indicator_ranking_data, get_margin_data,
-#                         get_p_balance_data, get_p_cash_flow_data,
-#                         get_p_income_data, get_performance_forecaste_data,
-#                         get_periodly_financial_indicator_data,
-#                         get_q_cash_flow_data, get_q_income_data,
-#                         get_quarterly_financial_indicator_data,
-#                         get_ttm_cash_flow_data, get_ttm_income_data)
-# from .preprocess import (get_investment_rating,
-#                          get_short_name_history, get_static_info_table)
-from .wy_class import get_sw_industry
+from .wy_data import (get_dividend_data, get_investment_rating_data,
+                      get_margin_data, get_short_name_changes)
+from .wy_finance import _add_ggrq, _get_p_data, get_ggrq, get_q_indicator
+from .wy_info import get_industry, get_info, get_ths_concept
+
 # from .yahoo import YAHOO_ITEMS, read_item_data
 
 # 设置显示日志
 logbook.set_datetime_format('local')
 logbook.StreamHandler(sys.stdout).push_application()
 logger = make_logger('网易数据包')
-
-# TAB_MAPS = {
-#     # 定期财务报告
-#     'periodly_balance_sheets': get_p_balance_data,
-#     'periodly_income_statements': get_p_income_data,
-#     'periodly_cash_flow_statements': get_p_cash_flow_data,
-#     # TTM财务报告
-#     'ttm_income_statements': get_ttm_income_data,
-#     'ttm_cash_flow_statements': get_ttm_cash_flow_data,
-#     # 报告期财务指标
-#     'periodly_financial_indicators': get_periodly_financial_indicator_data,
-#     # 季度财务指标
-#     'quarterly_financial_indicators': get_quarterly_financial_indicator_data,
-#     # 财务指标行业排名
-#     'financial_indicator_rankings': get_financial_indicator_ranking_data,
-#     # 上市公司业绩预告
-#     'performance_forecastes': get_performance_forecaste_data,
-#     # 季度利润表
-#     'quarterly_income_statements': get_q_income_data,
-#     # 季度现金流量表
-#     'quarterly_cash_flow_statements': get_q_cash_flow_data,
-# }
 
 
 def _fix_mixed_type(df):
@@ -117,7 +89,7 @@ def write_dataframe(df, table_name, attr_dict=None):
                                              TS_FIELD_NAME] - pd.Timedelta(hours=1)
     df = _fix_tz(df)
     # 修复混合类型，填充默认值，否则bcolz.ctable.fromdataframe会出错
-    # _fix_mixed_type(df)
+    _fix_mixed_type(df)
     # 丢失tz信息
     ct = bcolz.ctable.fromdataframe(df, rootdir=rootdir)
     if attr_dict:
@@ -128,21 +100,21 @@ def write_dataframe(df, table_name, attr_dict=None):
     logger.info(f'{len(df)} 行 写入：{rootdir}')
 
 
-def write_sw_industry_to_bcolz():
-    """写入申万行业分类静态数据"""
-    logger.info('申万行业分类')
-    table_name = 'sw_industry'
-    df = get_sw_industry()
-    attr_dict = {}
-    write_dataframe(df, table_name, attr_dict)
-
-
 def write_static_info_to_bcolz():
-    """写入股票分类等静态数据"""
-    logger.info('读取股票分类数据')
-    table_name = 'infoes'
-    df, attr_dict = get_static_info_table()
-    write_dataframe(df, table_name, attr_dict)
+    """写入股票分类等数据"""
+    logger.info('读取股票基础数据')
+
+    table_name = '基础信息'
+    info = get_info()
+    write_dataframe(info, table_name, {})
+
+    table_name = '股票概念'
+    concept, d = get_ths_concept()
+    write_dataframe(concept, table_name, d)
+
+    table_name = '行业分类'
+    industry = get_industry()
+    write_dataframe(industry, table_name, {})
 
 
 def write_dynamic_data_to_bcolz():
@@ -157,16 +129,22 @@ def write_dynamic_data_to_bcolz():
     """
     logger.info('读取融资融券')
     df_m = get_margin_data()
-    write_dataframe(df_m, 'margin')
+    write_dataframe(df_m, '融资融券')
+    del df_m
+
     logger.info('读取现金股利')
     df_dd = get_dividend_data()
-    write_dataframe(df_dd, 'dividend')
+    write_dataframe(df_dd, '现金股利')
+    del df_dd
+
     logger.info('读取股票简称变动历史')
-    df_sn = get_short_name_history()
-    write_dataframe(df_sn, 'shortname', {})
+    df_sn = get_short_name_changes()
+    write_dataframe(df_sn, '股票简称', {})
+    del df_sn
+
     logger.info('读取股票投资评级')
-    df_ir, attr_dic = get_investment_rating()
-    write_dataframe(df_ir, 'investment_rating', attr_dic)
+    df_ir, attr_dic = get_investment_rating_data()
+    write_dataframe(df_ir, '投资评级', attr_dic)
 
 
 def write_financial_data_to_bcolz():
@@ -185,9 +163,23 @@ def write_financial_data_to_bcolz():
         10. 季度利润表
         11. 季度现金流量表
     """
-    for table, func in TAB_MAPS.items():
+    # 报告期财务报表
+    p_reports = ['资产负债表', '利润表', '现金流量表']
+    ggrq = get_ggrq()
+    for table in p_reports:
         logger.info(f'读取{table}')
-        write_dataframe(func(), table)
+        df = _get_p_data(table)
+        df = _add_ggrq(df, ggrq)
+        write_dataframe(df, table)
+
+    prefix = '按单季度'
+    q_reports = ['主要财务指标', '偿还能力', '成长能力', '盈利能力', '营运能力']
+    for table in q_reports:
+        name = f"{prefix}_{table}"
+        logger.info(f'读取{name}')
+        df = get_q_indicator(name)
+        df = _add_ggrq(df, ggrq)
+        write_dataframe(df, table)
 
 
 # def write_yahoo():
@@ -200,9 +192,8 @@ def write_data_to_bcolz():
     """写入Fundamentals数据"""
     print('准备写入Fundamentals数据......')
     s = time.time()
-    write_sw_industry_to_bcolz()
-    # write_static_info_to_bcolz()
-    # write_dynamic_data_to_bcolz()
-    # write_financial_data_to_bcolz()
+    write_static_info_to_bcolz()
+    write_dynamic_data_to_bcolz()
+    write_financial_data_to_bcolz()
     # write_yahoo()
     print(f"用时{time.time() - s:.2f}秒")

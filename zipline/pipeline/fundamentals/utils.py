@@ -1,9 +1,10 @@
 from collections import OrderedDict
-
+import re
 import numpy as np
 import pandas as pd
 from datashape import (Date, DateTime, Option, Record, String, boolean,
                        integral, isrecord, isscalar, var)
+from pypinyin import lazy_pinyin, Style
 
 from zipline.utils.numpy_utils import (_FILLVALUE_DEFAULTS, bool_dtype,
                                        categorical_dtype, datetime64ns_dtype,
@@ -13,6 +14,10 @@ from zipline.utils.numpy_utils import (_FILLVALUE_DEFAULTS, bool_dtype,
 
 from ..common import AD_FIELD_NAME, SID_FIELD_NAME, TS_FIELD_NAME
 from ..loaders.blaze.core import datashape_type_to_numpy
+
+DOT_PAT = re.compile(r"\.")
+IN_TABLE = "1234567890"
+OUT_TABLE = "一二三四五六七八九零"
 
 
 def _normalized_dshape(input_dshape, utc=False):
@@ -55,7 +60,7 @@ def fillvalue_for_expr(expr):
             elif pd.core.dtypes.common.is_integer_dtype(n_type):
                 ret[name] = fillmissing[int64_dtype]
             elif pd.core.dtypes.common.is_object_dtype(n_type):
-                ret[name] = '' #fillmissing[object_dtype]
+                ret[name] = ''  # fillmissing[object_dtype]
             elif pd.core.dtypes.common.is_bool_dtype(n_type):
                 ret[name] = fillmissing[bool_dtype]
     return ret
@@ -84,3 +89,54 @@ def gen_odo_kwargs(expr, utc=False):
                 type_ = type_.ty
             out_dshape.append([name, type_])
     return {'dshape': var * Record(out_dshape)}
+
+
+def get_acronym(phrase):
+    """
+    获取字符串的首字母
+    :param phrase: 字符串
+    :return: 字符串
+    """
+    return ''.join(lazy_pinyin(phrase, style=Style.FIRST_LETTER)).upper()
+
+
+def regular_name(col_name, trantab):
+    """规范列名称
+
+    规则：
+    1. 首字符为数字，以中文数字拼音首字符替代
+    2. '.'以 'd'替代
+    3. 其余不变
+
+    案例：
+    ----
+    >>> regular_name("5G", trantab)
+    WG
+    >>> regular_name("3代半导体", trantab)
+    S代半导体
+    >>> regular_name("工业4.0", trantab)
+    工业4D0
+    >>> regular_name("阿里概念", trantab)
+    阿里概念
+    """
+    first_letter = col_name[0]
+    if first_letter in IN_TABLE:
+        col_name = f"{get_acronym(first_letter.translate(trantab))}{col_name[1:]}"
+    col_name = DOT_PAT.sub('D', col_name)
+    return col_name
+
+
+def get_bcolz_col_names(cols):
+    """整理适应于bcolz表中列名称规范，返回OrderedDict对象"""
+    trantab = str.maketrans(IN_TABLE, OUT_TABLE)   # 制作翻译表
+    # col_names = OrderedDict(
+    #     {col: get_acronym(col.translate(trantab)) for col in cols})
+    col_names = OrderedDict()
+    for col in cols:
+        if col in (AD_FIELD_NAME, SID_FIELD_NAME, TS_FIELD_NAME):
+            col_names[col] = col
+        else:
+            col_names[col] = regular_name(col, trantab)
+    if len(col_names.values()) != len(set(col_names.values())):
+        raise ValueError("整理后得列名称包含重复值")
+    return col_names

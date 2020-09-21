@@ -36,7 +36,7 @@ from ..localdata import fetch_single_minutely_equity
 from ..minute_bars import CN_EQUITIES_MINUTES_PER_DAY, BcolzMinuteBarWriter
 from .core import load, most_recent_data
 
-log = make_logger('数据包', collection='zipline')
+logger = make_logger('数据包', collection='zipline')
 
 
 def info_func():
@@ -130,6 +130,7 @@ def refresh_data(bundle):
         d_path = try_run_ingest('cndaily', True)
         m_path = try_run_ingest('cnminutely')
 
+    logger.info("拷贝调整数据库")
     # 拷贝调整数据库
     sql_fs = ['adjustments.sqlite', 'assets-7.sqlite']
     for f in sql_fs:
@@ -137,10 +138,12 @@ def refresh_data(bundle):
         dst = join(m_path, f)
         shutil.copy2(src, dst)
 
+    logger.info("拷贝日线数据")
     # 拷贝日线数据
     name = 'daily_equities.bcolz'
     src = join(d_path, name)
     dst = join(m_path, name)
+
     # 首先删除现存目录
     try:
         shutil.rmtree(dst)
@@ -151,7 +154,8 @@ def refresh_data(bundle):
     # 处理分钟数据刷新
     dst = join(m_path, 'minute_equities.bcolz')
     m_dir_path = Path(dst)
-    log.info("使用`000002【A股指数】`日线数据作为基准收益率")
+    logger.info("使用`000002【A股指数】`日线数据作为基准收益率")
+
     # 代码在其子目录下 ** 代表当前目录的子目录
     db_codes = [p.stem.split('.')[0] for p in m_dir_path.glob("**/*.bcolz")]
     # web_codes = get_recent_trading_stocks()
@@ -167,8 +171,13 @@ def refresh_data(bundle):
     append(dst, to_append)
 
     # 基础数据【fundamentals使用】
-    cmd = ['zipline', 'fm']
+    cmd = ['zipline', 'fm', '-b', 'wy']
     execute(cmd)
+
     # 保留最新2次提取的日线数据
-    cmd = ['zipline', 'clean', '-k', '2']
+    cmd = ['zipline', 'clean', '-b', 'dwy', '-k', '2']
+    execute(cmd)
+
+    # 保留最新2次提取的分钟数据
+    cmd = ['zipline', 'clean', '-b', 'mwy', '-k', '2']
     execute(cmd)

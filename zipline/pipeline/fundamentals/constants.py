@@ -8,7 +8,6 @@ SUPER_SECTOR_NAMES = {
     1: '周期',  # 'Cyclical'),
     2: '防御',  # 'Defensive'),
     3: '敏感',  # 'Sensitive'),
-    -1: '未分类',
 }
 
 SECTOR_NAMES = {
@@ -23,7 +22,6 @@ SECTOR_NAMES = {
     309: '能源',      # 'ENERGY'),
     310: '工业领域',  # 'INDUSTRIALS'),
     311: '工程技术',  # 'TECHNOLOGY'),
-    -1:  '未分类',
 }
 
 # 国证一级行业分类转换为`SECTOR`编码
@@ -71,5 +69,35 @@ SW_SECTOR_MAPS = {
     801790: 'S49',  # 非银金融
     801880: 'S28',  # 汽车
     801890: 'S64',  # 机械设备
-    -1:  '未分类',
+}
+
+SW_SECTOR_NAMES = {
+    801010: '农林牧渔',  # 'AGRICULTURE'
+    801020: '采掘',  # MINING
+    801030: '化工',  # CHEMICALS
+    801040: '钢铁',  # STEEL
+    801050: '有色金属',  # METALS
+    801080: '电子',  # ELECTRONICS
+    801110: '家用电器',  # APPLIANCES
+    801120: '食品饮料',  # FOOD
+    801130: '纺织服装',  # TEXTILES
+    801140: '轻工制造',  # LIGHT_MANUFACTURING
+    801150: '医药生物',  # PHARMACEUTICALS
+    801160: '公用事业',  # UTILITIES
+    801170: '交通运输',  # TRANSPORTATION
+    801180: '房地产',  # REAL_ESTATE
+    801200: '商业贸易',  # COMMERCE
+    801210: '休闲服务',  # SERVICES
+    801230: '综合',  # CONGLOMERATE
+    801710: '建筑材料',  # BUILDING_MATERIALS
+    801720: '建筑装饰',  # BUILDING_DECORATIONS
+    801730: '电气设备',  # ELECTRICALS
+    801740: '国防军工',  # DEFENSE_MILITARY
+    801750: '计算机',  # IT
+    801760: '传媒',  # MEDIA
+    801770: '通信',  # COMMUNICATION_SERVICES
+    801780: '银行',  # BANKS
+    801790: '非银金融',  # NONBANK_FINANCIALS
+    801880: '汽车',  # AUTO
+    801890: '机械设备',  # MACHINERY
 }
