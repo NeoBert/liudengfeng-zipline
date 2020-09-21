@@ -1,12 +1,4 @@
 """
-zipline ingest 适用于期初全新导入数据
-本模块将每日所需处理任务集成，`zipline rfd`一条命令完成任务。
-
-数据包括：
-1. 日线数据【含附加列】
-2. 分钟级别【仅含OHLCV】
-3. 基础数据【fundamentals使用】
-
 由于分钟级别数据写入极其耗时，使用`append`模式
 首次完成`ingest`分钟级别数据后，日常使用刷新方式写入数据
 
@@ -15,8 +7,6 @@ zipline ingest 适用于期初全新导入数据
 2. 判断是否存在分钟级别数据，否则执行`zipline ingest -b cnminutely`
 3. 拷贝日线至分钟级别数据目录【含调整数据库文件】
 4. 添加分钟级别数据
-5. 执行`zipline fm`
-6. 清理保留最新2次的日线数据`zipline clean -k 2`
 """
 import shutil
 import subprocess
@@ -55,12 +45,9 @@ def execute(cmd):
     subprocess.run(cmd)
 
 
-def try_run_ingest(name, force=False):
+def try_run_ingest(name):
     # 注意：每一项都要分列
     cmd = ["zipline", "ingest", "-b", name]
-    # 强制执行数据提取
-    if force:
-        execute(cmd)
     try:
         return most_recent_data(name)
     except ValueError:
@@ -124,10 +111,10 @@ def append(dest, codes):
 
 def refresh_data(bundle):
     if 'wy' in bundle:
-        d_path = try_run_ingest('dwy', True)
+        d_path = try_run_ingest('dwy')
         m_path = try_run_ingest('mwy')
     else:
-        d_path = try_run_ingest('cndaily', True)
+        d_path = try_run_ingest('cndaily')
         m_path = try_run_ingest('cnminutely')
 
     logger.info("拷贝调整数据库")
@@ -169,15 +156,3 @@ def refresh_data(bundle):
     # 已经存在的股票代码使用添加方式
     to_append = set(web_codes).intersection(db_codes)
     append(dst, to_append)
-
-    # 基础数据【fundamentals使用】
-    cmd = ['zipline', 'fm', '-b', 'wy']
-    execute(cmd)
-
-    # 保留最新2次提取的日线数据
-    cmd = ['zipline', 'clean', '-b', 'dwy', '-k', '2']
-    execute(cmd)
-
-    # 保留最新2次提取的分钟数据
-    cmd = ['zipline', 'clean', '-b', 'mwy', '-k', '2']
-    execute(cmd)

@@ -68,14 +68,18 @@ def get_exchange(code):
         return '指数'
     if code.startswith('688'):
         return "上交所科创板"
-    elif code.startswith('6'):
-        return "上交所"
     elif code.startswith('002'):
         return "深交所中小板"
+    elif code.startswith('6'):
+        return "上交所"
     elif code.startswith('3'):
         return "深交所创业板"
     elif code.startswith('0'):
         return "深交所主板"
+    elif code.startswith('2'):
+        return "深证B股"
+    elif code.startswith('9'):
+        return "上海B股"
     else:
         raise ValueError(f'股票代码：{code}错误')
 
@@ -153,6 +157,9 @@ def _stock_first_and_last(code):
     if code not in db.list_collection_names():
         return pd.DataFrame()
     collection = db[code]
+    # 空表
+    if collection.count_documents({}) == 0:
+        return pd.DataFrame()
     first = collection.find_one(projection={
         '_id': 0,
         '日期': 1,
@@ -224,9 +231,9 @@ def gen_asset_metadata(only_in=True, only_A=True, include_index=True):
     if only_in:
         codes = [code for code in codes if code not in delisted.keys()]
     # 股票数量 >3900
-    # 设置max_workers=8，用时 67s
+    # 设置max_workers=8，用时 67s  股票 4565 用时 110s
     # 设置max_workers=4，用时 54s
-    with ThreadPoolExecutor(16) as pool:
+    with ThreadPoolExecutor(MAX_WORKER) as pool:
         r = pool.map(_stock_first_and_last, codes)
     df = pd.concat(r)
     df.sort_values('symbol', inplace=True)
@@ -410,6 +417,8 @@ def fetch_single_equity(stock_code, start, end):
     df = _add_back_prices(df)
     cond = df['date'].between(start, end)
     df = df.loc[cond, :]
+    if df.empty:
+        return df
     t_start, t_end = df['date'].values[0], df['date'].values[-1]
     # 判断数据长度是否缺失
     dts = [t for t in _tdates() if t >= t_start and t <= t_end]

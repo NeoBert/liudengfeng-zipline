@@ -288,13 +288,11 @@ def _check_symbol_mappings(df, exchanges, asset_exchange):
     """
     mappings = df.set_index('sid')[list(mapping_columns)].copy()
     # 🆗 正确查询`country_code`，修正bug
-    exs = asset_exchange.loc[df['sid']]
-    copied = exchanges.copy()
-    if 'exchange' in copied.columns:
-        copied.set_index('exchange', inplace=True)
-    mappings['country_code'] = copied.loc[
-        exs.values, 'country_code'
-    ].values
+    # See https://pandas.pydata.org/pandas-docs/stable/user_guide/indexing.html#deprecate-loc-reindex-listlike
+
+    mappings['country_code'] = exchanges['country_code'].reindex(
+        asset_exchange.values).values
+
     ambigious = {}
 
     def check_intersections(persymbol):

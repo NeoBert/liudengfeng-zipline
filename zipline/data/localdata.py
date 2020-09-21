@@ -18,6 +18,7 @@ from cnswd.mongodb import get_db
 from cnswd.setting.constants import MAX_WORKER
 from cnswd.utils import sanitize_dates
 
+
 warnings.filterwarnings('ignore')
 
 WY_DAILY_COL_MAPS = {
@@ -66,14 +67,18 @@ def get_exchange(code):
         return '指数'
     if code.startswith('688'):
         return "上交所科创板"
-    elif code.startswith('6'):
-        return "上交所"
     elif code.startswith('002'):
         return "深交所中小板"
+    elif code.startswith('6'):
+        return "上交所"
     elif code.startswith('3'):
         return "深交所创业板"
     elif code.startswith('0'):
         return "深交所主板"
+    elif code.startswith('2'):
+        return "深证B股"
+    elif code.startswith('9'):
+        return "上海B股"
     else:
         raise ValueError(f'股票代码：{code}错误')
 

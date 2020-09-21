@@ -17,23 +17,13 @@ from ..localdata import (fetch_single_equity, fetch_single_quity_adjustments,
                          fetch_single_minutely_equity, gen_asset_metadata)
 from . import core as bundles
 from .adjusts import ADJUST_FACTOR
-
+from .utils import _exchanges
 
 TODAY = pd.Timestamp('today').normalize()
 log = make_logger('cnquandl', collection='zipline')
 
 
 OHLCV_COLS = ['open', 'high', 'low', 'close', 'volume']
-
-
-def _exchanges():
-    # 通过 `股票.exchange = exchanges.exchange`来关联
-    # 深证信 股票信息 上市地点
-    return pd.DataFrame({
-        'exchange': ['深交所主板', '上交所', '深交所中小板', '深交所创业板', '上交所科创板', '指数'],
-        'canonical_name': ['XSHE', 'XSHG', 'XSHE', 'XSHE', 'XSHG', 'XSHG'],
-        'country_code': ['CN'] * 6
-    })
 
 
 def _to_sid(x):
