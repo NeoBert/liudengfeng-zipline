@@ -46,7 +46,7 @@ from zipline.utils.numpy_utils import iNaT, float64_dtype, uint32_dtype
 from zipline.utils.memoize import lazyval
 from zipline.utils.cli import maybe_show_progress
 from ._equities import _compute_row_slices, _read_bcolz_data
-from .bundles.adjusts import ADJUST_FACTOR
+from .bundles.adjusts import NON_ADJUSTED_COLUMN_FACTOR
 
 logger = logbook.Logger('UsEquityPricing')
 
@@ -54,7 +54,7 @@ OHLC = frozenset(['open', 'high', 'low', 'close'])
 US_EQUITY_PRICING_BCOLZ_COLUMNS = ('open', 'high', 'low', 'close', 'volume',
                                    'day', 'id')
 ALL_EQUITY_PRICING_BCOLZ_COLUMNS = list(US_EQUITY_PRICING_BCOLZ_COLUMNS
-                                        | ADJUST_FACTOR.keys())
+                                        | NON_ADJUSTED_COLUMN_FACTOR.keys())
 UINT32_MAX = iinfo(np.uint32).max
 
 
@@ -380,10 +380,10 @@ class BcolzDailyBarWriter(object):
         processed['day'] = dates.astype('uint32')
         processed['volume'] = raw_data.volume.astype('uint32')
         # 附加列同样转换为uint32
-        for c in ADJUST_FACTOR.keys():
+        for c in NON_ADJUSTED_COLUMN_FACTOR.keys():
             if c in raw_data.columns:
                 processed[c] = (raw_data.loc[:, c] *
-                                ADJUST_FACTOR.get(c, 1)).astype('uint32')
+                                NON_ADJUSTED_COLUMN_FACTOR.get(c, 1)).astype('uint32')
         return ctable.fromdataframe(processed)
 
 
@@ -605,7 +605,7 @@ class BcolzDailyBarReader(CurrencyAwareSessionBarReader):
         )
         # 🆗 恢复调整列原始单位
         for i, col in enumerate(list(columns)):
-            adj = 1 / ADJUST_FACTOR.get(col, 1)
+            adj = 1 / NON_ADJUSTED_COLUMN_FACTOR.get(col, 1)
             raw_arrays[i] = raw_arrays[i] * adj
             # # 🆗 为0值 无效值
             # raw_arrays[i] = np.where(raw_arrays[i] == 0., np.nan,
@@ -727,8 +727,8 @@ class BcolzDailyBarReader(CurrencyAwareSessionBarReader):
                 return nan
             else:
                 return price * 0.001
-        elif field in ADJUST_FACTOR.keys():
-            return price / ADJUST_FACTOR[field]
+        elif field in NON_ADJUSTED_COLUMN_FACTOR.keys():
+            return price / NON_ADJUSTED_COLUMN_FACTOR[field]
         raise ValueError(f"表没有列：'{field}'")
 
     def currency_codes(self, sids):

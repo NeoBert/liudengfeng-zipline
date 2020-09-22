@@ -1,6 +1,6 @@
 # ohlcv以外各列的调整因子
 
-ADJUST_FACTOR = {
+NON_ADJUSTED_COLUMN_FACTOR = {
     'amount': 0.0001,
     'market_cap': 0.0001,
     'total_cap': 0.0001,

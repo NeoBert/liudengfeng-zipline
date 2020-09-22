@@ -35,7 +35,7 @@ from zipline.utils.math_utils import number_of_decimal_places
 from zipline.utils.memoize import lazyval
 from zipline.utils.numpy_utils import float64_dtype
 from zipline.utils.pandas_utils import find_in_sorted_index, normalize_date
-from .bundles.adjusts import ADJUST_FACTOR
+from .bundles.adjusts import NON_ADJUSTED_COLUMN_FACTOR
 
 # Default number of decimal places used for rounding asset prices.
 DEFAULT_ASSET_PRICE_DECIMALS = 3
@@ -57,9 +57,10 @@ class HistoryCompatibleUSEquityAdjustmentReader(object):
         out = [None] * len(columns)
         for i, column in enumerate(columns):
             adjs = {}
-            for asset in assets:
-                adjs.update(self._get_adjustments_in_range(
-                    asset, dts, column))
+            if column not in NON_ADJUSTED_COLUMN_FACTOR.keys():
+                for asset in assets:
+                    adjs.update(self._get_adjustments_in_range(
+                        asset, dts, column))
             out[i] = adjs
         return out
 
@@ -181,9 +182,10 @@ class ContinuousFutureAdjustmentReader(object):
         out = [None] * len(columns)
         for i, column in enumerate(columns):
             adjs = {}
-            for asset in assets:
-                adjs.update(self._get_adjustments_in_range(
-                    asset, dts, column))
+            if column not in NON_ADJUSTED_COLUMN_FACTOR.keys():
+                for asset in assets:
+                    adjs.update(self._get_adjustments_in_range(
+                        asset, dts, column))
             out[i] = adjs
         return out
 
@@ -307,7 +309,7 @@ class HistoryLoader(with_metaclass(ABCMeta)):
     adjustment_reader : SQLiteAdjustmentReader
         Reader for adjustment data.
     """
-    FIELDS = ('open', 'high', 'low', 'close', 'volume', 'sid') + tuple(ADJUST_FACTOR.keys())
+    FIELDS = ('open', 'high', 'low', 'close', 'volume', 'sid') + tuple(NON_ADJUSTED_COLUMN_FACTOR.keys())
 
     def __init__(self, trading_calendar, reader, equity_adjustment_reader,
                  asset_finder,

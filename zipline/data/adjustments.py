@@ -182,6 +182,8 @@ class SQLiteAdjustmentReader(object):
         )
 
     def load_pricing_adjustments(self, columns, dates, assets):
+        # 🆗 在流程前排除了非调整列，保持原始默认只有OHLCV列逻辑
+        # 尽管添加了非调整列，但已经排除附加列进入，无需修改
         if 'volume' not in set(columns):
             adjustment_type = 'price'
         elif len(set(columns)) == 1:

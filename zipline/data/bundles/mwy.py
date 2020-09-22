@@ -16,7 +16,7 @@ from cnswd.utils import make_logger, HotDataCache
 from .wy_data import (fetch_single_equity, fetch_single_quity_adjustments,
                       fetch_single_minutely_equity, gen_asset_metadata)
 from . import core as bundles
-from .adjusts import ADJUST_FACTOR
+from .adjusts import NON_ADJUSTED_COLUMN_FACTOR
 from .utils import _exchanges
 
 TODAY = pd.Timestamp('today').normalize()
@@ -66,13 +66,13 @@ def _update_dividends(dividends, asset_id, origin_data, start, end):
         'sid':
         asset_id
     })
-    cond = (start <= df['pay_date']) & (df['pay_date'] <= end)
+    cond = (start <= df['ex_date']) & (df['ex_date'] <= end)
     dividends.append(df.loc[cond, :])
 
 
 def gen_symbol_data(symbol_map, sessions, splits, dividends, is_minutely):
     if not is_minutely:
-        cols = OHLCV_COLS + list(ADJUST_FACTOR.keys())
+        cols = OHLCV_COLS + list(NON_ADJUSTED_COLUMN_FACTOR.keys())
     else:
         cols = OHLCV_COLS
     start, end = sessions[0], sessions[-1]
