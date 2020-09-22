@@ -817,7 +817,8 @@ class DataPortal(object):
                                        end_dt,
                                        field_to_use,
                                        data_frequency):
-        if data_frequency == 'daily':
+        # 🆗 字段为附加非调整列时 同样
+        if data_frequency == 'daily' or field_to_use in NON_ADJUSTED_COLUMN_FACTOR.keys():
             # two cases where we use daily data for the whole range:
             # 1) the history window ends at midnight utc.
             # 2) the last desired day of the window is after the
