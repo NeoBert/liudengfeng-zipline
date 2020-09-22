@@ -491,13 +491,18 @@ class TradingAlgorithm(object):
         """
         If the clock property is not set, then create one based on frequency.
         """
-        trading_o_and_c = self.trading_calendar.schedule.loc[self.sim_params.sessions]
-        # trading_sessions = self.trading_calendar.schedule.index.intersection(self.sim_params.sessions)
-        # trading_o_and_c = self.trading_calendar.schedule.loc[trading_sessions]
-        market_closes = trading_o_and_c['market_close']
+        # FIXME generalize these values
+        before_trading_start_minutes = days_at_time(
+            self.sim_params.sessions,
+            time(9, 30),  # 🆗
+            "Asia/Shanghai"  # 🆗
+        )
+        # 包含四列 上午开盘、上午收盘 下午开盘、下午收盘
+        trading_table = self.trading_calendar.schedule.loc[self.sim_params.sessions]
+        market_closes = trading_table['market_close']
         minutely_emission = False
         if self.sim_params.data_frequency == 'minute':
-            market_opens = trading_o_and_c['market_open']
+            market_opens = trading_table['market_open']
             minutely_emission = self.sim_params.emission_rate == "minute"
 
             # The calendar's execution times are the minutes over which we
@@ -511,27 +516,35 @@ class TradingAlgorithm(object):
                 self.trading_calendar.execution_time_from_open(market_opens)
             execution_closes = \
                 self.trading_calendar.execution_time_from_close(market_closes)
+            return MinuteSimulationClock(
+                self.sim_params.sessions,
+                execution_opens,
+                trading_table['am_end'],
+                trading_table['pm_start'],
+                execution_closes,
+                before_trading_start_minutes,
+                daily=False,
+                minute_emission=minutely_emission,
+            )        
         else:
             # in daily mode, we want to have one bar per session, timestamped
             # as the last minute of the session.
             execution_closes = \
                 self.trading_calendar.execution_time_from_close(market_closes)
             execution_opens = execution_closes
+            
+            return MinuteSimulationClock(
+                self.sim_params.sessions,
+                execution_closes,
+                execution_closes,
+                execution_closes,
+                execution_closes,
+                before_trading_start_minutes,
+                daily=True,
+                minute_emission=minutely_emission,
+            ) 
 
-        # FIXME generalize these values
-        before_trading_start_minutes = days_at_time(
-            self.sim_params.sessions,
-            time(9, 30),  # 🆗
-            "Asia/Shanghai"  # 🆗
-        )
 
-        return MinuteSimulationClock(
-            self.sim_params.sessions,
-            execution_opens,
-            execution_closes,
-            before_trading_start_minutes,
-            minute_emission=minutely_emission,
-        )
 
     def _create_benchmark_source(self):
         if self.benchmark_sid is not None:

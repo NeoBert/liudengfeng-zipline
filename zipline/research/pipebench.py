@@ -61,20 +61,6 @@ def _tdate(calendar, d, direction):
             raise ValueError(f'方向只能为`next或者previous`，输入：{direction}')
     return d
 
-# TODO:解决分钟级别
-def _tminute(calendar, dt, direction):
-    if isinstance(dt, str):
-        dt = pd.Timestamp(dt, tz=TZ).tz_convert('UTC')
-    sessions = calendar.all_sessions
-    loc = sessions.get_loc(dt)
-
-    if direction == 'next':
-        return calendar.all_sessions
-    elif direction == 'previous':
-        return calendar.previous_close(dt)
-    else:
-        raise ValueError(f'方向只能为`next或者previous`，输入：{direction}')
-
 
 def run_pipeline_against_bundle(pipeline, start_date, end_date, bundle):
     """Run a pipeline against the data in a bundle.
@@ -106,13 +92,10 @@ def run_pipeline_against_bundle(pipeline, start_date, end_date, bundle):
     #     d2 = _tdate(calendar, end_date, 'previous').normalize()
     #     if d1 > d2:
     #         d1 = d2
-    if bundle == 'dwy':
-        dts = pd.date_range(start_date, end_date, tz='UTC')
-        trading_sessions = calendar.schedule.index.intersection(dts)
-        start, end = trading_sessions[0], trading_sessions[-1]
-    else:
-        start = _tminute(calendar, start_date, 'previous')
-        end = _tminute(calendar, end_date, 'next')
+
+    dts = pd.date_range(start_date, end_date, tz='UTC')
+    trading_sessions = calendar.schedule.index.intersection(dts)
+    start, end = trading_sessions[0], trading_sessions[-1]
 
     if pipeline._domain is GENERIC:
         pipeline._domain = CN_EQUITIES
