@@ -46,8 +46,8 @@ WY_ADJUSTMENT_COLS = {
     '派息(每10股)': 'amount',
     '公告日期': 'declared_date',
     '股权登记日': 'record_date',
-    '红股上市日': 'ex_date',
-    '除权除息日': 'pay_date'
+    '除权除息日': 'ex_date',
+    '红股上市日': 'pay_date'
 }
 
 
@@ -632,23 +632,11 @@ def fetch_single_quity_adjustments(stock_code, start, end):
     if df.empty:
         # 返回一个空表
         return pd.DataFrame(columns=WY_ADJUSTMENT_COLS)
-    if '股权登记日' not in df.columns:
+    if '除权除息日' not in df.columns:
         # 返回一个空表
         return pd.DataFrame(columns=WY_ADJUSTMENT_COLS)
-    else:
-        # 处理未来事件
-        today = pd.Timestamp.now().normalize()
-        # 尚未登记，将其日期默认为未来一个月
-        cond = df['股权登记日'] >= today
-        df.loc[cond, "除权除息日"] = df.loc[cond, "股权登记日"] + pd.Timedelta(days=30)
-        df.loc[cond, "红股上市日"] = df.loc[cond, "股权登记日"] + pd.Timedelta(days=30)
-    # 当派息日为空，使用`A股除权日`
-    if '红股上市日' not in df.columns:
-        df['红股上市日'] = df['除权除息日']
-    else:
-        cond = df['红股上市日'].isnull()
-        df.loc[cond, '红股上市日'] = df.loc[cond, '除权除息日']
-    df.rename(columns=WY_ADJUSTMENT_COLS, inplace=True)
+    # 只有除权除息日有效，其余日期无关紧要
+    df.rename(columns=WY_ADJUSTMENT_COLS, inplace=True, errors='ignore')
     for col in ['s_ratio', 'z_ratio', 'amount']:
         if col not in df.columns:
             df[col] = 0.0

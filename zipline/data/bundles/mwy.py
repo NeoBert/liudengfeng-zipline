@@ -40,7 +40,7 @@ def _update_splits(splits, asset_id, origin_data, start, end):
     # date -> datetime64[ns]
     df = pd.DataFrame({
         'ratio': 1 / (1 + ratio),
-        'effective_date': pd.to_datetime(origin_data.ex_date),
+        'effective_date': pd.to_datetime(origin_data['ex_date']),
         'sid': asset_id
     })
     cond = (start <= df['effective_date']) & (df['effective_date'] <= end)
