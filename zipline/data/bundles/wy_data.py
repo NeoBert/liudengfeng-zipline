@@ -612,9 +612,11 @@ def fetch_single_quity_adjustments(stock_code, start, end):
     """
     if len(stock_code) == 7:
         return pd.DataFrame()
+    EX_DATE = '除权除息日'
     db = get_db('wy')
     collection = db['分红配股']
     predicate = {'股票代码': stock_code}
+    sort = [(EX_DATE, 1)]
     projection = {
         # '股票代码': 1,
         # '分红年度': 1,
@@ -627,12 +629,12 @@ def fetch_single_quity_adjustments(stock_code, start, end):
         # '派息日(A)': 1,
         '_id': 0
     }
-    cursor = collection.find(predicate, projection)
+    cursor = collection.find(predicate, projection, sort=sort)
     df = pd.DataFrame.from_records(cursor)
     if df.empty:
         # 返回一个空表
         return pd.DataFrame(columns=WY_ADJUSTMENT_COLS)
-    if '除权除息日' not in df.columns:
+    if EX_DATE not in df.columns:
         # 返回一个空表
         return pd.DataFrame(columns=WY_ADJUSTMENT_COLS)
     # 只有除权除息日有效，其余日期无关紧要

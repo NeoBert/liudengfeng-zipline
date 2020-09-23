@@ -91,4 +91,3 @@ assets/
 tests/t.ipynb
 .venv/
 whls/
-zipline/data/bundles/test.py

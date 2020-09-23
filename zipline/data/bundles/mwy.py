@@ -9,7 +9,6 @@
        属正常。
     5. 成交量数值可能超出int32，以手为单位。
 """
-
 import pandas as pd
 import time
 from cnswd.utils import make_logger, HotDataCache
@@ -37,7 +36,6 @@ def _update_splits(splits, asset_id, origin_data, start, end):
         return
     ratio = origin_data['s_ratio'] + origin_data['z_ratio']
     # 调整适应于zipline算法
-    # date -> datetime64[ns]
     df = pd.DataFrame({
         'ratio': 1 / (1 + ratio),
         'effective_date': pd.to_datetime(origin_data['ex_date']),
@@ -45,7 +43,9 @@ def _update_splits(splits, asset_id, origin_data, start, end):
     })
     cond = (start <= df['effective_date']) & (df['effective_date'] <= end)
     # df['ratio'] = df.ratio.astype('float')
-    splits.append(df.loc[cond, :])
+    df = df.loc[cond, :]
+    if not df.empty:
+        splits.append(df)
 
 
 def _update_dividends(dividends, asset_id, origin_data, start, end):
@@ -67,7 +67,9 @@ def _update_dividends(dividends, asset_id, origin_data, start, end):
         asset_id
     })
     cond = (start <= df['ex_date']) & (df['ex_date'] <= end)
-    dividends.append(df.loc[cond, :])
+    df = df.loc[cond, :]
+    if not df.empty:
+        dividends.append(df)
 
 
 def gen_symbol_data(symbol_map, sessions, splits, dividends, is_minutely):
@@ -87,8 +89,6 @@ def gen_symbol_data(symbol_map, sessions, splits, dividends, is_minutely):
             )
             # 新股可能存在日线延迟，会触发异常
             if not raw_data.empty:
-                # 🆗 除去调整
-                # raw_data['volume'] = raw_data['volume'] / 100.0
 
                 # 以日期、符号为索引
                 raw_data.set_index(['date', 'symbol'], inplace=True)
@@ -142,10 +142,13 @@ def cndaily_bundle(environ, asset_db_writer, minute_bar_writer,
     t = time.time()
     log.info('读取股票元数据......')
     # metadata = gen_asset_metadata(False)
+
+    # 截取测试代码
     hc = HotDataCache(gen_asset_metadata, hour=9, minute=30, only_in=False)
     metadata = hc.data
     # 资产元数据写法要求添加`sid`列
     metadata['sid'] = metadata.symbol.map(_to_sid)
+
     symbol_map = metadata.symbol
     sessions = calendar.sessions_in_range(start_session, end_session)
 
@@ -174,6 +177,7 @@ def cndaily_bundle(environ, asset_db_writer, minute_bar_writer,
         dividends=None
         if len(dividends) == 0 else pd.concat(dividends, ignore_index=True),
     )
+
     log.info(f'完成用时：{time.time() - t:.2f}秒')
 
 
@@ -190,18 +194,12 @@ def cnminutely_bundle(environ, asset_db_writer, minute_bar_writer,
     """
     t = time.time()
     log.info('读取股票元数据......')
-    # metadata = gen_asset_metadata(False)
-    # 只保留000002A股指数，且日内设定为常数
+
+    # 无股指分时数据，以日线代替分钟级别数据
     hc = HotDataCache(gen_asset_metadata, hour=9, minute=30, only_in=False)
     metadata = hc.data
-    log.info("分钟级别数据，固定使用`000002【A股指数】`日线数据作为基准收益率")
-    cond = metadata.symbol.str.len() == 6
-    metadata = pd.concat(
-        [metadata[metadata.symbol == '1000002'], metadata[cond]])
-    # 测试切片
-    # metadata = metadata.iloc[:20, :]
-
     metadata['sid'] = metadata.symbol.map(_to_sid)
+
     symbol_map = metadata.symbol
 
     sessions = calendar.sessions_in_range(start_session, end_session)
@@ -215,6 +213,24 @@ def cnminutely_bundle(environ, asset_db_writer, minute_bar_writer,
 
     splits = []
     dividends = []
+    # 必须先写入日线数据
+    daily_bar_writer.write(
+        gen_symbol_data(symbol_map,
+                        sessions,
+                        splits,
+                        dividends,
+                        is_minutely=False),
+        show_progress=show_progress,
+        has_additional_cols=True,
+    )
+
+    adjustment_writer.write(
+        splits=None if len(splits) == 0 else pd.concat(splits,
+                                                       ignore_index=True),
+        dividends=None
+        if len(dividends) == 0 else pd.concat(dividends, ignore_index=True),
+    )
+    # 分钟级别数据会涉及到日线调整的问题，需要先写入日线数据
     minute_bar_writer.write(
         gen_symbol_data(symbol_map,
                         sessions,
@@ -224,10 +240,4 @@ def cnminutely_bundle(environ, asset_db_writer, minute_bar_writer,
         show_progress=show_progress,
     )
 
-    adjustment_writer.write(
-        splits=None if len(splits) == 0 else pd.concat(splits,
-                                                       ignore_index=True),
-        dividends=None
-        if len(dividends) == 0 else pd.concat(dividends, ignore_index=True),
-    )
     log.info(f'完成用时：{time.time() - t:.2f}秒')

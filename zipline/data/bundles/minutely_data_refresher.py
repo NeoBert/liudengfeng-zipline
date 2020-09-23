@@ -141,7 +141,7 @@ def refresh_data(bundle):
     # 处理分钟数据刷新
     dst = join(m_path, 'minute_equities.bcolz')
     m_dir_path = Path(dst)
-    logger.info("使用`000002【A股指数】`日线数据作为基准收益率")
+    logger.info("使用指数日线数据作为基准收益率")
 
     # 代码在其子目录下 ** 代表当前目录的子目录
     db_codes = [p.stem.split('.')[0] for p in m_dir_path.glob("**/*.bcolz")]
