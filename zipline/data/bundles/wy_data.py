@@ -568,7 +568,7 @@ def fetch_single_minutely_equity(stock_code, start, end):
     if len(stock_code) == 7:
         df = _fetch_single_index(stock_code, start, end)
         if df.empty:
-            return default
+            return df
         df = df[cols+['date']]
         df.set_index('date', inplace=True)
         dfs = [pd.DataFrame(dict(row), index=to_index(d))

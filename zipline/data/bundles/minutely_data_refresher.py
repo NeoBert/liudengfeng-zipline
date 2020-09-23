@@ -15,16 +15,15 @@ from pathlib import Path
 
 import click
 import pandas as pd
-from trading_calendars import get_calendar
-
-from cnswd.utils import make_logger
-# from cnswd.websource.tencent import get_recent_trading_stocks
+from cnswd.mongodb import get_db
 from cnswd.scripts.base import get_stock_status
+from cnswd.utils import make_logger
+from trading_calendars import get_calendar
 from zipline.utils.cli import maybe_show_progress
 
-from ..localdata import fetch_single_minutely_equity
 from ..minute_bars import CN_EQUITIES_MINUTES_PER_DAY, BcolzMinuteBarWriter
 from .core import load, most_recent_data
+from .wy_data import fetch_single_minutely_equity, encode_index_code
 
 logger = make_logger('数据包', collection='zipline')
 
@@ -71,12 +70,14 @@ def insert(dest, codes):
         codes,
         show_progress=True,
         item_show_func=lambda e: e,
-        label="【新增股票】分钟级别数据",
+        label="【新增】分钟级别数据",
     )
     with ctx as it:
         for code in it:
             sid = int(code)
             df = fetch_single_minutely_equity(code, s, e)
+            if df.empty:
+                continue
             # 务必转换为UTC时区
             df = df.tz_localize('Asia/Shanghai').tz_convert('UTC')
             writer.write_sid(sid, df)
@@ -91,7 +92,7 @@ def append(dest, codes):
         show_progress=True,
         # 🆗 显示股票代码
         item_show_func=lambda e: e,
-        label="【更新股票】分钟级别数据",
+        label="【更新】分钟级别数据",
     )
     with ctx as it:
         for code in it:
@@ -104,18 +105,17 @@ def append(dest, codes):
             if start > e:
                 continue
             df = fetch_single_minutely_equity(code, start, e)
+            if df.empty:
+                continue
             # 务必转换为UTC时区
             df = df.tz_localize('Asia/Shanghai').tz_convert('UTC')
             writer.write_sid(sid, df)
 
 
 def refresh_data(bundle):
-    if 'wy' in bundle:
-        d_path = try_run_ingest('dwy')
-        m_path = try_run_ingest('mwy')
-    else:
-        d_path = try_run_ingest('cndaily')
-        m_path = try_run_ingest('cnminutely')
+    daily_bundle_name = f"d{bundle[1:]}"
+    d_path = try_run_ingest(daily_bundle_name)
+    m_path = try_run_ingest(bundle)
 
     logger.info("拷贝调整数据库")
     # 拷贝调整数据库
@@ -141,18 +141,34 @@ def refresh_data(bundle):
     # 处理分钟数据刷新
     dst = join(m_path, 'minute_equities.bcolz')
     m_dir_path = Path(dst)
-    logger.info("使用指数日线数据作为基准收益率")
+    logger.info("指数分钟级别数据实际为日线数据")
 
+    # 比较已经写入的代码与代码总体
     # 代码在其子目录下 ** 代表当前目录的子目录
     db_codes = [p.stem.split('.')[0] for p in m_dir_path.glob("**/*.bcolz")]
-    # web_codes = get_recent_trading_stocks()
     web_codes = [code for code, dt in get_stock_status().items()
                  if dt is not None]
+    db = get_db('wy_index_daily')
+    index_codes = db.list_collection_names()
+    web_codes += [encode_index_code(x) for x in index_codes]
 
     # 全新股票代码采用插入方式
     to_insert = set(web_codes).difference(db_codes)
-    insert(dst, to_insert)
+    insert(dst, list(to_insert))
 
     # 已经存在的股票代码使用添加方式
     to_append = set(web_codes).intersection(db_codes)
-    append(dst, to_append)
+    append(dst, list(to_append))
+
+
+def truncate(bundle, ndays):
+    """截断分钟级别数据包中，实际交易日前ndays在所有ctable中的数据."""
+    if not ndays:
+        return
+    p = most_recent_data(bundle)
+    dest = join(p, 'minute_equities.bcolz')
+    calendar = get_calendar('XSHG')
+    date = calendar.actual_last_session - ndays*calendar.day
+    logger.warning(f"从{date}开始截断数据包{bundle}中的数据")
+    writer = BcolzMinuteBarWriter.open(dest)
+    writer.truncate(date)

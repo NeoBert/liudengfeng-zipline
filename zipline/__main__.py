@@ -495,11 +495,33 @@ def fm(bundle):
     show_default=True,
     help='The data bundle to ingest.',
 )
+@click.option(
+    '--ndays',
+    default=0,
+    type=int,
+    help="The sid of the instrument to be used as a benchmark "
+         "(should exist in the ingested bundle)",
+)
+def truncate(bundle, ndays):
+    """截断分钟级别数据包中，实际交易日前ndays在所有ctable中的数据"""
+    from zipline.data.bundles import minutely_data_refresher
+    minutely_data_refresher.truncate(bundle, ndays)
+
+
+@main.command()
+@click.option(
+    '-b',
+    '--bundle',
+    default='mwy',
+    metavar='BUNDLE-NAME',
+    show_default=True,
+    help='The data bundle to ingest.',
+)
 def rfd(bundle):
     """添加模式刷新分钟数据包"""
     # 提高`import zipline`速度
-    from zipline.data.bundles.minutely_data_refresher import refresh_data
-    refresh_data(bundle)
+    from zipline.data.bundles import minutely_data_refresher
+    minutely_data_refresher.refresh_data(bundle)
 
 
 if __name__ == '__main__':
