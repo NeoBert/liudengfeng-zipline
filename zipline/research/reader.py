@@ -1,11 +1,11 @@
 import pandas as pd
 from cnswd.utils import ensure_list
-from ..data.localdata import fetch_single_equity
+from ..data.bundles.wy_data import fetch_single_equity
 
 
 def get_pricing(sids, start, end, fields):
     """查询股价数据
-    
+
     Arguments:
         sids {整数列表或单个整数} -- 要查询的股票代码。单个整数或字符串，或列表
         start {date-like} -- 开始日期

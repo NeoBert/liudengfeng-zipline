@@ -5,7 +5,7 @@ import pytest
 from numpy.testing import assert_array_almost_equal
 from cnswd.utils import sanitize_dates
 from trading_calendars import get_calendar
-from zipline.data.localdata import fetch_single_equity, WY_DAILY_COL_MAPS
+from zipline.data.bundles.wy_data import fetch_single_equity, WY_DAILY_COL_MAPS
 
 START_DATE = '2000-01-01'
 END_DATE = '2019-09-30'
