@@ -599,6 +599,10 @@ class DataPortal(object):
 
         adjustment_ratios_per_asset = []
 
+        # 🆗 凡是非调整列直接返回值全为1的列表
+        if field in NON_ADJUSTED_COLUMN_FACTOR.keys():
+            return [1.0 for asset in assets]
+
         def split_adj_factor(x):
             return x if field != 'volume' else 1.0 / x
 
@@ -633,6 +637,7 @@ class DataPortal(object):
                         break
 
             ratio = reduce(mul, adjustments_for_asset, 1.0)
+            
             adjustment_ratios_per_asset.append(ratio)
 
         return adjustment_ratios_per_asset
