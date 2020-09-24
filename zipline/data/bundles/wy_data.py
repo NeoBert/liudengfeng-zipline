@@ -4,6 +4,9 @@
 
 读取本地数据
 
+1. 元数据所涉及的时间列 其tz为UTC
+2. 数据框datetime-index.tz为None
+
 注：只选A股股票。注意股票总体在`ingest`及`fundamental`必须保持一致。
 """
 import re
@@ -194,10 +197,10 @@ def get_delist_stock_dates():
     res = {}
     for c, d in zip(sz_delist_df['证券代码'].values, sz_delist_df['终止上市日期'].values):
         if not pd.isnull(d):
-            res[c] = pd.to_datetime(d).round('D')
+            res[c] = pd.to_datetime(d).round('D').tz_localize('UTC')
     for c, d in zip(sh_delist_df['COMPANY_CODE'].values, sh_delist_df['QIANYI_DATE'].values):
         if not pd.isnull(d):
-            res[c] = pd.to_datetime(d).round('D')
+            res[c] = pd.to_datetime(d).round('D').tz_localize('UTC')
     return res
 
 
@@ -385,7 +388,7 @@ def fetch_single_equity(stock_code, start, end):
 
     return
     ----------
-    DataFrame: OHLCV列的DataFrame对象。
+    DataFrame: OHLCV列的DataFrame对象。datetimeindex.tz 为 None
 
     Examples
     --------
@@ -463,7 +466,8 @@ def _single_minutely_equity(one_day, code):
     return df
 
 
-def _fetch_single_minutely_equity(one_day, stock_code, default):
+# def _fetch_single_minutely_equity(one_day, stock_code, default):
+def _fetch_single_minutely_equity(one_day, stock_code):
     """
     Notes:
     ------
@@ -482,8 +486,10 @@ def _fetch_single_minutely_equity(one_day, stock_code, default):
     2018-04-19 15:00:00  51.57  51.57  51.57  51.57  353900
     """
     df = _single_minutely_equity(one_day, stock_code)
+    # if df.empty:
+    #     return default[one_day]
     if df.empty:
-        return default[one_day]
+        return df
     end_times = [('11:30', '11:31'), ('15:00', '15:01')]
     resampled = df.resample('1T', label='right')
     ohlc = resampled['price'].ohlc().bfill()
@@ -559,28 +565,34 @@ def fetch_single_minutely_equity(stock_code, start, end):
     cols = ['open', 'high', 'low', 'close', 'volume']
 
     def to_index(d):
+        # 时区为None
         return calendar.minutes_for_session(d).tz_convert('Asia/Shanghai').tz_localize(None)
-
-    default = {d: pd.DataFrame(0, columns=cols, index=to_index(d))
-               for d in dates}
+    # 系统自动处理填充
+    # default = {d: pd.DataFrame(0, columns=cols, index=to_index(d))
+    #            for d in dates}
 
     # 指数分钟级别数据
     if len(stock_code) == 7:
         df = _fetch_single_index(stock_code, start, end)
+        # if df.empty:
+        #     df = pd.concat(default.values()).sort_index()
+        #     return df
         if df.empty:
             return df
         df = df[cols+['date']]
         df.set_index('date', inplace=True)
         dfs = [pd.DataFrame(dict(row), index=to_index(d))
                for d, row in df.iterrows()]
-        return pd.concat(dfs)
+        return pd.concat(dfs).sort_index()
 
+    # func = partial(_fetch_single_minutely_equity,
+    #                stock_code=stock_code, default=default)
     func = partial(_fetch_single_minutely_equity,
-                   stock_code=stock_code, default=default)
+                   stock_code=stock_code)
     # dfs = list(map(func, dates))
     with ThreadPoolExecutor(16) as executor:
         dfs = executor.map(func, dates)
-    return pd.concat(dfs)
+    return pd.concat(dfs).sort_index()
 
 
 def fetch_single_quity_adjustments(stock_code, start, end):

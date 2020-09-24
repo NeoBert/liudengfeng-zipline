@@ -42,9 +42,10 @@ def _update_splits(splits, asset_id, origin_data, start, end):
         'sid': asset_id
     })
     cond = (start <= df['effective_date']) & (df['effective_date'] <= end)
-    # df['ratio'] = df.ratio.astype('float')
     df = df.loc[cond, :]
     if not df.empty:
+        # 此时将时间转换UTC时区
+        df['effective_date'] = pd.to_datetime(df['effective_date'], utc=True)
         splits.append(df)
 
 
@@ -69,6 +70,8 @@ def _update_dividends(dividends, asset_id, origin_data, start, end):
     cond = (start <= df['ex_date']) & (df['ex_date'] <= end)
     df = df.loc[cond, :]
     if not df.empty:
+        # 此时将时间转换UTC时区
+        df['ex_date'] = pd.to_datetime(df['ex_date'], utc=True)
         dividends.append(df)
 
 
@@ -78,6 +81,7 @@ def gen_symbol_data(symbol_map, sessions, splits, dividends, is_minutely):
     else:
         cols = OHLCV_COLS
     start, end = sessions[0], sessions[-1]
+    # 查询时须将时区转换为None
     start, end = start.tz_localize(None), end.tz_localize(None)
     for _, symbol in symbol_map.iteritems():
         asset_id = _to_sid(symbol)
@@ -97,22 +101,23 @@ def gen_symbol_data(symbol_map, sessions, splits, dividends, is_minutely):
                 # 时区调整，以0.0填充na
                 # 转换为以日期为索引的表(与sessions保持一致)
                 asset_data = raw_data.xs(symbol, level=1).reindex(
-                    sessions.tz_localize(None)).fillna(0.0)
+                    sessions.tz_localize(None)
+                ).fillna(0.0).tz_localize('Asia/Shanghai').tz_convert('utc')
             else:
                 asset_data = raw_data
         else:
             # 处理分钟级别数据
             asset_data = fetch_single_minutely_equity(
                 symbol,
-                start=sessions[0],
-                end=sessions[-1],
+                start=start,
+                end=end,
             ).tz_localize('Asia/Shanghai').tz_convert('utc')
 
         # 顺带处理分红派息
         # 获取原始调整数据
         raw_adjustment = fetch_single_quity_adjustments(symbol,
-                                                        start=sessions[0],
-                                                        end=sessions[-1])
+                                                        start=start,
+                                                        end=end)
         # 当非空时才执行
         if not raw_adjustment.empty:
             # 剔除未来事件
@@ -141,7 +146,6 @@ def cndaily_bundle(environ, asset_db_writer, minute_bar_writer,
     """
     t = time.time()
     log.info('读取股票元数据......')
-    # metadata = gen_asset_metadata(False)
 
     # 截取测试代码
     hc = HotDataCache(gen_asset_metadata, hour=9, minute=30, only_in=False)
