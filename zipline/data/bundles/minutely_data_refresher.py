@@ -23,7 +23,8 @@ from zipline.utils.cli import maybe_show_progress
 
 from ..minute_bars import CN_EQUITIES_MINUTES_PER_DAY, BcolzMinuteBarWriter
 from .core import load, most_recent_data
-from .wy_data import fetch_single_minutely_equity, encode_index_code
+from .for_test_bundle import TEST_CODES
+from .wy_data import encode_index_code, fetch_single_minutely_equity
 
 logger = make_logger('数据包', collection='zipline')
 
@@ -151,6 +152,8 @@ def refresh_data(bundle):
     db = get_db('wy_index_daily')
     index_codes = db.list_collection_names()
     web_codes += [encode_index_code(x) for x in index_codes]
+    if 'test' in bundle:
+        web_codes = TEST_CODES
 
     # 全新股票代码采用插入方式
     to_insert = set(web_codes).difference(db_codes)
@@ -161,14 +164,12 @@ def refresh_data(bundle):
     append(dst, list(to_append))
 
 
-def truncate(bundle, ndays):
+def truncate(bundle, start):
     """截断分钟级别数据包中，实际交易日前ndays在所有ctable中的数据."""
-    if not ndays:
-        return
+    if isinstance(start, str):
+        start = pd.Timestamp(start, utc=True)
     p = most_recent_data(bundle)
     dest = join(p, 'minute_equities.bcolz')
-    calendar = get_calendar('XSHG')
-    date = calendar.actual_last_session - ndays*calendar.day
-    logger.warning(f"从{date}开始截断数据包{bundle}中的数据")
+    logger.warning(f"从{start}开始截断数据包{bundle}中的数据")
     writer = BcolzMinuteBarWriter.open(dest)
-    writer.truncate(date)
+    writer.truncate(start)

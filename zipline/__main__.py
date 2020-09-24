@@ -496,16 +496,15 @@ def fm(bundle):
     help='The data bundle to ingest.',
 )
 @click.option(
-    '--ndays',
-    default=0,
-    type=int,
-    help="The sid of the instrument to be used as a benchmark "
-         "(should exist in the ingested bundle)",
+    '-s',
+    '--start',
+    type=Date(tz='utc', as_timestamp=True),
+    help='开始截断日期。',
 )
-def truncate(bundle, ndays):
-    """截断分钟级别数据包中，实际交易日前ndays在所有ctable中的数据"""
+def truncate(bundle, start):
+    """截断指定日期开始的分钟级别数据包中所有ctable数据"""
     from zipline.data.bundles import minutely_data_refresher
-    minutely_data_refresher.truncate(bundle, ndays)
+    minutely_data_refresher.truncate(bundle, start)
 
 
 @main.command()

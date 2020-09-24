@@ -2,14 +2,17 @@
 TEST数据包
 """
 
-import pandas as pd
 import time
-from cnswd.utils import make_logger, HotDataCache
-from .wy_data import (fetch_single_equity, fetch_single_quity_adjustments,
-                      fetch_single_minutely_equity, gen_asset_metadata)
+
+import pandas as pd
+from cnswd.utils import HotDataCache, make_logger
+
 from . import core as bundles
 from .adjusts import NON_ADJUSTED_COLUMN_FACTOR
+
 from .utils import _exchanges
+from .wy_data import (fetch_single_equity, fetch_single_minutely_equity,
+                      fetch_single_quity_adjustments, gen_asset_metadata)
 
 TODAY = pd.Timestamp('today').normalize()
 log = make_logger('wydb', collection='zipline')
@@ -17,7 +20,8 @@ log = make_logger('wydb', collection='zipline')
 
 OHLCV_COLS = ['open', 'high', 'low', 'close', 'volume']
 # 截取测试股票、指数代码
-TEST_SIDS = [1, 2, 333, 2335, 1000002]
+TEST_SIDS = [1, 2, 333, 2335, 2024, 600645, 300001, 1000002, 1000001]
+TEST_CODES = [str(x).zfill(6) for x in TEST_SIDS]
 
 
 def _to_sid(x):
@@ -125,7 +129,7 @@ def gen_symbol_data(symbol_map, sessions, splits, dividends, is_minutely):
 
 
 @bundles.register(
-    'DTEST',
+    'dtest',
     calendar_name='XSHG',
     minutes_per_day=240)
 def cndaily_bundle(environ, asset_db_writer, minute_bar_writer,
@@ -178,11 +182,10 @@ def cndaily_bundle(environ, asset_db_writer, minute_bar_writer,
 
 
 @bundles.register(
-    'MTEST',
+    'mtest',
     calendar_name='XSHG',
-    # TODO:测试
-    # start_session=pd.Timestamp('2020-06-29', tz='UTC'),
-    start_session=pd.Timestamp('2020-8-12', tz='UTC'),
+    start_session=pd.Timestamp('2020-06-29', tz='UTC'),
+    end_session=pd.Timestamp('today', tz='UTC').round('D'),
     minutes_per_day=240)
 def cnminutely_bundle(environ, asset_db_writer, minute_bar_writer,
                       daily_bar_writer, adjustment_writer, calendar,
