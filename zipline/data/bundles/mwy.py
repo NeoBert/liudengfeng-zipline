@@ -143,7 +143,7 @@ def gen_symbol_data(symbol_map, sessions, splits, dividends, d_index, m_index, i
     'dwy',
     calendar_name='XSHG',
     start_session=pd.Timestamp('2010-01-04', tz='UTC'),
-    end_session=pd.Timestamp('today', tz='UTC').round('D'),
+    # end_session=pd.Timestamp('today', tz='UTC').round('D'),
     minutes_per_day=240)
 def cndaily_bundle(environ, asset_db_writer, minute_bar_writer,
                    daily_bar_writer, adjustment_writer, calendar,
@@ -205,7 +205,7 @@ def cndaily_bundle(environ, asset_db_writer, minute_bar_writer,
     'mwy',
     calendar_name='XSHG',
     start_session=pd.Timestamp('2020-06-29', tz='UTC'),
-    end_session=pd.Timestamp('today', tz='UTC').round('D'),
+    # end_session=pd.Timestamp('today', tz='UTC').round('D'),
     minutes_per_day=240)
 def cnminutely_bundle(environ, asset_db_writer, minute_bar_writer,
                       daily_bar_writer, adjustment_writer, calendar,
