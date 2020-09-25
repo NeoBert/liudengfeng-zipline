@@ -75,7 +75,7 @@ def _update_dividends(dividends, asset_id, origin_data, start, end):
         dividends.append(df)
 
 
-def gen_symbol_data(symbol_map, sessions, splits, dividends, is_minutely):
+def gen_symbol_data(symbol_map, sessions, splits, dividends, d_index, m_index, is_minutely):
     if not is_minutely:
         cols = OHLCV_COLS + list(NON_ADJUSTED_COLUMN_FACTOR.keys())
     else:
@@ -83,15 +83,15 @@ def gen_symbol_data(symbol_map, sessions, splits, dividends, is_minutely):
     start, end = sessions[0], sessions[-1]
     # 查询时须将时区转换为None
     start, end = start.tz_localize(None), end.tz_localize(None)
+    m_index_local = m_index.tz_convert('Asia/Shanghai').tz_localize(None)
     for _, symbol in symbol_map.iteritems():
         asset_id = _to_sid(symbol)
         if not is_minutely:
             raw_data = fetch_single_equity(
                 symbol,
-                start=sessions[0],
-                end=sessions[-1],
+                start=start,
+                end=end,
             )
-            # 新股可能存在日线延迟，会触发异常
             if not raw_data.empty:
 
                 # 以日期、符号为索引
@@ -104,14 +104,18 @@ def gen_symbol_data(symbol_map, sessions, splits, dividends, is_minutely):
                     sessions.tz_localize(None)
                 ).fillna(0.0).tz_localize('Asia/Shanghai').tz_convert('utc')
             else:
-                asset_data = raw_data
+                asset_data = pd.DataFrame(
+                    data=0.0, index=d_index, columns=cols)
         else:
             # 处理分钟级别数据
             asset_data = fetch_single_minutely_equity(
                 symbol,
                 start=start,
                 end=end,
-            ).tz_localize('Asia/Shanghai').tz_convert('utc')
+            )
+            asset_data = asset_data.reindex(m_index_local, method='ffill')
+            asset_data = asset_data.tz_localize(
+                'Asia/Shanghai').tz_convert('utc')
 
         # 顺带处理分红派息
         # 获取原始调整数据
@@ -134,9 +138,12 @@ def gen_symbol_data(symbol_map, sessions, splits, dividends, is_minutely):
         yield asset_id, asset_data
 
 
+# 开始日期必须是交易日
 @bundles.register(
     'dwy',
     calendar_name='XSHG',
+    start_session=pd.Timestamp('2010-01-04', tz='UTC'),
+    end_session=pd.Timestamp('today', tz='UTC').round('D'),
     minutes_per_day=240)
 def cndaily_bundle(environ, asset_db_writer, minute_bar_writer,
                    daily_bar_writer, adjustment_writer, calendar,
@@ -156,6 +163,13 @@ def cndaily_bundle(environ, asset_db_writer, minute_bar_writer,
     symbol_map = metadata.symbol
     sessions = calendar.sessions_in_range(start_session, end_session)
 
+    d_fmt = r"%Y-%m-%d"
+    start_str = sessions[0].strftime(d_fmt)
+    end_str = sessions[-1].strftime(d_fmt)
+    # UTC 时区 index
+    d_index = calendar.sessions_in_range(start_str, end_str)
+    m_index = calendar.minutes_for_sessions_in_range(start_str, end_str)
+
     log.info('日线数据集（股票数量：{}）'.format(len(symbol_map)))
 
     # 写入股票元数据
@@ -170,6 +184,8 @@ def cndaily_bundle(environ, asset_db_writer, minute_bar_writer,
                         sessions,
                         splits,
                         dividends,
+                        d_index=d_index,
+                        m_index=m_index,
                         is_minutely=False),
         show_progress=show_progress,
         has_additional_cols=True,
@@ -189,6 +205,7 @@ def cndaily_bundle(environ, asset_db_writer, minute_bar_writer,
     'mwy',
     calendar_name='XSHG',
     start_session=pd.Timestamp('2020-06-29', tz='UTC'),
+    end_session=pd.Timestamp('today', tz='UTC').round('D'),
     minutes_per_day=240)
 def cnminutely_bundle(environ, asset_db_writer, minute_bar_writer,
                       daily_bar_writer, adjustment_writer, calendar,
@@ -208,6 +225,12 @@ def cnminutely_bundle(environ, asset_db_writer, minute_bar_writer,
 
     sessions = calendar.sessions_in_range(start_session, end_session)
 
+    d_fmt = r"%Y-%m-%d"
+    start_str = sessions[0].strftime(d_fmt)
+    end_str = sessions[-1].strftime(d_fmt)
+    d_index = calendar.sessions_in_range(start_str, end_str)
+    m_index = calendar.minutes_for_sessions_in_range(start_str, end_str)
+
     log.info('分钟级别数据集（股票数量：{}）'.format(len(symbol_map)))
 
     # 写入股票元数据
@@ -223,6 +246,8 @@ def cnminutely_bundle(environ, asset_db_writer, minute_bar_writer,
                         sessions,
                         splits,
                         dividends,
+                        d_index=d_index,
+                        m_index=m_index,
                         is_minutely=False),
         show_progress=show_progress,
         has_additional_cols=True,
@@ -240,6 +265,8 @@ def cnminutely_bundle(environ, asset_db_writer, minute_bar_writer,
                         sessions,
                         splits,
                         dividends,
+                        d_index=d_index,
+                        m_index=m_index,
                         is_minutely=True),
         show_progress=show_progress,
     )

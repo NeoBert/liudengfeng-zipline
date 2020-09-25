@@ -10,6 +10,7 @@
 import re
 import warnings
 from concurrent.futures.thread import ThreadPoolExecutor
+from functools import partial
 
 import numpy as np
 import pandas as pd
@@ -417,9 +418,10 @@ def get_concept_info(only_A=True):
 
 # region 动态数据
 
-def _change_hist(code):
+def _change_hist(code, db=None):
     # 深发展Ａ -> 深发展A
-    db = get_db('wy_stock_daily')
+    if db is None:
+        db = get_db('wy_stock_daily')
     collection = db[code]
     if collection.estimated_document_count() == 0:
         return pd.DataFrame()
@@ -441,9 +443,10 @@ def get_short_name_changes(only_A=True):
     codes = db.list_collection_names()
     if only_A:
         codes = filter_a(codes)
+    func = partial(_change_hist, db=db)
     # 3878只股票 用时 48s
     with ThreadPoolExecutor(MAX_WORKER) as pool:
-        r = pool.map(_change_hist, codes)
+        r = pool.map(func, codes)
     df = pd.concat(r, ignore_index=True)
     return df
 

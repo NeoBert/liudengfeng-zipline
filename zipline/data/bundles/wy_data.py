@@ -12,7 +12,6 @@
 import re
 import warnings
 from concurrent.futures.thread import ThreadPoolExecutor
-from concurrent.futures import ProcessPoolExecutor
 from functools import lru_cache, partial
 from trading_calendars import get_calendar
 import numpy as np
@@ -146,7 +145,7 @@ def gen_index_metadata():
     return pd.concat(dfs)
 
 
-def _stock_first_and_last(code):
+def _stock_first_and_last(code, db=None):
     """
     日线交易数据开始交易及结束交易日期
 
@@ -156,7 +155,8 @@ def _stock_first_and_last(code):
     symbol	asset_name	first_traded	last_traded
     0	000333	美的集团	2020-04-02 00:00:00+00:00	2020-04-04 00:00:00+00:00
     """
-    db = get_db('wy_stock_daily')
+    if db is None:
+        db = get_db('wy_stock_daily')
     if code not in db.list_collection_names():
         return pd.DataFrame()
     collection = db[code]
@@ -233,11 +233,13 @@ def gen_asset_metadata(only_in=True, only_A=True, include_index=True):
     delisted = get_delist_stock_dates()
     if only_in:
         codes = [code for code in codes if code not in delisted.keys()]
+    
     # 股票数量 >3900
     # 设置max_workers=8，用时 67s  股票 4565 用时 110s
     # 设置max_workers=4，用时 54s
+    func = partial(_stock_first_and_last, db=db)
     with ThreadPoolExecutor(MAX_WORKER) as pool:
-        r = pool.map(_stock_first_and_last, codes)
+        r = pool.map(func, codes)
     df = pd.concat(r)
     df.sort_values('symbol', inplace=True)
     df['exchange'] = df['symbol'].map(get_exchange)
@@ -362,8 +364,7 @@ def _fetch_single_index(code, start, end):
     # fill 0
     cols = ['b_close', 'b_high', 'b_low', 'b_open',
             'shares_outstanding', 'total_shares']
-    for col in cols:
-        df[col] = 0.0
+    df.loc[:, cols] = 0.0
     return df
 
 
@@ -437,37 +438,35 @@ def fetch_single_equity(stock_code, start, end):
     return df
 
 
-def _single_minutely_equity(one_day, code):
-    db = get_db('cjmx')
+def _single_minutely_equity(one_day, code, db=None):
+    if db is None:
+        db = get_db('cjmx')
     name = one_day.strftime(r"%Y-%m-%d")
     if name not in db.list_collection_names():
         return pd.DataFrame()
     collection = db[name]
-    predicate = {'股票代码': code}
+    # 存在延时
+    start = one_day.replace(hour=9, minute=30)
+    end = one_day.replace(hour=15, minute=1)
+    predicate = {
+        '股票代码': code,
+        '成交时间': {'$gte': start, '$lte': end},
+    }
     projection = {
-        '成交时间': 1,
-        # '股票代码': 1,
-        '成交价': 1,
-        '成交量': 1,
+        'datetime': '$成交时间',
+        'price': '$成交价',
+        'volume': '$成交量',
         '_id': 0
     }
     cursor = collection.find(predicate, projection=projection)
     df = pd.DataFrame.from_records(cursor)
     if df.empty:
         return df
-    df.rename(columns={
-        '成交时间': 'datetime',
-        # '股票代码': 'symbol',
-        '成交价': 'price',
-        '成交量': 'volume',
-    },
-        inplace=True)
     df.set_index(['datetime'], inplace=True)
     return df
 
 
-# def _fetch_single_minutely_equity(one_day, stock_code, default):
-def _fetch_single_minutely_equity(one_day, stock_code):
+def _fetch_single_minutely_equity(one_day, stock_code, db=None):
     """
     Notes:
     ------
@@ -476,7 +475,7 @@ def _fetch_single_minutely_equity(one_day, stock_code):
     --------
     >>> stock_code = '000333'
     >>> one_day = pd.Timestamp('2020-07-31 00:00:00', freq='B')
-    >>> df = _fetch_single_minutely_equity(one_day, stock_code, {})
+    >>> df = _fetch_single_minutely_equity(one_day, stock_code)
     >>> df.tail()
                         close   high    low   open  volume
     2018-04-19 14:56:00  51.55  51.56  51.50  51.55  376400
@@ -485,9 +484,7 @@ def _fetch_single_minutely_equity(one_day, stock_code):
     2018-04-19 14:59:00  51.55  51.55  51.55  51.55       0
     2018-04-19 15:00:00  51.57  51.57  51.57  51.57  353900
     """
-    df = _single_minutely_equity(one_day, stock_code)
-    # if df.empty:
-    #     return default[one_day]
+    df = _single_minutely_equity(one_day, stock_code, db)
     if df.empty:
         return df
     end_times = [('11:30', '11:31'), ('15:00', '15:01')]
@@ -528,7 +525,7 @@ def fetch_single_minutely_equity(stock_code, start, end):
     从本地数据库读取单个股票期间分钟级别交易明细数据
 
     **注意** 
-        交易日历分钟自9：31~11：31 13：01~15：01
+        交易日历分钟自9:31~11:30 13:01~15：00
         在数据库中，分钟级别成交数据分日期存储
 
     Parameters
@@ -559,38 +556,23 @@ def fetch_single_minutely_equity(stock_code, start, end):
     2018-04-19 15:00:00  51.57  51.57  51.57  51.57  353900
     """
     dates = pd.date_range(start, end, freq='B').tz_localize(None)
-    calendar = get_calendar('XSHG')
-    t_end = calendar.actual_last_session.date()
-    dates = list(filter(lambda d: d.date() <= t_end, dates))
     cols = ['open', 'high', 'low', 'close', 'volume']
-
-    def to_index(d):
-        # 时区为None
-        return calendar.minutes_for_session(d).tz_convert('Asia/Shanghai').tz_localize(None)
-    # 系统自动处理填充
-    # default = {d: pd.DataFrame(0, columns=cols, index=to_index(d))
-    #            for d in dates}
 
     # 指数分钟级别数据
     if len(stock_code) == 7:
-        df = _fetch_single_index(stock_code, start, end)
-        # if df.empty:
-        #     df = pd.concat(default.values()).sort_index()
-        #     return df
+        index = pd.date_range(dates[0], dates[-1] + pd.Timedelta(days=1), freq='1T')
+        df = _fetch_single_index(stock_code, dates[0], dates[-1])
         if df.empty:
-            return df
+            return pd.DataFrame(0.0, columns=cols, index=index)
         df = df[cols+['date']]
         df.set_index('date', inplace=True)
-        dfs = [pd.DataFrame(dict(row), index=to_index(d))
-               for d, row in df.iterrows()]
-        return pd.concat(dfs).sort_index()
+        df = df.reindex(index, method='ffill')
+        return df.sort_index()
 
-    # func = partial(_fetch_single_minutely_equity,
-    #                stock_code=stock_code, default=default)
+    db = get_db('cjmx')
     func = partial(_fetch_single_minutely_equity,
-                   stock_code=stock_code)
-    # dfs = list(map(func, dates))
-    with ThreadPoolExecutor(16) as executor:
+                   stock_code=stock_code, db=db)
+    with ThreadPoolExecutor(MAX_WORKER) as executor:
         dfs = executor.map(func, dates)
     return pd.concat(dfs).sort_index()
 

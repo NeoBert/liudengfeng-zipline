@@ -207,7 +207,7 @@ class BcolzDailyBarWriter(object):
         ctx = maybe_show_progress(
             (
                 (sid, self.to_ctable(df, invalid_data_behavior))
-                for sid, df in data if not df.empty  # 空白表不需要写入！！！
+                for sid, df in data
             ),
             show_progress=show_progress,
             item_show_func=self.progress_bar_item_show_func,

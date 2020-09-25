@@ -73,14 +73,22 @@ def insert(dest, codes):
         item_show_func=lambda e: e,
         label="【新增】分钟级别数据",
     )
+
+    d_fmt = r"%Y-%m-%d"
+    start_str = s.strftime(d_fmt)
+    end_str = e.strftime(d_fmt)
+    m_index = c.minutes_for_sessions_in_range(start_str, end_str)
+
     with ctx as it:
         for code in it:
             sid = int(code)
-            df = fetch_single_minutely_equity(code, s, e)
+            df = fetch_single_minutely_equity(code, s.date(), e.date())
             if df.empty:
                 continue
             # 务必转换为UTC时区
-            df = df.tz_localize('Asia/Shanghai').tz_convert('UTC')
+            # 且由于指数分钟级别数据包含的是所有分钟，需要截断至交易分钟
+            df = df.tz_localize(
+                'Asia/Shanghai').tz_convert('UTC').reindex(m_index, method='ffill')
             writer.write_sid(sid, df)
 
 
@@ -91,10 +99,15 @@ def append(dest, codes):
     ctx = maybe_show_progress(
         codes,
         show_progress=True,
-        # 🆗 显示股票代码
         item_show_func=lambda e: e,
         label="【更新】分钟级别数据",
     )
+
+    d_fmt = r"%Y-%m-%d"
+    start_str = s.strftime(d_fmt)
+    end_str = e.strftime(d_fmt)
+    m_index = c.minutes_for_sessions_in_range(start_str, end_str)
+
     with ctx as it:
         for code in it:
             sid = int(code)
@@ -105,15 +118,37 @@ def append(dest, codes):
                 start = last_dt + c.day
             if start > e:
                 continue
-            df = fetch_single_minutely_equity(code, start, e)
+            # print(sid, start.date(), e.date())
+            df = fetch_single_minutely_equity(code, start.date(), e.date())
             if df.empty:
                 continue
             # 务必转换为UTC时区
-            df = df.tz_localize('Asia/Shanghai').tz_convert('UTC')
+            # 且由于指数分钟级别数据包含的是所有分钟，需要截断至交易分钟
+            df = df.tz_localize(
+                'Asia/Shanghai').tz_convert('UTC').reindex(m_index, method='ffill')
             writer.write_sid(sid, df)
 
 
+def _get_codes(bundle, m_dir_path):
+    # 代码在其子目录下 ** 代表当前目录的子目录
+    db_codes = [p.stem.split('.')[0] for p in m_dir_path.glob("**/*.bcolz")]
+    if 'test' in bundle:
+        web_codes = TEST_CODES
+    else:
+        web_codes = [code for code, dt in get_stock_status().items()
+                     if dt is not None]
+        db = get_db('wy_index_daily')
+        index_codes = db.list_collection_names()
+        web_codes += [encode_index_code(x) for x in index_codes]
+    to_insert = set(web_codes).difference(db_codes)
+    to_append = set(web_codes).intersection(db_codes)
+    return to_insert, to_append
+
+
 def refresh_data(bundle):
+    # 首字为m代表分钟级别数据包
+    if bundle[0] != 'm':
+        return
     daily_bundle_name = f"d{bundle[1:]}"
     d_path = try_run_ingest(daily_bundle_name)
     m_path = try_run_ingest(bundle)
@@ -145,23 +180,13 @@ def refresh_data(bundle):
     logger.info("指数分钟级别数据实际为日线数据")
 
     # 比较已经写入的代码与代码总体
-    # 代码在其子目录下 ** 代表当前目录的子目录
-    db_codes = [p.stem.split('.')[0] for p in m_dir_path.glob("**/*.bcolz")]
-    web_codes = [code for code, dt in get_stock_status().items()
-                 if dt is not None]
-    db = get_db('wy_index_daily')
-    index_codes = db.list_collection_names()
-    web_codes += [encode_index_code(x) for x in index_codes]
-    if 'test' in bundle:
-        web_codes = TEST_CODES
+    to_insert, to_append = _get_codes(bundle, m_dir_path)
 
     # 全新股票代码采用插入方式
-    to_insert = set(web_codes).difference(db_codes)
-    insert(dst, list(to_insert))
+    insert(dst, to_insert)
 
     # 已经存在的股票代码使用添加方式
-    to_append = set(web_codes).intersection(db_codes)
-    append(dst, list(to_append))
+    append(dst, to_append)
 
 
 def truncate(bundle, start):
@@ -169,11 +194,11 @@ def truncate(bundle, start):
     if isinstance(start, str):
         start = pd.Timestamp(start, utc=True).round('D')
     calendar = get_calendar('XSHG')
-    # calendar.schedule.index.searchsorted(start,'right')
     sessions = calendar.sessions_in_range(
         start, pd.Timestamp('today', tz='UTC'))
     if len(sessions) < 1:
         return
+    # 不带时区信息
     date = sessions[0]
     p = most_recent_data(bundle)
     dest = join(p, 'minute_equities.bcolz')
