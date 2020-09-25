@@ -113,9 +113,12 @@ def gen_symbol_data(symbol_map, sessions, splits, dividends, d_index, m_index, i
                 start=start,
                 end=end,
             )
-            asset_data = asset_data.reindex(m_index_local, method='ffill')
-            asset_data = asset_data.tz_localize(
-                'Asia/Shanghai').tz_convert('utc')
+            if not asset_data.empty:
+                asset_data = asset_data.reindex(m_index_local, method='ffill')
+                asset_data = asset_data.tz_localize(
+                    'Asia/Shanghai').tz_convert('utc')
+            else:
+                asset_data = pd.DataFrame(0.0, columns=cols, index=m_index)
 
         # 顺带处理分红派息
         # 获取原始调整数据
