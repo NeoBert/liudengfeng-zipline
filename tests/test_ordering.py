@@ -26,8 +26,9 @@ class TestOrderMethods(zf.WithConstantEquityMinuteBarData,
     # 12 13 14 15 16 17 18
     # 19 20 21 22 23 24 25
     # 26 27 28 30 31  1  2
+    # 期间共四个交易日
     START_DATE = T('2020-01-02')
-    END_DATE = T('2020-01-06')
+    END_DATE = T('2020-01-07')
     SIM_PARAMS_START_DATE = T('2020-01-04')
 
     ASSET_FINDER_EQUITY_SIDS = (1,)
