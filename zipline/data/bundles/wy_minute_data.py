@@ -136,12 +136,15 @@ def _fetch_single_minutely_equity(one_day, stock_code, db=None, is_index=False):
 def _index_daily_to_minute(code, one_day):
     """将指数日线数据转换为分钟级别数据"""
     cols = ['date', 'open', 'high', 'low', 'close', 'volume']
-    df = _fetch_single_index(code, one_day, one_day)
     index = tminutes(one_day, one_day)
+    default = pd.DataFrame(
+        0.0, columns=['open', 'high', 'low', 'close', 'volume'], index=index)
+    try:
+        df = _fetch_single_index(code, one_day, one_day)
+    except KeyError:
+        return default
     if df.empty:
-        res = pd.DataFrame(
-            0.0, columns=['open', 'high', 'low', 'close', 'volume'], index=index)
-        return res
+        return default
     df = df[cols]
     df['date'] = df['date'].map(lambda x: x.replace(hour=9, minute=31))
     df.set_index('date', inplace=True)

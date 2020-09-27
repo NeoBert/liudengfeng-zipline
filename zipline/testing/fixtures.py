@@ -520,7 +520,7 @@ class WithTradingCalendars(object):
         with that asset type.
     """
     TRADING_CALENDAR_STRS = ('XSHG',)
-    TRADING_CALENDAR_FOR_ASSET_TYPE = {Equity: 'XSHG', Future: 'us_futures'}
+    TRADING_CALENDAR_FOR_ASSET_TYPE = {Equity: 'XSHG', Future: 'XSHG'}
     # For backwards compatibility, exisitng tests and fixtures refer to
     # `trading_calendar` with the assumption that the value is the XSHG
     # calendar.
@@ -1413,7 +1413,7 @@ class WithFutureMinuteBarData(WithAssetFinder, WithTradingCalendars):
 
     @classmethod
     def make_future_minute_bar_data(cls):
-        trading_calendar = get_calendar('us_futures')
+        trading_calendar = get_calendar('XSHG')
         return create_minute_bar_data(
             trading_calendar.minutes_for_sessions_in_range(
                 cls.future_minute_bar_days[0],
@@ -1425,7 +1425,7 @@ class WithFutureMinuteBarData(WithAssetFinder, WithTradingCalendars):
     @classmethod
     def init_class_fixtures(cls):
         super(WithFutureMinuteBarData, cls).init_class_fixtures()
-        trading_calendar = get_calendar('us_futures')
+        trading_calendar = get_calendar('XSHG')
         cls.future_minute_bar_days = _trading_days_for_minute_bars(
             trading_calendar,
             pd.Timestamp(cls.FUTURE_MINUTE_BAR_START_DATE),
@@ -1536,7 +1536,7 @@ class WithBcolzFutureMinuteBarReader(WithFutureMinuteBarData, WithTmpDir):
     @classmethod
     def init_class_fixtures(cls):
         super(WithBcolzFutureMinuteBarReader, cls).init_class_fixtures()
-        trading_calendar = get_calendar('us_futures')
+        trading_calendar = get_calendar('XSHG')
         cls.bcolz_future_minute_bar_path = p = \
             cls.make_bcolz_future_minute_bar_rootdir_path()
         days = cls.future_minute_bar_days
