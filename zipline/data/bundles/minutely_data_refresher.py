@@ -24,7 +24,8 @@ from zipline.utils.cli import maybe_show_progress
 from ..minute_bars import CN_EQUITIES_MINUTES_PER_DAY, BcolzMinuteBarWriter
 from .core import load, most_recent_data
 from .for_test_bundle import TEST_CODES
-from .wy_data import encode_index_code, fetch_single_minutely_equity
+from .wy_minute_data import encode_index_code, fetch_single_minutely_equity
+
 
 logger = make_logger('数据包', collection='zipline')
 

@@ -197,10 +197,10 @@ def get_delist_stock_dates():
     res = {}
     for c, d in zip(sz_delist_df['证券代码'].values, sz_delist_df['终止上市日期'].values):
         if not pd.isnull(d):
-            res[c] = pd.to_datetime(d).round('D').tz_localize('UTC')
+            res[c] = pd.to_datetime(d).floor('D').tz_localize('UTC')
     for c, d in zip(sh_delist_df['COMPANY_CODE'].values, sh_delist_df['QIANYI_DATE'].values):
         if not pd.isnull(d):
-            res[c] = pd.to_datetime(d).round('D').tz_localize('UTC')
+            res[c] = pd.to_datetime(d).floor('D').tz_localize('UTC')
     return res
 
 
@@ -233,7 +233,7 @@ def gen_asset_metadata(only_in=True, only_A=True, include_index=True):
     delisted = get_delist_stock_dates()
     if only_in:
         codes = [code for code in codes if code not in delisted.keys()]
-    
+
     # 股票数量 >3900
     # 设置max_workers=8，用时 67s  股票 4565 用时 110s
     # 设置max_workers=4，用时 54s
@@ -520,61 +520,62 @@ def _fetch_single_minutely_equity(one_day, stock_code, db=None):
     return pd.concat([am, pm]).sort_index()
 
 
-def fetch_single_minutely_equity(stock_code, start, end):
-    """
-    从本地数据库读取单个股票期间分钟级别交易明细数据
+# def fetch_single_minutely_equity(stock_code, start, end):
+#     """
+#     从本地数据库读取单个股票期间分钟级别交易明细数据
 
-    **注意** 
-        交易日历分钟自9:31~11:30 13:01~15：00
-        在数据库中，分钟级别成交数据分日期存储
+#     **注意** 
+#         交易日历分钟自9:31~11:30 13:01~15：00
+#         在数据库中，分钟级别成交数据分日期存储
 
-    Parameters
-    ----------
-    stock_code : str
-        要获取数据的股票代码
-    start_date : datetime-like
-        自开始日期(包含该日)
-    end_date : datetime-like
-        至结束日期
+#     Parameters
+#     ----------
+#     stock_code : str
+#         要获取数据的股票代码
+#     start_date : datetime-like
+#         自开始日期(包含该日)
+#     end_date : datetime-like
+#         至结束日期
 
-    return
-    ----------
-    DataFrame: OHLCV列的DataFrame对象。
+#     return
+#     ----------
+#     DataFrame: OHLCV列的DataFrame对象。
 
-    Examples
-    --------
-    >>> stock_code = '000333'
-    >>> start = '2020-06-29'
-    >>> end = pd.Timestamp('2020-06-30')
-    >>> df = fetch_single_minutely_equity(stock_code, start, end)
-    >>> df.tail()
-                        close   high    low   open  volume
-    2018-04-19 14:56:00  51.55  51.56  51.50  51.55  376400
-    2018-04-19 14:57:00  51.55  51.55  51.55  51.55   20000
-    2018-04-19 14:58:00  51.55  51.55  51.55  51.55       0
-    2018-04-19 14:59:00  51.55  51.55  51.55  51.55       0
-    2018-04-19 15:00:00  51.57  51.57  51.57  51.57  353900
-    """
-    dates = pd.date_range(start, end, freq='B').tz_localize(None)
-    cols = ['open', 'high', 'low', 'close', 'volume']
+#     Examples
+#     --------
+#     >>> stock_code = '000333'
+#     >>> start = '2020-06-29'
+#     >>> end = pd.Timestamp('2020-06-30')
+#     >>> df = fetch_single_minutely_equity(stock_code, start, end)
+#     >>> df.tail()
+#                         close   high    low   open  volume
+#     2018-04-19 14:56:00  51.55  51.56  51.50  51.55  376400
+#     2018-04-19 14:57:00  51.55  51.55  51.55  51.55   20000
+#     2018-04-19 14:58:00  51.55  51.55  51.55  51.55       0
+#     2018-04-19 14:59:00  51.55  51.55  51.55  51.55       0
+#     2018-04-19 15:00:00  51.57  51.57  51.57  51.57  353900
+#     """
+#     dates = pd.date_range(start, end, freq='B').tz_localize(None)
+#     cols = ['open', 'high', 'low', 'close', 'volume']
 
-    # 指数分钟级别数据
-    if len(stock_code) == 7:
-        index = pd.date_range(dates[0], dates[-1] + pd.Timedelta(days=1), freq='1T')
-        df = _fetch_single_index(stock_code, dates[0], dates[-1])
-        if df.empty:
-            return pd.DataFrame(0.0, columns=cols, index=index)
-        df = df[cols+['date']]
-        df.set_index('date', inplace=True)
-        df = df.reindex(index, method='ffill')
-        return df.sort_index()
+#     # 指数分钟级别数据
+#     if len(stock_code) == 7:
+#         index = pd.date_range(
+#             dates[0], dates[-1] + pd.Timedelta(days=1), freq='1T')
+#         df = _fetch_single_index(stock_code, dates[0], dates[-1])
+#         if df.empty:
+#             return pd.DataFrame(0.0, columns=cols, index=index)
+#         df = df[cols+['date']]
+#         df.set_index('date', inplace=True)
+#         df = df.reindex(index, method='ffill')
+#         return df.sort_index()
 
-    db = get_db('cjmx')
-    func = partial(_fetch_single_minutely_equity,
-                   stock_code=stock_code, db=db)
-    with ThreadPoolExecutor(MAX_WORKER) as executor:
-        dfs = executor.map(func, dates)
-    return pd.concat(dfs).sort_index()
+#     db = get_db('cjmx')
+#     func = partial(_fetch_single_minutely_equity,
+#                    stock_code=stock_code, db=db)
+#     with ThreadPoolExecutor(MAX_WORKER) as executor:
+#         dfs = executor.map(func, dates)
+#     return pd.concat(dfs).sort_index()
 
 
 def fetch_single_quity_adjustments(stock_code, start, end):

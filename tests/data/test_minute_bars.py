@@ -1140,7 +1140,7 @@ class BcolzMinuteBarTestCase(WithTradingCalendars, WithAssetFinder,
 
         self.assertEqual(50.0, volume_price)
 
-    @unittest.skip("无需使用")
+    # @unittest.skip("无需使用")
     def test_truncate_all_data_points(self):
         tds = self.market_opens.index
         days = tds[tds.slice_indexer(

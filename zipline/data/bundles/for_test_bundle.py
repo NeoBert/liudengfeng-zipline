@@ -9,10 +9,10 @@ from cnswd.utils import HotDataCache, make_logger
 
 from . import core as bundles
 from .adjusts import NON_ADJUSTED_COLUMN_FACTOR
-
 from .utils import _exchanges
-from .wy_data import (fetch_single_equity, fetch_single_minutely_equity,
-                      fetch_single_quity_adjustments, gen_asset_metadata)
+from .wy_data import (fetch_single_equity, fetch_single_quity_adjustments,
+                      gen_asset_metadata)
+from .wy_minute_data import fetch_single_minutely_equity
 
 TODAY = pd.Timestamp('today').normalize()
 log = make_logger('wydb', collection='zipline')
@@ -139,6 +139,8 @@ def gen_symbol_data(symbol_map, sessions, splits, dividends, d_index, m_index, i
         yield asset_id, asset_data
 
 # 开始日期必须是交易日
+
+
 @bundles.register(
     'dtest',
     calendar_name='XSHG',
@@ -207,7 +209,7 @@ def cndaily_bundle(environ, asset_db_writer, minute_bar_writer,
     'mtest',
     calendar_name='XSHG',
     # 必须与正式环境一致
-    start_session=pd.Timestamp('2020-06-29',tz='UTC'),
+    start_session=pd.Timestamp('2020-06-29', tz='UTC'),
     # end_session=pd.Timestamp('today', tz='UTC').round('D'),
     minutes_per_day=240)
 def cnminutely_bundle(environ, asset_db_writer, minute_bar_writer,

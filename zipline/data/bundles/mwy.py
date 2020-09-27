@@ -13,7 +13,9 @@ import pandas as pd
 import time
 from cnswd.utils import make_logger, HotDataCache
 from .wy_data import (fetch_single_equity, fetch_single_quity_adjustments,
-                      fetch_single_minutely_equity, gen_asset_metadata)
+                      gen_asset_metadata)
+from .wy_minute_data import fetch_single_minutely_equity
+
 from . import core as bundles
 from .adjusts import NON_ADJUSTED_COLUMN_FACTOR
 from .utils import _exchanges
