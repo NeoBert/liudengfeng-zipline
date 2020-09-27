@@ -9,7 +9,7 @@ import numpy as np
 import pandas as pd
 
 from . import factors, filters, classifiers
-from ..utils.math_utils import nanmean, nansum
+from ..utils.math_utils import nanmean, nansum, nanmax
 from ..utils.numpy_utils import changed_locations, int64_dtype
 from .classifiers import CustomClassifier
 from .data.equity_pricing import CNEquityPricing
@@ -20,6 +20,7 @@ from .fundamentals import Fundamentals
 
 
 # region 自定义因子
+
 
 class TTM(CustomFactor):
     """
@@ -226,6 +227,7 @@ class SWSector(CustomClassifier):
     def compute(self, today, assets, out, cats):
         out[:] = cats[0]
 # endregion
+
 # region 过滤器
 
 # 交易总体仅保护股票、指数，不包含ETF、债券
@@ -245,6 +247,20 @@ class IsStock(CustomFilter):
 
     def compute(self, today, assets, out):
         out[:] = [len(str(x)) != 7 for x in assets]
+
+
+class MaxMultipleFilter(CustomFilter):
+    """
+    因子相对于max(factor[0~window_length-1]最大值的倍数大于指定k.
+
+    """
+    params = ('k',)
+    window_length = 21  # 默认一个月
+    inputs = [CNEquityPricing.volume]
+
+    def compute(self, today, assets, out, vs, k):
+        pre_max = nanmax(vs[:-1], axis=0)
+        out[:] = vs[-1] / pre_max > k
 
 
 def QTradableStocksUS():
