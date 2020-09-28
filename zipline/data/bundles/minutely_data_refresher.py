@@ -190,13 +190,13 @@ def refresh_data(bundle):
     append(dst, to_append)
 
 
-def truncate(bundle, start):
+def truncate(bundle, end):
     """截断分钟级别数据包中，实际交易日前ndays在所有ctable中的数据."""
-    if isinstance(start, str):
-        start = pd.Timestamp(start, utc=True).floor('D')
+    if isinstance(end, str):
+        start = pd.Timestamp(end, utc=True).floor('D')
     calendar = get_calendar('XSHG')
     sessions = calendar.sessions_in_range(
-        start, pd.Timestamp('today', tz='UTC'))
+        end, pd.Timestamp('today', tz='UTC'))
     if len(sessions) < 1:
         return
     date = sessions[0]
