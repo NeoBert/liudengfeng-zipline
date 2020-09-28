@@ -178,7 +178,7 @@ def refresh_data(bundle):
     # 处理分钟数据刷新
     dst = join(m_path, 'minute_equities.bcolz')
     m_dir_path = Path(dst)
-    logger.info("指数分钟级别数据实际为日线数据")
+    # logger.info("指数分钟级别数据实际为日线数据")
 
     # 比较已经写入的代码与代码总体
     to_insert, to_append = _get_codes(bundle, m_dir_path)
@@ -193,16 +193,15 @@ def refresh_data(bundle):
 def truncate(bundle, start):
     """截断分钟级别数据包中，实际交易日前ndays在所有ctable中的数据."""
     if isinstance(start, str):
-        start = pd.Timestamp(start, utc=True).round('D')
+        start = pd.Timestamp(start, utc=True).floor('D')
     calendar = get_calendar('XSHG')
     sessions = calendar.sessions_in_range(
         start, pd.Timestamp('today', tz='UTC'))
     if len(sessions) < 1:
         return
-    # 不带时区信息
     date = sessions[0]
     p = most_recent_data(bundle)
     dest = join(p, 'minute_equities.bcolz')
-    logger.warning(f"从交易日：{date} 开始截断数据包{bundle}中的数据")
+    logger.warning(f"从交易日：{date.strftime(r'%Y-%m-%d')} 开始截断数据包{bundle}中的数据")
     writer = BcolzMinuteBarWriter.open(dest)
     writer.truncate(date)
