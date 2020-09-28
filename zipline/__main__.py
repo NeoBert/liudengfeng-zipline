@@ -502,7 +502,7 @@ def fm(bundle):
     help='开始截断日期。',
 )
 def truncate(bundle, end):
-    """截断指定日期开始的分钟级别数据包中所有ctable数据"""
+    """截断指定日期之后的分钟级别数据包中所有ctable数据"""
     from zipline.data.bundles import minutely_data_refresher
     minutely_data_refresher.truncate(bundle, end)
 
