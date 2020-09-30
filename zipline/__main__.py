@@ -117,7 +117,7 @@ def ipython_only(option):
     '-f',
     '--algofile',
     default=None,
-    type=click.File('r'),
+    type=click.File('r', encoding='utf-8'),
     help='要运行的策略文件。',
 )
 @click.option(
