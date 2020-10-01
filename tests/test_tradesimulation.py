@@ -34,13 +34,13 @@ class TestBeforeTradingStartTiming(zf.WithMakeAlgo,
     # 国庆期间
     #      2019 10
     # Su Mo Tu We Th Fr Sa
-    #        1  2  3  4  5
+    # 29 30  1  2  3  4  5
     #  6  7  8  9 10 11 12
     # 13 14 15 16 17 18 19
     # 20 21 22 23 24 25 26
     # 27 28 29 30 31
     START_DATE = pd.Timestamp('2019-09-30', tz='UTC')
-    END_DATE = pd.Timestamp('2019-10-09', tz='UTC')
+    END_DATE = pd.Timestamp('2019-10-10', tz='UTC')
 
     @parameter_space(
         num_sessions=[1, 2, 3],
@@ -78,10 +78,14 @@ class TestBeforeTradingStartTiming(zf.WithMakeAlgo,
         self.assertEqual(len(bts_times), num_sessions)
 
         expected_times = [
-            pd.Timestamp('2019-09-30 8:45', tz="Asia/Shanghai").tz_convert('UTC'),
-            pd.Timestamp('2019-10-08 8:45', tz="Asia/Shanghai").tz_convert('UTC'),
-            pd.Timestamp('2019-10-09 8:45', tz="Asia/Shanghai").tz_convert('UTC'),
+            pd.Timestamp('2019-10-08 8:45',
+                         tz="Asia/Shanghai").tz_convert('UTC'),
+            pd.Timestamp('2019-10-09 8:45',
+                         tz="Asia/Shanghai").tz_convert('UTC'),
+            pd.Timestamp('2019-10-10 8:45',
+                         tz="Asia/Shanghai").tz_convert('UTC'),
         ]
+        
         self.assertEqual(bts_times, expected_times[:num_sessions])
 
 

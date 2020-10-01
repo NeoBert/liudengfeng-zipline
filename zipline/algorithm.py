@@ -494,7 +494,7 @@ class TradingAlgorithm(object):
         # FIXME generalize these values
         before_trading_start_minutes = days_at_time(
             self.sim_params.sessions,
-            time(9, 30),  # 🆗
+            time(8, 45),  # 🆗
             "Asia/Shanghai"  # 🆗
         )
         # 包含四列 上午开盘、上午收盘 下午开盘、下午收盘
