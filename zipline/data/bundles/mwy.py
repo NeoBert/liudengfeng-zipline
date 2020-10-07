@@ -62,7 +62,7 @@ def _update_dividends(dividends, asset_id, origin_data, start, end):
         pd.to_datetime(origin_data['ex_date']),
         'declared_date': pd.NaT,
         # pd.to_datetime(origin_data['declared_date']),
-        'pay_date': pd.NaT,
+        'pay_date': pd.to_datetime(origin_data['ex_date']),
         # pd.to_datetime(origin_data['pay_date']),
         'amount':
         origin_data['amount'],
@@ -74,6 +74,7 @@ def _update_dividends(dividends, asset_id, origin_data, start, end):
     if not df.empty:
         # 此时将时间转换UTC时区
         df['ex_date'] = pd.to_datetime(df['ex_date'], utc=True)
+        df['pay_date'] = pd.to_datetime(df['pay_date'], utc=True)
         dividends.append(df)
 
 
@@ -148,7 +149,6 @@ def gen_symbol_data(symbol_map, sessions, splits, dividends, d_index, m_index, i
     'dwy',
     calendar_name='XSHG',
     start_session=pd.Timestamp('2010-01-04', tz='UTC'),
-    # end_session=pd.Timestamp('today', tz='UTC').round('D'),
     minutes_per_day=240)
 def cndaily_bundle(environ, asset_db_writer, minute_bar_writer,
                    daily_bar_writer, adjustment_writer, calendar,

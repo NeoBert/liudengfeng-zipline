@@ -453,12 +453,12 @@ def log_nyse_close(context, data):
         algo = self.make_algo(
             script=algotext,
             sim_params=self.make_simparams(
-                trading_calendar=get_calendar("CMES"),
+                trading_calendar=get_calendar("XSHG"),
             )
         )
         algo.run()
 
-        nyse = get_calendar("NYSE")
+        nyse = get_calendar("XSHG")
 
         for minute in algo.nyse_opens:
             # each minute should be a nyse session open
@@ -573,17 +573,17 @@ def log_nyse_close(context, data):
         )
         algo.run()
 
-        self.assertEqual(len(expected_data), 780)
+        self.assertEqual(len(expected_data), 480)
         self.assertEqual(collected_data_pre, expected_data)
         self.assertEqual(collected_data_post, expected_data)
 
         self.assertEqual(
             len(function_stack),
-            3900,
-            'Incorrect number of functions called: %s != 3900' %
+            2400,
+            'Incorrect number of functions called: %s != 2400' %
             len(function_stack),
         )
-        expected_functions = [pre, handle_data, f, g, post] * 97530
+        expected_functions = [pre, handle_data, f, g, post] * 60030
         for n, (f, g) in enumerate(zip(function_stack, expected_functions)):
             self.assertEqual(
                 f,
@@ -813,8 +813,8 @@ class TestSetSymbolLookupDate(zf.WithMakeAlgo, zf.ZiplineTestCase):
 
 
 class TestPositions(zf.WithMakeAlgo, zf.ZiplineTestCase):
-    START_DATE = pd.Timestamp('2006-01-04', tz='utc')
-    END_DATE = pd.Timestamp('2006-01-06', tz='utc')
+    START_DATE = pd.Timestamp('2020-09-01', tz='utc')
+    END_DATE = pd.Timestamp('2020-09-04', tz='utc')
     SIM_PARAMS_CAPITAL_BASE = 1000
 
     ASSET_FINDER_EQUITY_SIDS = (1, 133)
@@ -917,7 +917,7 @@ class TestPositions(zf.WithMakeAlgo, zf.ZiplineTestCase):
             0,
         ]
         for i, expected in enumerate(expected_position_count):
-            self.assertEqual(result.ix[i]['num_positions'], expected)
+            self.assertEqual(result.iloc[i,:]['num_positions'], expected)
 
     def test_noop_orders(self):
         asset = self.asset_finder.retrieve_asset(1)
@@ -1078,7 +1078,7 @@ class TestBeforeTradingStart(zf.WithMakeAlgo, zf.ZiplineTestCase):
             },
             index=asset_minutes,
         )
-        split_data.iloc[780:] = split_data.iloc[780:] / 2.0
+        split_data.iloc[480:] = split_data.iloc[480:] / 2.0
         for sid in (1, 8554):
             yield sid, create_minute_df_for_asset(
                 cls.trading_calendar,
@@ -1140,8 +1140,8 @@ class TestBeforeTradingStart(zf.WithMakeAlgo, zf.ZiplineTestCase):
         results = algo.run()
 
         # fetching data at midnight gets us the previous market minute's data
-        self.assertEqual(390, results.iloc[0].the_price1)
-        self.assertEqual(392, results.iloc[0].the_high1)
+        self.assertEqual(240, results.iloc[0].the_price1)
+        self.assertEqual(242, results.iloc[0].the_high1)
 
         # make sure that price is ffilled, but not other fields
         self.assertEqual(350, results.iloc[0].the_price2)
