@@ -1,13 +1,16 @@
 import pandas as pd
 import os
 from zipline.utils.paths import zipline_path
-from zipline.pipeline.fundamentals.localdata import get_cn_industry, get_sw_industry, get_zjh_industry
+from zipline.pipeline.fundamentals.localdata_wy import get_cn_industry, get_sw_industry, get_zjh_industry
 from zipline.pipeline.fundamentals.constants import CN_TO_SECTOR, SECTOR_NAMES
 from .core import symbol
 from zipline.assets.assets import SymbolNotFound
 import random
 from cnswd.mongodb import get_db
 from trading_calendars import get_calendar
+import re
+
+CODE_PAT = re.compile(r"\d{6}")
 
 MATCH_ONLY_A = {
     '$match': {
@@ -178,7 +181,7 @@ def _get_concept_maps(collection):
         },
     ]
     cursor = collection.aggregate(pipeline)
-    return {record['概念名称']: record['股票列表'] for record in cursor}
+    return {record['概念名称']: [c for c in record['股票列表'] if CODE_PAT.match(c)] for record in cursor}
 
 
 def get_concept_maps(by='all', to_symbol=True):

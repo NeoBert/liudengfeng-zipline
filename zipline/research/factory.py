@@ -7,7 +7,7 @@ import pandas as pd
 
 
 DEFAULT_COUNTRY = CN_EQUITIES.country_code
-DEFAULT_BUNDLE = 'cndaily'
+DEFAULT_BUNDLE = 'dwy'
 
 
 @remember_last
