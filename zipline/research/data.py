@@ -169,7 +169,7 @@ def get_zjh_industry_maps(level=1, to_symbol=True):
     }
 
 
-def _get_concept_maps(collection):
+def _get_concept_maps(collection, latest):
     projection = {
         '_id': 0,
         '概念名称': 1,
@@ -180,17 +180,24 @@ def _get_concept_maps(collection):
             '$project': projection
         },
     ]
+    if collection.name == '同花顺概念' and latest:
+        end = pd.Timestamp.today().floor('D')
+        start = end - pd.Timedelta('730 days')
+        pipeline.insert(
+            0, {'$match': {'日期': {'$gte': start, '$lte': end}}}
+        )
     cursor = collection.aggregate(pipeline)
     return {record['概念名称']: [c for c in record['股票列表'] if CODE_PAT.match(c)] for record in cursor}
 
 
-def get_concept_maps(by='all', to_symbol=True):
+def get_concept_maps(by='all', to_symbol=True, latest=False):
     """概念对应股票列表
 
     Args:
         by (str, optional): 分类单位. Defaults to 'all'.
             all 代表合并
         to_symbol (bool, optional): 转换为Equity. Defaults to True.
+        latest (bool, optional): 限于最近2年. Defaults to False.
 
     Returns:
         dict: 以概念名称为键，股票列表为值
@@ -199,10 +206,10 @@ def get_concept_maps(by='all', to_symbol=True):
     db = get_db()
     if by == 'ths':
         collection = db['同花顺概念']
-        return _get_concept_maps(collection)
+        return _get_concept_maps(collection, latest)
     elif by == 'tct':
         collection = db['腾讯概念']
-        return _get_concept_maps(collection)
+        return _get_concept_maps(collection, latest)
     else:
         ths = _get_concept_maps(db['同花顺概念'])
         tct = _get_concept_maps(db['腾讯概念'])
