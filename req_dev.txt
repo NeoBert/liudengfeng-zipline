@@ -1,0 +1,127 @@
+# https://www.lfd.uci.edu/~gohlke/pythonlibs/
+# numpy mkl scipy
+# download and install `cyordereddict` `bottleneck` `tables` `lru_dict` `bcolz`
+# pip install -r etc\requirements.txt
+
+# Incompatible with earlier PIP versions
+pip>=18.1
+# bcolz fails to install if this is not in the build_requires.
+setuptools>=40.6.2
+
+# Logging
+Logbook>=1.4.1
+
+# Scientific Libraries
+
+pytz>=2018.7
+numpy>=1.15.4
+
+# for pandas-datareader
+requests-file>=1.4.3
+
+# for requests
+certifi>=2018.11.29
+chardet>=3.0.4
+idna>=2.8
+urllib3>=1.24.1
+
+# scipy and pandas are required for statsmodels,
+# statsmodels in turn is required for some pandas packages
+scipy>=1.2.0
+pandas>=0.23.4
+# pandas-datareader>=0.7.0
+# Needed for parts of pandas.stats
+patsy>=0.5.1
+statsmodels>=0.10.0
+
+python-dateutil>=2.7.5
+six>=1.12.0
+
+# For fetching remote data
+requests>=2.21.0
+
+Cython>=0.29.2
+
+# faster OrderedDict
+# cyordereddict>=1.0.0
+
+# faster array ops.
+bottleneck>=1.2.1
+
+
+# networkx requires decorator
+decorator>=4.3.0
+
+# Graph algorithms used by zipline.pipeline
+networkx>=2.2
+
+# NumericalExpression pipeline terms.
+# # numexpr>=2.6.1
+numexpr>=2.6.8
+
+# On disk storage format for pipeline data.
+# Version: 1.2.2.dev9
+# bcolz>=1.2.2
+
+# On disk storage format for pricing data.
+h5py>=2.8.0
+
+# Command line interface helper
+click>=7.0
+
+# FUNctional programming utilities
+toolz>=0.9.0
+multipledispatch>=0.6.0
+
+# for alembic
+MarkupSafe>=1.1.0
+Mako>=1.0.7
+# Asset writer and finder
+sqlalchemy>=1.2.15
+# For asset db management
+alembic>=1.0.5
+
+sortedcontainers>=2.1.0
+# for intervaltree
+intervaltree>=3.0.0
+
+# for caching
+lru-dict>=1.1.6
+
+# For financial risk calculations
+# Local installation
+# empyrical>=0.5.0
+
+tables>=3.4.4
+
+# For trading calendars
+# Local installation
+# trading-calendars>=1.6.1
+
+# Interface definitions.
+python-interface>=1.5.1
+
+# Country Codes
+iso3166>=0.9
+
+# Local installation
+# cnswd>=4.0.0
+
+# first install zipline then install pyfolio
+# pyfolio>=0.9.0
+iso4217==1.6.20180829
+
+pyarrow>=0.16.0
+dask[dataframe]
+
+# tar.gz
+https://github.com/liudengfeng/yahooquery/archive/2.2.4.tar.gz
+https://github.com/liudengfeng/cnswd/archive/5.0.0.tar.gz
+https://github.com/liudengfeng/trading_calendars/archive/1.8.0.tar.gz
+https://github.com/liudengfeng/datashape/archive/0.5.4.tar.gz
+https://github.com/liudengfeng/odo/archive/0.5.2.tar.gz
+https://github.com/liudengfeng/blaze/archive/0.11.3.tar.gz
+https://github.com/liudengfeng/empyrical/archive/0.6.0.tar.gz
+https://github.com/liudengfeng/pyfolio/archive/0.9.0.tar.gz
+https://github.com/liudengfeng/alphalens/archive/0.4.0.tar.gz
+https://github.com/liudengfeng/bcolz/archive/1.2.1.tar.gz

@@ -32,7 +32,7 @@ strategies.
 - `弃用 cyordereddict`
 - `git clone https://github.com/liudengfeng/zipline.git`
 - `cd <zipline path>`
-- `pip install -r etc\requirements_cus.txt`
+- `pip install -r req_dev.txt`
 - `python setup.py build_ext --inplace`
 - `pip install .` # 安装模式
 - `pip install -e .` # 开发模式
