@@ -124,4 +124,3 @@ https://github.com/liudengfeng/blaze/archive/0.11.3.tar.gz
 https://github.com/liudengfeng/empyrical/archive/0.6.0.tar.gz
 https://github.com/liudengfeng/pyfolio/archive/0.9.0.tar.gz
 https://github.com/liudengfeng/alphalens/archive/0.4.0.tar.gz
-https://github.com/liudengfeng/bcolz/archive/1.2.1.tar.gz

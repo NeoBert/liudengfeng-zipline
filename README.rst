@@ -29,6 +29,9 @@ strategies.
     2. anaconda
     3. mongodb
 - `conda install h5py` # 本机使用win10，pip install 出现异常
+- `git clone https://github.com/liudengfeng/bcolz.git`
+- `cd <bcolz path>`
+- `pip install .`
 - `弃用 cyordereddict`
 - `git clone https://github.com/liudengfeng/zipline.git`
 - `cd <zipline path>`
