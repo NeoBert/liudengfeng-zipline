@@ -18,7 +18,7 @@ from trading_calendars import get_calendar
 from .wy_data import _fetch_single_index
 
 
-INDEX_QUOTE_START = pd.Timestamp('2020-09-28')
+INDEX_QUOTE_START = pd.Timestamp('2020-11-02')
 
 
 def encode_index_code(x, offset=1000000):
